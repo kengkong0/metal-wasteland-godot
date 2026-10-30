@@ -175,7 +175,8 @@ func test_suite_2_gamestate_logic() -> void:
 func test_suite_3_meta_and_settings() -> void:
 	print("\n--- [Suite 3] 局外养成科技树与存档测试 ---")
 
-	GameState.noah_chips = 500
+	GameState.reset_meta_save()
+	GameState.noah_chips = 5000
 
 	# 猎人与底盘解锁
 	assert_true(GameState.is_hunter_unlocked("bounty_hunter"), "初始猎人默认解锁: bounty_hunter")
@@ -470,5 +471,21 @@ func test_suite_9_swarm_and_crush_mechanics() -> void:
 	var gold_before: int = GameState.gold
 	bf_node._finish_wave_success()
 	assert_true(GameState.gold >= gold_before + 50, "波次结束全域磁暴回收全场掉落物，零资源浪费")
+
+	# 6. 验证车库激光打孔与底盘换乘
+	GameState.chassis_slots = ["MAIN", "SUB", "SE", "SE"]
+	GameState.gold = 500
+	var slots_pre: int = GameState.chassis_slots.size()
+	var drill_ok: bool = GameState.drill_new_chassis_slot("MAIN")
+	assert_true(drill_ok and GameState.chassis_slots.size() == slots_pre + 1, "车库激光打孔扩充槽位成功: 当前 %d 孔" % GameState.chassis_slots.size())
+
+	var switch_ok: bool = GameState.switch_chassis("r_wolf")
+	assert_true(switch_ok and GameState.selected_chassis_id == "r_wolf", "车库底盘换乘至【绯红之狼】成功")
+
+	# 7. 验证战时升级EMP冲击波与绝境翻盘注能
+	bf_node.start_wave()
+	p_tank.current_sp = 20.0 # 濒死
+	bf_node._close_or_next_level_modal()
+	assert_true(p_tank.invuln_timer >= 0.0, "战时升级关闭触发战地EMP震荡波")
 
 	bf_node.queue_free()

@@ -1131,7 +1131,9 @@ func _populate_battlefield_level_cards() -> void:
 		var sep := HSeparator.new()
 		cv.add_child(sep)
 
-		var desc_lbl := _make_outlined_label("✅ %s\n%s\n💚 战地应急抢修 +6%% SP" % [desc_txt, stat_compare], 14, Color(0.92, 0.96, 0.92))
+		var is_emergency: bool = player_tank.is_human_mode or (player_tank.current_sp <= GameState.max_sp * 0.25)
+		var heal_label: String = "⚡【绝境逆转加成】紧急注入 +16% SP!" if is_emergency else "💚 战地应急抢修 +6% SP"
+		var desc_lbl := _make_outlined_label("✅ %s\n%s\n%s" % [desc_txt, stat_compare, heal_label], 14, Color(1.0, 0.88, 0.25) if is_emergency else Color(0.92, 0.96, 0.92))
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1146,7 +1148,15 @@ func _populate_battlefield_level_cards() -> void:
 			GameState.bonus_stats[st] = GameState.bonus_stats.get(st, 0.0) + final_val
 			GameState.pending_level_ups = max(0, GameState.pending_level_ups - 1)
 			GameState.recalculate_stats()
-			player_tank.heal_sp(GameState.max_sp * 0.06)
+			if is_emergency:
+				if player_tank.is_human_mode:
+					player_tank.human_hp = minf(GameState.max_human_hp, player_tank.human_hp + 28.0)
+					fx_layer.spawn_text(player_tank.human_pos, "⚡ 绝境翻盘！紧急急救 +28 HP!", Color(0.3, 1.0, 0.5), 1.35)
+				else:
+					player_tank.heal_sp(GameState.max_sp * 0.16)
+					fx_layer.spawn_text(player_tank.global_position, "⚡ 绝境翻盘！装甲紧急注能 +16% SP!", Color(1.0, 0.88, 0.2), 1.35)
+			else:
+				player_tank.heal_sp(GameState.max_sp * 0.06)
 			SoundManager.play("coin", 0.08, 0.0)
 			_close_or_next_level_modal()
 		)
@@ -1272,6 +1282,21 @@ func _close_or_next_level_modal() -> void:
 		level_up_modal.visible = false
 		wave_active = true
 		_update_hud()
+
+		# 战地应急 EMP 动能冲击波：震退战车周围敌怪并眩晕1秒，给玩家留出绝地反杀身位！
+		if is_instance_valid(player_tank) and is_instance_valid(fx_layer):
+			var p_pos: Vector2 = player_tank.get_active_position()
+			fx_layer.spawn_explosion(p_pos, 160.0, Color(0.35, 0.90, 1.0))
+			trigger_screen_shake(7.0, 0.22)
+			SoundManager.play("explosion_small", 0.08, 1.6)
+			fx_layer.spawn_text(p_pos + Vector2(0, -32), "⚡ EMP 动能震荡波！震退敌群！", Color(0.4, 0.95, 1.0), 1.3)
+			for e in enemies_container.get_children():
+				if is_instance_valid(e):
+					var d: float = p_pos.distance_to(e.global_position)
+					if d <= 175.0:
+						var push_dir: Vector2 = (e.global_position - p_pos).normalized() if d > 1.0 else Vector2.RIGHT
+						e.global_position += push_dir * maxf(60.0, 160.0 - d)
+						e.stun_timer = maxf(e.stun_timer, 1.1)
 
 func _on_super_weapon_evolved(evo_info: Dictionary) -> void:
 	SoundManager.play("mince_revive", 0.02, 3.5)

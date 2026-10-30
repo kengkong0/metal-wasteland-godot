@@ -495,7 +495,7 @@ func recalculate_stats() -> void:
 	var eng_weight: float = float(eng.get("max_weight", 18.0))
 	if ch.get("dual_engine", false):
 		eng_weight *= 1.60 # 猛犸象双核驱动
-	max_weight = eng_weight * (1.0 + bonus_stats.get("max_weight_pct", 0.0))
+	max_weight = (eng_weight + bonus_stats.get("flat_max_weight", 0.0)) * (1.0 + bonus_stats.get("max_weight_pct", 0.0))
 
 	# 3. 计算已用载重 W_equip
 	used_weight = float(ch.get("base_weight", 5.0)) + float(cu.get("weight", 1.0))
@@ -729,6 +729,40 @@ func cycle_chassis_slot_type(slot_index: int) -> bool:
 	var cur: String = chassis_slots[slot_index]
 	var next_idx: int = (order.find(cur) + 1) % order.size()
 	chassis_slots[slot_index] = order[next_idx]
+	return true
+
+func get_drill_slot_cost() -> int:
+	var extra: int = maxi(0, chassis_slots.size() - 4)
+	return 80 + extra * 45
+
+func can_drill_slot() -> bool:
+	return chassis_slots.size() < 6 and gold >= get_drill_slot_cost()
+
+func drill_new_chassis_slot(slot_type: String = "SUB") -> bool:
+	if chassis_slots.size() >= 6:
+		return false
+	var cost: int = get_drill_slot_cost()
+	if gold < cost:
+		return false
+	gold -= cost
+	chassis_slots.append(slot_type)
+	recalculate_stats()
+	return true
+
+func switch_chassis(new_chassis_id: String) -> bool:
+	if not GameData.CHASSIS.has(new_chassis_id):
+		return false
+	if not is_chassis_unlocked(new_chassis_id):
+		return false
+	selected_chassis_id = new_chassis_id
+	var ch: Dictionary = GameData.CHASSIS[new_chassis_id]
+	var base_slots: Array = []
+	for s in ch["slots"]:
+		base_slots.append(String(s))
+	while base_slots.size() < chassis_slots.size() and base_slots.size() < 6:
+		base_slots.append("SE")
+	chassis_slots = base_slots
+	recalculate_stats()
 	return true
 
 func get_available_wanted_posters() -> Array:

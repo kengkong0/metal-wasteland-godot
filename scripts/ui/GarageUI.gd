@@ -20,9 +20,10 @@ var lbl_chips_big: Label
 var lbl_event_toast: Label
 var btn_reroll: Button
 
-# --- 升级天赋浮层 (如有未领升级) ---
-var perk_panel: PanelContainer
-var perk_hbox: HBoxContainer
+# --- 车库激光打孔与底盘换乘改装弹窗 ---
+var drill_modal: Control
+var chassis_modal: Control
+var chassis_grid: GridContainer
 
 # --- 左上：立式商店卡片行 ---
 var shop_cards_hbox: HBoxContainer
@@ -133,14 +134,6 @@ func _build_ui() -> void:
 	lbl_event_toast.clip_text = true
 	top_vbox.add_child(lbl_event_toast)
 
-	# 猎人未领升级栏 (平时隐藏)
-	perk_panel = _make_styled_panel(Color(0.20, 0.16, 0.10), Color(1.0, 0.82, 0.20), 6)
-	perk_panel.visible = false
-	root_vbox.add_child(perk_panel)
-	perk_hbox = HBoxContainer.new()
-	perk_hbox.add_theme_constant_override("separation", 10)
-	perk_panel.add_child(perk_hbox)
-
 	# =========================================================================
 	# 2. 主体双栏 (左 70%：上方立式商品卡 + 下方武器槽位网格 | 右 30%：属性进度条 + 属性表 + 悬赏 + 出击)
 	# =========================================================================
@@ -180,8 +173,29 @@ func _build_ui() -> void:
 	inv_top_row.add_theme_constant_override("separation", 10)
 	inv_vbox.add_child(inv_top_row)
 
-	lbl_slots_header = _make_outlined_label("🔧 战车武器与底盘孔位 (0/4)", 16, Color(0.55, 0.88, 1.0))
+	lbl_slots_header = _make_outlined_label("🔧 战车武装与底盘孔位 (0/4)", 16, Color(0.55, 0.88, 1.0))
 	inv_top_row.add_child(lbl_slots_header)
+
+	var btn_drill := Button.new()
+	btn_drill.text = "🔧激光打孔"
+	btn_drill.custom_minimum_size = Vector2(86, 28)
+	btn_drill.add_theme_font_size_override("font_size", 12)
+	btn_drill.pressed.connect(_on_drill_button_pressed)
+	inv_top_row.add_child(btn_drill)
+
+	var btn_switch_ch := Button.new()
+	btn_switch_ch.text = "🚜换乘底盘"
+	btn_switch_ch.custom_minimum_size = Vector2(86, 28)
+	btn_switch_ch.add_theme_font_size_override("font_size", 12)
+	btn_switch_ch.pressed.connect(_open_chassis_modal)
+	inv_top_row.add_child(btn_switch_ch)
+
+	var btn_tune := Button.new()
+	btn_tune.text = "⚡引擎出力+2.5t (45G)"
+	btn_tune.custom_minimum_size = Vector2(136, 28)
+	btn_tune.add_theme_font_size_override("font_size", 12)
+	btn_tune.pressed.connect(_on_tune_engine_pressed)
+	inv_top_row.add_child(btn_tune)
 
 	synergy_pills_hbox = HBoxContainer.new()
 	synergy_pills_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -269,6 +283,9 @@ func _build_ui() -> void:
 	btn_launch.pressed.connect(_on_launch_pressed)
 	right_vbox.add_child(btn_launch)
 
+	_build_drill_modal()
+	_build_chassis_modal()
+
 func open_garage() -> void:
 	visible = true
 	reroll_count = 0
@@ -307,7 +324,6 @@ func refresh_all() -> void:
 	lbl_gold_big.text = "💰 %d G" % GameState.gold
 	lbl_chips_big.text = "💎 %d" % GameState.noah_chips
 
-	_refresh_perk_bar()
 	_refresh_shop_cards()
 	_refresh_slots_and_weapons_grid()
 	_refresh_right_stats_and_wanted()
@@ -318,36 +334,226 @@ func refresh_all() -> void:
 	if visible and get_viewport() and get_viewport().gui_get_focus_owner() == null and is_instance_valid(btn_launch):
 		btn_launch.call_deferred("grab_focus")
 
-func _refresh_perk_bar() -> void:
-	for c in perk_hbox.get_children():
-		c.queue_free()
-	if GameState.pending_level_ups <= 0:
-		perk_panel.visible = false
+# --- 车库核心改装：激光打孔、底盘换乘与引擎出力扩容 ---
+func _on_drill_button_pressed() -> void:
+	if GameState.chassis_slots.size() >= 6:
+		lbl_event_toast.text = "❌ 当前底盘孔位已达上限 (6/6)，无法继续打孔！"
+		SoundManager.play("explosion_small", 0.05, 2.0)
 		return
-	perk_panel.visible = true
+	drill_modal.visible = true
+	_update_drill_modal_text()
 
-	var title := _make_outlined_label("🎖️ 升级点(%d):" % GameState.pending_level_ups, 14, Color(1.0, 0.90, 0.30))
-	perk_hbox.add_child(title)
+func _update_drill_modal_text() -> void:
+	var cost: int = GameState.get_drill_slot_cost()
+	var sub_lbl: Label = drill_modal.get_node_or_null("CenterContainer/Panel/VBox/DescLabel")
+	if is_instance_valid(sub_lbl):
+		sub_lbl.text = "当前底盘已有 %d/6 孔位。激光打孔将扩充 1 个新孔位 (消耗 %d G，持有 %d G)。\n请选择要开辟的武器孔位类型：" % [
+			GameState.chassis_slots.size(), cost, GameState.gold
+		]
 
-	var shuffled: Array = GameData.LEVEL_PERKS.duplicate()
-	shuffled.shuffle()
-	for i in range(min(4, shuffled.size())):
-		var p: Dictionary = shuffled[i]
-		var val: float = float(p["val"])
-		var disp_num: int = int(roundf(val * 100.0)) if p.get("is_pct", true) else int(roundf(val))
-		var desc_txt: String = String(p["desc"]) % disp_num
+func _execute_drill(slot_type: String) -> void:
+	var cost: int = GameState.get_drill_slot_cost()
+	if GameState.gold < cost:
+		lbl_event_toast.text = "❌ 赏金不足，激光打孔需要 %d G！" % cost
+		drill_modal.visible = false
+		return
+	if GameState.chassis_slots.size() >= 6:
+		lbl_event_toast.text = "❌ 孔位已达上限 (6/6)！"
+		drill_modal.visible = false
+		return
+	GameState.drill_new_chassis_slot(slot_type)
+	SoundManager.play("cannon_heavy", 0.05, 2.5)
+	lbl_event_toast.text = "🎉 激光打孔成功！战车新增 [%s] 孔位，孔位现为 (%d/6)！" % [
+		"主炮孔" if slot_type == "MAIN" else ("副炮孔" if slot_type == "SUB" else "S-E孔"),
+		GameState.chassis_slots.size()
+	]
+	drill_modal.visible = false
+	refresh_all()
+
+func _on_tune_engine_pressed() -> void:
+	var tune_cost: int = 45
+	if GameState.gold < tune_cost:
+		lbl_event_toast.text = "❌ 赏金不足，引擎出力扩容需要 %d G！" % tune_cost
+		return
+	GameState.gold -= tune_cost
+	GameState.bonus_stats["flat_max_weight"] = GameState.bonus_stats.get("flat_max_weight", 0.0) + 2.5
+	GameState.recalculate_stats()
+	SoundManager.play("upgrade", 0.05, 1.4)
+	lbl_event_toast.text = "⚡ 引擎出力改装成功！最大载重 +2.5t，富余载重已转化为更多 SP 装甲片！"
+	refresh_all()
+
+func _open_chassis_modal() -> void:
+	for c in chassis_grid.get_children():
+		c.queue_free()
+	chassis_modal.visible = true
+
+	for c_id in GameData.CHASSIS.keys():
+		var ch: Dictionary = GameData.CHASSIS[c_id]
+		var is_current: bool = (c_id == GameState.selected_chassis_id)
+		var is_unlocked: bool = GameState.is_chassis_unlocked(c_id)
+
+		var border_col: Color = Color(0.4, 0.95, 0.45) if is_current else (Color(0.85, 0.65, 0.25) if is_unlocked else Color(0.4, 0.4, 0.45))
+		var card := _make_styled_panel(Color(0.16, 0.16, 0.20), border_col, 6)
+		card.custom_minimum_size = Vector2(195, 180)
+		chassis_grid.add_child(card)
+
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", 4)
+		card.add_child(cv)
+
+		var tex_r := TextureRect.new()
+		tex_r.texture = GameData.get_chassis_tex(c_id)
+		tex_r.custom_minimum_size = Vector2(64, 42)
+		tex_r.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tex_r.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		cv.add_child(tex_r)
+
+		var n_lbl := _make_outlined_label(ch["name"].split(" ")[0], 14, Color.WHITE if is_unlocked else Color(0.6, 0.6, 0.6))
+		n_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cv.add_child(n_lbl)
+
+		var trait_lbl := _make_outlined_label("🏷️ %s" % String(ch.get("desc", "")).substr(0, 24), 11, Color(0.85, 0.82, 0.72))
+		trait_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		trait_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		cv.add_child(trait_lbl)
+
 		var btn := Button.new()
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.custom_minimum_size = Vector2(0, 34)
-		btn.text = "★ %s (%s)" % [p["name"], desc_txt]
-		btn.pressed.connect(func():
-			var st: String = p["stat"]
-			GameState.bonus_stats[st] = GameState.bonus_stats.get(st, 0.0) + val
-			GameState.pending_level_ups -= 1
-			SoundManager.play("upgrade", 0.05, 0.0)
-			refresh_all()
-		)
-		perk_hbox.add_child(btn)
+		btn.custom_minimum_size = Vector2(0, 32)
+		btn.add_theme_font_size_override("font_size", 12)
+		if is_current:
+			btn.text = "✅ 当前驾驶"
+			btn.disabled = true
+		elif is_unlocked:
+			btn.text = "🚜 换乘此底盘"
+			btn.pressed.connect(func():
+				GameState.switch_chassis(c_id)
+				SoundManager.play("cannon_heavy", 0.04, 1.8)
+				lbl_event_toast.text = "🎉 成功换乘至【%s】！已打孔槽位完整保留！" % ch["name"].split(" ")[0]
+				chassis_modal.visible = false
+				refresh_all()
+			)
+		else:
+			btn.text = "🔒 未解锁"
+			btn.disabled = true
+		cv.add_child(btn)
+
+func _build_drill_modal() -> void:
+	drill_modal = Control.new()
+	drill_modal.name = "DrillModal"
+	drill_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	drill_modal.visible = false
+	add_child(drill_modal)
+
+	var bg := ColorRect.new()
+	bg.color = Color(0.04, 0.04, 0.06, 0.85)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	drill_modal.add_child(bg)
+
+	var center := CenterContainer.new()
+	center.name = "CenterContainer"
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	drill_modal.add_child(center)
+
+	var panel := _make_styled_panel(Color(0.14, 0.15, 0.19), Color(0.35, 0.85, 1.0), 10)
+	panel.name = "Panel"
+	panel.custom_minimum_size = Vector2(520, 260)
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.name = "VBox"
+	vbox.add_theme_constant_override("separation", 14)
+	panel.add_child(vbox)
+
+	var title := _make_outlined_label("🔧 多拉姆激光打孔改装车间 (Slot Drilling)", 20, Color(0.4, 0.9, 1.0))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var desc_lbl := _make_outlined_label("", 13, Color(0.9, 0.9, 0.9))
+	desc_lbl.name = "DescLabel"
+	desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vbox.add_child(desc_lbl)
+
+	var btns_hbox := HBoxContainer.new()
+	btns_hbox.add_theme_constant_override("separation", 12)
+	vbox.add_child(btns_hbox)
+
+	var btn_main := Button.new()
+	btn_main.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_main.custom_minimum_size = Vector2(0, 48)
+	btn_main.text = "🔴 主炮孔 (MAIN)\n重型主加农炮"
+	btn_main.pressed.connect(func(): _execute_drill("MAIN"))
+	btns_hbox.add_child(btn_main)
+
+	var btn_sub := Button.new()
+	btn_sub.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_sub.custom_minimum_size = Vector2(0, 48)
+	btn_sub.text = "🟡 副炮孔 (SUB)\n极速机枪/机炮"
+	btn_sub.pressed.connect(func(): _execute_drill("SUB"))
+	btns_hbox.add_child(btn_sub)
+
+	var btn_se := Button.new()
+	btn_se.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_se.custom_minimum_size = Vector2(0, 48)
+	btn_se.text = "🔵 特殊孔 (S-E)\n导弹/拦截激光"
+	btn_se.pressed.connect(func(): _execute_drill("SE"))
+	btns_hbox.add_child(btn_se)
+
+	var btn_cancel := Button.new()
+	btn_cancel.text = "返回"
+	btn_cancel.custom_minimum_size = Vector2(0, 36)
+	btn_cancel.pressed.connect(func(): drill_modal.visible = false)
+	vbox.add_child(btn_cancel)
+
+func _build_chassis_modal() -> void:
+	chassis_modal = Control.new()
+	chassis_modal.name = "ChassisModal"
+	chassis_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	chassis_modal.visible = false
+	add_child(chassis_modal)
+
+	var bg := ColorRect.new()
+	bg.color = Color(0.04, 0.04, 0.06, 0.88)
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	chassis_modal.add_child(bg)
+
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	chassis_modal.add_child(center)
+
+	var panel := _make_styled_panel(Color(0.14, 0.15, 0.18), Color(0.85, 0.65, 0.25), 10)
+	panel.custom_minimum_size = Vector2(880, 560)
+	center.add_child(panel)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	panel.add_child(vbox)
+
+	var title := _make_outlined_label("🚜 废土战车底盘换乘改装 (Switch Chassis)", 22, Color(1.0, 0.88, 0.35))
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(title)
+
+	var desc := _make_outlined_label("选择您在车库中已解锁的座驾底盘换乘，当前已打孔的槽位数量将完整保留！", 13, Color(0.85, 0.85, 0.85))
+	desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(desc)
+
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(0, 420)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	vbox.add_child(scroll)
+
+	chassis_grid = GridContainer.new()
+	chassis_grid.columns = 4
+	chassis_grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	chassis_grid.add_theme_constant_override("h_separation", 10)
+	chassis_grid.add_theme_constant_override("v_separation", 10)
+	scroll.add_child(chassis_grid)
+
+	var btn_close := Button.new()
+	btn_close.text = "返回车库"
+	btn_close.custom_minimum_size = Vector2(0, 40)
+	btn_close.pressed.connect(func(): chassis_modal.visible = false)
+	vbox.add_child(btn_close)
 
 func _get_max_shop_rarity_for_wave(w: int) -> int:
 	if w <= 2:
@@ -797,6 +1003,31 @@ func _refresh_slots_and_weapons_grid() -> void:
 			mod_btn.text = "🔩 切换孔位"
 			mod_btn.pressed.connect(func(): _try_mod_slot(i, mod_cost))
 			ev.add_child(mod_btn)
+
+	# 激光打孔扩充新槽位卡片 (上限6孔)
+	if GameState.chassis_slots.size() < 6:
+		var drill_card := _make_styled_panel(Color(0.12, 0.15, 0.20), Color(0.35, 0.85, 1.0), 6)
+		drill_card.custom_minimum_size = Vector2(136, 0)
+		drill_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		drill_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		slots_cards_hbox.add_child(drill_card)
+
+		var dv := VBoxContainer.new()
+		dv.alignment = BoxContainer.ALIGNMENT_CENTER
+		dv.add_theme_constant_override("separation", 6)
+		drill_card.add_child(dv)
+
+		var d_cost: int = GameState.get_drill_slot_cost()
+		var d_title := _make_outlined_label("➕ 激光打孔\n扩充新武器孔\n(消耗 %d G)" % d_cost, 12, Color(0.4, 0.9, 1.0))
+		d_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		dv.add_child(d_title)
+
+		var d_btn := Button.new()
+		d_btn.text = "立即打孔"
+		d_btn.custom_minimum_size = Vector2(0, 30)
+		d_btn.add_theme_font_size_override("font_size", 12)
+		d_btn.pressed.connect(_on_drill_button_pressed)
+		dv.add_child(d_btn)
 
 func _try_mod_slot(slot_idx: int, mod_cost: int) -> void:
 	if GameState.gold < mod_cost:
