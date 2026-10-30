@@ -812,6 +812,33 @@ const SYNERGIES: Dictionary = {
 # 7. 废土机械兽生态：常规小怪、远程特种怪、战术支援怪与四大重装精英 (ENEMIES)
 # ============================================================================
 const ENEMIES: Dictionary = {
+	# --- 0. 废土变异生化兽 (LOW-SPEED MELEE MUTATED BEASTS) ---
+	"mutant_sludge": {
+		"id": "mutant_sludge", "name": "辐射变异软泥怪", "hp": 85.0, "speed": 62.0, "dmg": 18.0,
+		"armor": 4.0, "radius": 20.0, "xp": 1, "gold": 1, "color": Color(0.40, 0.88, 0.22),
+		"behavior": "melee"
+	},
+	"rad_beetle": {
+		"id": "rad_beetle", "name": "辐射重甲巨甲虫", "hp": 155.0, "speed": 78.0, "dmg": 26.0,
+		"armor": 28.0, "radius": 24.0, "xp": 2, "gold": 2, "color": Color(0.55, 0.40, 0.25),
+		"behavior": "melee"
+	},
+	"sand_worm_larva": {
+		"id": "sand_worm_larva", "name": "废土沙虫幼体", "hp": 110.0, "speed": 84.0, "dmg": 22.0,
+		"armor": 10.0, "radius": 22.0, "xp": 1, "gold": 2, "color": Color(0.85, 0.65, 0.40),
+		"behavior": "melee"
+	},
+	"flesh_juggernaut": {
+		"id": "flesh_juggernaut", "name": "生化变异肉山", "hp": 380.0, "speed": 55.0, "dmg": 40.0,
+		"armor": 20.0, "radius": 32.0, "xp": 3, "gold": 4, "color": Color(0.68, 0.22, 0.38),
+		"behavior": "melee"
+	},
+	"corpse_crawler": {
+		"id": "corpse_crawler", "name": "腐骨爬行尸怪", "hp": 95.0, "speed": 72.0, "dmg": 20.0,
+		"armor": 6.0, "radius": 19.0, "xp": 1, "gold": 1, "color": Color(0.50, 0.48, 0.45),
+		"behavior": "melee"
+	},
+
 	# --- 1. 近战突袭类 ---
 	"bio_ant": {
 		"id": "bio_ant", "name": "钳甲机械蚁", "hp": 46.0, "speed": 145.0, "dmg": 18.0,
@@ -1146,14 +1173,14 @@ const MAPS: Array = [
 		"hp_mult": 1.0,
 		"dmg_mult": 1.0,
 		"chip_mult": 1.0,
-		"enemy_pool": ["bio_ant", "bionic_hound", "kamikaze_wheel", "sand_turret"],
+		"enemy_pool": ["mutant_sludge", "mutant_sludge", "corpse_crawler", "bio_ant", "rad_beetle", "sand_turret"],
 		"elite_pool": ["auto_tank"],
 		"regional_boss_id": "boss_killdozer",
 		"final_boss_id": "boss_jelly",
 		"bg_color": Color(0.22, 0.18, 0.13),
 		"grid_color": Color(0.27, 0.22, 0.16),
 		"border_color": Color(0.85, 0.52, 0.18),
-		"desc": "【荒野起点】小怪：机械蚁/猎犬/滚雷车/机枪塔 | 精英：杀戮重坦 | 赏金首：【杀人推土机】&【加农水母】",
+		"desc": "【荒野起点】小怪：辐射软泥怪/腐骨尸怪/辐射甲虫/沙漠机枪塔 | 精英：杀戮重坦 | 赏金首：【杀人推土机】&【加农水母】",
 		"unlock_ach_id": "",
 		"unlock_ach_desc": "初始已解锁"
 	},
@@ -1165,14 +1192,14 @@ const MAPS: Array = [
 		"hp_mult": 1.65,
 		"dmg_mult": 1.35,
 		"chip_mult": 1.40,
-		"enemy_pool": ["bionic_hound", "gas_walker", "acid_snail", "mortar_crab"],
+		"enemy_pool": ["sand_worm_larva", "sand_worm_larva", "rad_beetle", "mutant_sludge", "bionic_hound", "acid_snail"],
 		"elite_pool": ["elite_flame_juggernaut", "auto_tank"],
 		"regional_boss_id": "boss_sand_shark",
 		"final_boss_id": "boss_skunks",
 		"bg_color": Color(0.28, 0.19, 0.11),
 		"grid_color": Color(0.35, 0.24, 0.14),
 		"border_color": Color(0.95, 0.65, 0.20),
-		"desc": "【炽热沙海】小怪：猎犬/毒气桶/酸蜗牛/迫击炮蟹 | 精英：喷火装甲车 | 赏金首：【深沙巨鲛】&【狂飙斯卡普】",
+		"desc": "【炽热沙海】小怪：沙虫幼体/辐射重甲虫/辐射软泥/狂暴猎犬/酸液蜗牛 | 精英：喷火装甲车 | 赏金首：【深沙巨鲛】&【狂飙斯卡普】",
 		"unlock_ach_id": "ach_clear_map_1",
 		"unlock_ach_desc": "达成成就【荒原先遣队】通关第1章解锁"
 	},
@@ -1184,14 +1211,14 @@ const MAPS: Array = [
 		"hp_mult": 2.50,
 		"dmg_mult": 1.75,
 		"chip_mult": 1.85,
-		"enemy_pool": ["sand_turret", "sniper_cannon", "shield_mecha", "repair_bot"],
+		"enemy_pool": ["flesh_juggernaut", "corpse_crawler", "rad_beetle", "bio_ant", "shield_mecha", "sniper_cannon"],
 		"elite_pool": ["elite_missile_mammoth", "auto_tank"],
 		"regional_boss_id": "boss_centipede",
 		"final_boss_id": "boss_gomez",
 		"bg_color": Color(0.15, 0.16, 0.18),
 		"grid_color": Color(0.21, 0.22, 0.25),
 		"border_color": Color(0.50, 0.75, 0.92),
-		"desc": "【工业废墟】小怪：远程狙击炮/护盾卫士/战地维修蜂 | 精英：导弹巨兽 | 赏金首：【百足列车】&【劫掠王巴洛克】",
+		"desc": "【工业废墟】小怪：变异肉山/腐骨尸怪/辐射重甲虫/护盾卫士/狙击自行炮 | 精英：导弹巨兽 | 赏金首：【百足列车】&【劫掠王巴洛克】",
 		"unlock_ach_id": "ach_clear_map_2",
 		"unlock_ach_desc": "达成成就【沙海征服者】通关第2章解锁"
 	},
@@ -1203,14 +1230,14 @@ const MAPS: Array = [
 		"hp_mult": 3.80,
 		"dmg_mult": 2.25,
 		"chip_mult": 2.40,
-		"enemy_pool": ["gas_walker", "acid_snail", "mortar_crab", "emp_spider", "repair_bot"],
+		"enemy_pool": ["flesh_juggernaut", "mutant_sludge", "sand_worm_larva", "gas_walker", "mortar_crab", "emp_spider"],
 		"elite_pool": ["elite_missile_mammoth", "elite_flame_juggernaut"],
 		"regional_boss_id": "boss_chimera",
 		"final_boss_id": "boss_desert_boat",
 		"bg_color": Color(0.10, 0.18, 0.15),
 		"grid_color": Color(0.15, 0.25, 0.21),
 		"border_color": Color(0.35, 0.92, 0.55),
-		"desc": "【生化海床】小怪：迫击炮蟹/磁暴蛛/毒气桶/维修蜂 | 精英：导弹巨兽 | 赏金首：【奇美拉】&【沙漠之舟】",
+		"desc": "【生化海床】小怪：变异肉山/沙虫幼体/辐射软泥/迫击炮蟹/磁暴蛛 | 精英：炼狱喷火/导弹巨兽 | 赏金首：【奇美拉】&【沙漠之舟】",
 		"unlock_ach_id": "ach_clear_map_3",
 		"unlock_ach_desc": "达成成就【百足终结者】通关第3章解锁"
 	},
@@ -1222,14 +1249,14 @@ const MAPS: Array = [
 		"hp_mult": 5.50,
 		"dmg_mult": 3.00,
 		"chip_mult": 3.50,
-		"enemy_pool": ["sniper_cannon", "mortar_crab", "shield_mecha", "repair_bot", "emp_spider"],
+		"enemy_pool": ["flesh_juggernaut", "flesh_juggernaut", "rad_beetle", "corpse_crawler", "sniper_cannon", "emp_spider", "repair_bot"],
 		"elite_pool": ["elite_cyber_executioner", "elite_missile_mammoth", "elite_flame_juggernaut"],
 		"regional_boss_id": "boss_bighemoth",
 		"final_boss_id": "boss_noah",
 		"bg_color": Color(0.13, 0.09, 0.18),
 		"grid_color": Color(0.20, 0.13, 0.28),
 		"border_color": Color(0.95, 0.25, 0.60),
-		"desc": "【终局要塞】全特种军团混编 | 精英：天穹量子处决者 | 赏金首：【重装帕鲁】&【终焉主脑·原核矩阵】",
+		"desc": "【终局要塞】变异肉山/重甲巨甲虫/腐骨尸怪/特种军团 | 精英：天穹量子处决者 | 赏金首：【重装帕鲁】&【终焉主脑·原核矩阵】",
 		"unlock_ach_id": "ach_clear_map_4",
 		"unlock_ach_desc": "达成成就【海床突围】通关第4章解锁"
 	}

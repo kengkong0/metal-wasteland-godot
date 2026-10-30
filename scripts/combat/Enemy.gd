@@ -737,7 +737,19 @@ func _draw_regular(c: Color) -> void:
 	if shield > 0.0:
 		draw_arc(Vector2.ZERO, radius + 5.0, 0.0, TAU, 24, Color(0.35, 0.85, 1.0, 0.85), 3.0)
 
-	draw_set_transform(Vector2.ZERO, facing_angle, Vector2.ONE)
+	# 生化变异怪呼吸与蠕动形变
+	var is_bio_mutant: bool = enemy_id in ["mutant_sludge", "rad_beetle", "sand_worm_larva", "flesh_juggernaut", "corpse_crawler"]
+	var bio_scale := Vector2.ONE
+	if is_bio_mutant:
+		var squish_t: float = float(Time.get_ticks_msec()) * 0.005 + float(get_instance_id() % 73)
+		bio_scale = Vector2(1.0 + sin(squish_t) * 0.08, 1.0 - sin(squish_t) * 0.08)
+		# 辐射与生化光晕
+		if enemy_id == "mutant_sludge":
+			draw_circle(Vector2.ZERO, radius * 1.25, Color(0.35, 0.95, 0.15, 0.18 + sin(squish_t) * 0.08))
+		elif enemy_id == "flesh_juggernaut":
+			draw_circle(Vector2.ZERO, radius * 1.20, Color(0.85, 0.15, 0.35, 0.18 + sin(squish_t) * 0.08))
+
+	draw_set_transform(Vector2.ZERO, facing_angle, bio_scale)
 	var en_tex: Texture2D = GameData.get_enemy_tex(enemy_id)
 	if en_tex != null:
 		var t_sz: Vector2 = en_tex.get_size()
@@ -749,6 +761,22 @@ func _draw_regular(c: Color) -> void:
 		if cement_slow_timer > 0.0 and hit_flash_timer <= 0.0:
 			mod_c = Color(0.65, 0.78, 1.0, 1.0)
 		draw_texture_rect(en_tex, Rect2(-dw * 0.5, -dh * 0.5, dw, dh), false, mod_c)
+	elif is_bio_mutant:
+		# 生化变异怪专属纯代码矢量外观
+		draw_circle(Vector2.ZERO, radius, c)
+		draw_circle(Vector2.ZERO, radius * 0.65, c.lightened(0.25))
+		if enemy_id == "mutant_sludge":
+			draw_circle(Vector2(-radius * 0.3, -radius * 0.2), radius * 0.25, Color(0.9, 1.0, 0.3))
+			draw_circle(Vector2(radius * 0.3, radius * 0.2), radius * 0.2, Color(0.9, 1.0, 0.3))
+		elif enemy_id == "rad_beetle":
+			draw_line(Vector2(0, -radius), Vector2(0, radius), c.darkened(0.5), 3.0)
+			draw_line(Vector2(radius * 0.5, -radius * 0.5), Vector2(radius * 0.9, -radius * 0.9), Color(0.8, 0.4, 0.2), 3.0)
+			draw_line(Vector2(radius * 0.5, radius * 0.5), Vector2(radius * 0.9, radius * 0.9), Color(0.8, 0.4, 0.2), 3.0)
+		elif enemy_id == "sand_worm_larva":
+			draw_arc(Vector2.ZERO, radius * 0.45, 0.0, TAU, 16, Color(0.8, 0.2, 0.2), 3.0)
+			draw_circle(Vector2.ZERO, radius * 0.2, Color.BLACK)
+		else:
+			draw_circle(Vector2.ZERO, radius * 0.4, Color(0.4, 0.1, 0.2))
 	elif is_elite or behavior in ["sniper", "mortar"]:
 		draw_rect(Rect2(-radius, -radius * 0.8, radius * 2.0, radius * 1.6), Color(0.22, 0.22, 0.22))
 		draw_rect(Rect2(-radius * 0.82, -radius * 0.65, radius * 1.64, radius * 1.3), c)
