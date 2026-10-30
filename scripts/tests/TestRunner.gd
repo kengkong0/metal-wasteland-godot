@@ -482,10 +482,24 @@ func test_suite_9_swarm_and_crush_mechanics() -> void:
 	var switch_ok: bool = GameState.switch_chassis("r_wolf")
 	assert_true(switch_ok and GameState.selected_chassis_id == "r_wolf", "车库底盘换乘至【绯红之狼】成功")
 
-	# 7. 验证战时升级EMP冲击波与绝境翻盘注能
+	# 7. 验证战时升级EMP冲击波与绝境翻盘注能（仅简单模式生效）
+	GameState.selected_difficulty_id = "easy"
 	bf_node.start_wave()
 	p_tank.current_sp = 20.0 # 濒死
+	var test_e1 := Node2D.new()
+	test_e1.set_script(load("res://scripts/combat/Enemy.gd"))
+	bf_node.enemies_container.add_child(test_e1)
+	test_e1.setup_regular(GameData.ENEMIES["bio_ant"], 1, p_tank.global_position + Vector2(50, 0))
+	test_e1.stun_timer = 0.0
+
 	bf_node._close_or_next_level_modal()
-	assert_true(p_tank.invuln_timer >= 0.0, "战时升级关闭触发战地EMP震荡波")
+	assert_true(test_e1.stun_timer >= 1.0, "【简单模式】战时升级关闭触发战地EMP震荡波并眩晕敌怪 (眩晕时长 %.1fs)" % test_e1.stun_timer)
+
+	# 验证在困难模式(normal)下不触发EMP冲击波与绝境翻盘注能
+	GameState.selected_difficulty_id = "normal"
+	test_e1.global_position = p_tank.global_position + Vector2(50, 0)
+	test_e1.stun_timer = 0.0
+	bf_node._close_or_next_level_modal()
+	assert_true(test_e1.stun_timer == 0.0, "【困难/地狱模式】战时升级严格禁用EMP震荡波，保持硬核废土战斗节奏")
 
 	bf_node.queue_free()

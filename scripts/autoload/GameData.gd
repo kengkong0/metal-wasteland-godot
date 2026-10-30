@@ -1104,7 +1104,7 @@ const DIFFICULTIES: Dictionary = {
 		"bonus_start_gold": 20,
 		"show_hints": true,
 		"color": Color(0.38, 0.95, 0.50),
-		"desc": "标准废土兽潮强度，开局额外+20G；【显示流派与超武配件提示】，通关解锁下一张地图！"
+		"desc": "标准兽潮强度，开局+20G；【战地应急EMP震荡波与绝境翻盘注能仅此模式生效】；显示流派超武提示，通关解锁下一地图！"
 	},
 	"normal": {
 		"id": "normal",
@@ -1118,7 +1118,7 @@ const DIFFICULTIES: Dictionary = {
 		"bonus_start_gold": 0,
 		"show_hints": true,
 		"color": Color(1.00, 0.85, 0.25),
-		"desc": "敌军生命×1.45、伤害×1.35、密度+22%！【显示流派与超武配件提示】，结算原核晶片 ×1.40！"
+		"desc": "敌军生命×1.45、伤害×1.35、密度+22%！【无EMP保护与翻倍抢修，纯靠操作走位】，显示合成提示，晶片结算×1.40！"
 	},
 	"hell": {
 		"id": "hell",
@@ -1132,7 +1132,7 @@ const DIFFICULTIES: Dictionary = {
 		"bonus_start_gold": 0,
 		"show_hints": false,
 		"color": Color(1.00, 0.28, 0.25),
-		"desc": "敌军生命×2.35、伤害×1.90、密度+50%！【硬核盲配：隐藏所有流派与超武合成提示】，结算原核晶片 ×2.30！"
+		"desc": "敌军生命×2.35、伤害×1.90、密度+50%！【无EMP与翻倍抢修，隐藏全部合成提示】，极度硬核，晶片结算×2.30！"
 	}
 }
 

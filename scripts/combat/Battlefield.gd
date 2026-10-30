@@ -1131,8 +1131,8 @@ func _populate_battlefield_level_cards() -> void:
 		var sep := HSeparator.new()
 		cv.add_child(sep)
 
-		var is_emergency: bool = player_tank.is_human_mode or (player_tank.current_sp <= GameState.max_sp * 0.25)
-		var heal_label: String = "⚡【绝境逆转加成】紧急注入 +16% SP!" if is_emergency else "💚 战地应急抢修 +6% SP"
+		var is_emergency: bool = (GameState.selected_difficulty_id == "easy") and (player_tank.is_human_mode or (player_tank.current_sp <= GameState.max_sp * 0.25))
+		var heal_label: String = "⚡【简单模式·绝境逆转】紧急注入 +16% SP!" if is_emergency else "💚 战地应急抢修 +6% SP"
 		var desc_lbl := _make_outlined_label("✅ %s\n%s\n%s" % [desc_txt, stat_compare, heal_label], 14, Color(1.0, 0.88, 0.25) if is_emergency else Color(0.92, 0.96, 0.92))
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1283,8 +1283,8 @@ func _close_or_next_level_modal() -> void:
 		wave_active = true
 		_update_hud()
 
-		# 战地应急 EMP 动能冲击波：震退战车周围敌怪并眩晕1秒，给玩家留出绝地反杀身位！
-		if is_instance_valid(player_tank) and is_instance_valid(fx_layer):
+		# 战地应急 EMP 动能冲击波：仅简单模式(easy)生效，震退战车周围敌怪并眩晕1秒，给新手玩家留出绝地反杀身位！
+		if GameState.selected_difficulty_id == "easy" and is_instance_valid(player_tank) and is_instance_valid(fx_layer):
 			var p_pos: Vector2 = player_tank.get_active_position()
 			fx_layer.spawn_explosion(p_pos, 160.0, Color(0.35, 0.90, 1.0))
 			trigger_screen_shake(7.0, 0.22)
