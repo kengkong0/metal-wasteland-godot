@@ -69,26 +69,26 @@ func _draw() -> void:
 	var s: float = 1.0 + sin(pulse_time) * 0.12
 	match drop_type:
 		"scrap":
-			draw_circle(Vector2.ZERO, 6.0 * s, Color(0.55, 0.78, 0.98))
-			draw_circle(Vector2.ZERO, 3.0 * s, Color(0.9, 0.98, 1.0))
+			draw_circle(Vector2.ZERO, 9.0 * s, Color(0.55, 0.78, 0.98))
+			draw_circle(Vector2.ZERO, 5.0 * s, Color(0.9, 0.98, 1.0))
 		"gold":
-			draw_circle(Vector2.ZERO, 7.0 * s, Color(0.98, 0.80, 0.15))
-			draw_arc(Vector2.ZERO, 7.0 * s, 0.0, TAU, 16, Color(0.55, 0.35, 0.05), 1.5)
+			draw_circle(Vector2.ZERO, 10.0 * s, Color(0.98, 0.80, 0.15))
+			draw_arc(Vector2.ZERO, 10.0 * s, 0.0, TAU, 16, Color(0.55, 0.35, 0.05), 2.0)
 		"sp_kit":
-			draw_rect(Rect2(-8, -8, 16, 16), Color(0.2, 0.78, 0.35))
-			draw_rect(Rect2(-2, -6, 4, 12), Color.WHITE)
-			draw_rect(Rect2(-6, -2, 12, 4), Color.WHITE)
+			draw_rect(Rect2(-11, -11, 22, 22), Color(0.2, 0.78, 0.35))
+			draw_rect(Rect2(-3, -8, 6, 16), Color.WHITE)
+			draw_rect(Rect2(-8, -3, 16, 6), Color.WHITE)
 		"bio_meat":
-			draw_circle(Vector2.ZERO, 8.0 * s, Color(0.92, 0.32, 0.52))
-			draw_circle(Vector2(2, -2), 3.0, Color.WHITE)
+			draw_circle(Vector2.ZERO, 12.0 * s, Color(0.92, 0.32, 0.52))
+			draw_circle(Vector2(3, -3), 4.5, Color.WHITE)
 		"buried_chest":
 			# 金属探测器雷达圈 + 黄金军火宝箱贴图
-			var radar_r: float = 20.0 + fmod(pulse_time * 6.0, 18.0)
-			draw_arc(Vector2.ZERO, radar_r, 0.0, TAU, 24, Color(1.0, 0.85, 0.2, 0.55), 1.8)
+			var radar_r: float = 26.0 + fmod(pulse_time * 6.0, 24.0)
+			draw_arc(Vector2.ZERO, radar_r, 0.0, TAU, 24, Color(1.0, 0.85, 0.2, 0.55), 2.2)
 			var chest_tex: Texture2D = GameData.get_tex("drop_chest")
 			if chest_tex != null:
-				draw_texture_rect(chest_tex, Rect2(-18 * s, -14 * s, 36 * s, 28 * s), false)
+				draw_texture_rect(chest_tex, Rect2(-24 * s, -18 * s, 48 * s, 36 * s), false)
 			else:
-				draw_rect(Rect2(-12, -9, 24, 18), Color(0.75, 0.52, 0.15))
-				draw_rect(Rect2(-12, -9, 24, 18), Color(1.0, 0.90, 0.35), false, 2.0)
-				draw_rect(Rect2(-3, -3, 6, 6), Color(1.0, 0.95, 0.5))
+				draw_rect(Rect2(-16, -12, 32, 24), Color(0.75, 0.52, 0.15))
+				draw_rect(Rect2(-16, -12, 32, 24), Color(1.0, 0.90, 0.35), false, 2.5)
+				draw_rect(Rect2(-4, -4, 8, 8), Color(1.0, 0.95, 0.5))

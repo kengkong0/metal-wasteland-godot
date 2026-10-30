@@ -648,88 +648,88 @@ const ENEMIES: Dictionary = {
 	# --- 1. 近战突袭类 ---
 	"bio_ant": {
 		"id": "bio_ant", "name": "钳甲机械蚁", "hp": 46.0, "speed": 145.0, "dmg": 18.0,
-		"armor": 6.0, "radius": 13.0, "xp": 1, "gold": 1, "color": Color(0.75, 0.35, 0.20),
+		"armor": 6.0, "radius": 19.0, "xp": 1, "gold": 1, "color": Color(0.75, 0.35, 0.20),
 		"behavior": "melee"
 	},
 	"bionic_hound": {
 		"id": "bionic_hound", "name": "狂暴生化猎犬", "hp": 65.0, "speed": 175.0, "dmg": 24.0,
-		"armor": 10.0, "radius": 14.0, "xp": 1, "gold": 1, "color": Color(0.88, 0.45, 0.25),
+		"armor": 10.0, "radius": 21.0, "xp": 1, "gold": 1, "color": Color(0.88, 0.45, 0.25),
 		"behavior": "leap_hound"
 	},
 
 	# --- 2. 自爆特攻类 ---
 	"kamikaze_wheel": {
 		"id": "kamikaze_wheel", "name": "自爆滚雷车", "hp": 38.0, "speed": 225.0, "dmg": 46.0,
-		"armor": 0.0, "radius": 13.0, "xp": 1, "gold": 2, "color": Color(0.95, 0.25, 0.15),
+		"armor": 0.0, "radius": 19.0, "xp": 1, "gold": 2, "color": Color(0.95, 0.25, 0.15),
 		"behavior": "suicide"
 	},
 	"gas_walker": {
 		"id": "gas_walker", "name": "毒气自爆铁桶", "hp": 96.0, "speed": 122.0, "dmg": 38.0,
-		"armor": 20.0, "radius": 16.0, "xp": 2, "gold": 2, "color": Color(0.55, 0.88, 0.22),
+		"armor": 20.0, "radius": 23.0, "xp": 2, "gold": 2, "color": Color(0.55, 0.88, 0.22),
 		"behavior": "toxic_suicide"
 	},
 
 	# --- 3. 远程弹幕、狙击与曲射迫击炮类 ---
 	"sand_turret": {
 		"id": "sand_turret", "name": "沙漠机枪炮台", "hp": 82.0, "speed": 52.0, "dmg": 20.0,
-		"armor": 16.0, "radius": 17.0, "xp": 1, "gold": 2, "color": Color(0.65, 0.60, 0.38),
+		"armor": 16.0, "radius": 24.0, "xp": 1, "gold": 2, "color": Color(0.65, 0.60, 0.38),
 		"behavior": "shooter"
 	},
 	"acid_snail": {
 		"id": "acid_snail", "name": "辐射酸液蜗牛", "hp": 135.0, "speed": 85.0, "dmg": 26.0,
-		"armor": 35.0, "radius": 19.0, "xp": 2, "gold": 2, "color": Color(0.42, 0.82, 0.28),
+		"armor": 35.0, "radius": 26.0, "xp": 2, "gold": 2, "color": Color(0.42, 0.82, 0.28),
 		"behavior": "shooter"
 	},
 	"sniper_cannon": {
 		"id": "sniper_cannon", "name": "远程狙击自行炮", "hp": 105.0, "speed": 70.0, "dmg": 48.0,
-		"armor": 14.0, "radius": 18.0, "xp": 2, "gold": 3, "color": Color(0.92, 0.28, 0.42),
+		"armor": 14.0, "radius": 25.0, "xp": 2, "gold": 3, "color": Color(0.92, 0.28, 0.42),
 		"behavior": "sniper"
 	},
 	"mortar_crab": {
 		"id": "mortar_crab", "name": "迫击炮机械蟹", "hp": 155.0, "speed": 76.0, "dmg": 44.0,
-		"armor": 40.0, "radius": 20.0, "xp": 2, "gold": 3, "color": Color(0.85, 0.52, 0.20),
+		"armor": 40.0, "radius": 27.0, "xp": 2, "gold": 3, "color": Color(0.85, 0.52, 0.20),
 		"behavior": "mortar"
 	},
 
 	# --- 4. 护盾防御、战地医疗与EMP控制类 ---
 	"shield_mecha": {
 		"id": "shield_mecha", "name": "电磁护盾卫士", "hp": 145.0, "shield": 120.0, "speed": 100.0, "dmg": 26.0,
-		"armor": 32.0, "radius": 20.0, "xp": 2, "gold": 3, "color": Color(0.28, 0.68, 0.95),
+		"armor": 32.0, "radius": 27.0, "xp": 2, "gold": 3, "color": Color(0.28, 0.68, 0.95),
 		"behavior": "shield_guard"
 	},
 	"repair_bot": {
 		"id": "repair_bot", "name": "诺亚战地维修蜂", "hp": 90.0, "speed": 155.0, "dmg": 15.0,
-		"armor": 12.0, "radius": 15.0, "xp": 2, "gold": 3, "color": Color(0.30, 0.95, 0.55),
+		"armor": 12.0, "radius": 21.0, "xp": 2, "gold": 3, "color": Color(0.30, 0.95, 0.55),
 		"behavior": "healer"
 	},
 	"emp_spider": {
 		"id": "emp_spider", "name": "磁暴捕猎蛛", "hp": 112.0, "speed": 132.0, "dmg": 24.0,
-		"armor": 18.0, "radius": 16.0, "xp": 2, "gold": 3, "color": Color(0.55, 0.42, 0.95),
+		"armor": 18.0, "radius": 23.0, "xp": 2, "gold": 3, "color": Color(0.55, 0.42, 0.95),
 		"behavior": "emp_shooter"
 	},
 
 	# --- 5. 四大区域重装精英怪 (ELITE MINI-BOSSES) ---
 	"auto_tank": {
 		"id": "auto_tank", "name": "⚡【精英】自律杀戮重坦", "is_elite": true,
-		"hp": 520.0, "speed": 112.0, "dmg": 38.0, "armor": 48.0, "radius": 26.0,
+		"hp": 520.0, "speed": 112.0, "dmg": 38.0, "armor": 48.0, "radius": 36.0,
 		"xp": 5, "gold": 12, "color": Color(0.50, 0.58, 0.68),
 		"behavior": "elite_tank"
 	},
 	"elite_flame_juggernaut": {
 		"id": "elite_flame_juggernaut", "name": "⚡【精英】炼狱喷火装甲车", "is_elite": true,
-		"hp": 680.0, "speed": 150.0, "dmg": 44.0, "armor": 44.0, "radius": 27.0,
+		"hp": 680.0, "speed": 150.0, "dmg": 44.0, "armor": 44.0, "radius": 38.0,
 		"xp": 6, "gold": 14, "color": Color(0.95, 0.38, 0.15),
 		"behavior": "elite_flamer"
 	},
 	"elite_missile_mammoth": {
 		"id": "elite_missile_mammoth", "name": "⚡【精英】双联装导弹巨兽", "is_elite": true,
-		"hp": 860.0, "speed": 90.0, "dmg": 52.0, "armor": 58.0, "radius": 30.0,
+		"hp": 860.0, "speed": 90.0, "dmg": 52.0, "armor": 58.0, "radius": 42.0,
 		"xp": 7, "gold": 16, "color": Color(0.68, 0.55, 0.32),
 		"behavior": "elite_mortar"
 	},
 	"elite_cyber_executioner": {
 		"id": "elite_cyber_executioner", "name": "⚡【精英】诺亚量子处决者", "is_elite": true,
-		"hp": 1080.0, "speed": 142.0, "dmg": 58.0, "armor": 54.0, "radius": 28.0,
+		"hp": 1080.0, "speed": 142.0, "dmg": 58.0, "armor": 54.0, "radius": 40.0,
 		"xp": 8, "gold": 20, "color": Color(0.85, 0.25, 0.85),
 		"behavior": "elite_blinker"
 	}
@@ -743,7 +743,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_killdozer",
 		"name": "杀人推土机 (Killdozer)",
 		"stars": 1, "min_wave": 2, "bounty": 180,
-		"hp": 1650.0, "armor": 42.0, "speed": 160.0, "dmg": 48.0, "radius": 38.0,
+		"hp": 1650.0, "armor": 42.0, "speed": 160.0, "dmg": 48.0, "radius": 52.0,
 		"color": Color(0.92, 0.72, 0.12),
 		"mechanic": "charge_plow",
 		"reward_weapon": "cannon_195mm",
@@ -753,7 +753,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_jelly",
 		"name": "加农水母 (Cannon Jelly)",
 		"stars": 1, "min_wave": 3, "bounty": 240,
-		"hp": 2100.0, "armor": 24.0, "speed": 115.0, "dmg": 38.0, "radius": 40.0,
+		"hp": 2100.0, "armor": 24.0, "speed": 115.0, "dmg": 38.0, "radius": 54.0,
 		"color": Color(0.28, 0.78, 0.95),
 		"mechanic": "bullet_ring",
 		"reward_weapon": "sub_tesla",
@@ -763,7 +763,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_sand_shark",
 		"name": "沙漠之鲛·沙鲨 (Sand Shark)",
 		"stars": 2, "min_wave": 5, "bounty": 380,
-		"hp": 3600.0, "armor": 48.0, "speed": 200.0, "dmg": 58.0, "radius": 44.0,
+		"hp": 3600.0, "armor": 48.0, "speed": 200.0, "dmg": 58.0, "radius": 60.0,
 		"color": Color(0.32, 0.48, 0.72),
 		"mechanic": "burrow_shark",
 		"reward_weapon": "boss_shark_torpedo",
@@ -773,7 +773,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_skunks",
 		"name": "臭鼬军团长·斯卡鲁 (Skunks)",
 		"stars": 2, "min_wave": 7, "bounty": 480,
-		"hp": 4600.0, "armor": 38.0, "speed": 245.0, "dmg": 54.0, "radius": 36.0,
+		"hp": 4600.0, "armor": 38.0, "speed": 245.0, "dmg": 54.0, "radius": 50.0,
 		"color": Color(0.88, 0.35, 0.18),
 		"mechanic": "flame_circle",
 		"reward_weapon": "se_tornado",
@@ -783,7 +783,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_centipede",
 		"name": "百足装甲列车 (Centipede Express)",
 		"stars": 3, "min_wave": 9, "bounty": 680,
-		"hp": 6000.0, "armor": 58.0, "speed": 170.0, "dmg": 65.0, "radius": 42.0,
+		"hp": 6000.0, "armor": 58.0, "speed": 170.0, "dmg": 65.0, "radius": 58.0,
 		"color": Color(0.55, 0.65, 0.35),
 		"mechanic": "multi_segment",
 		"reward_weapon": "cannon_205_peony",
@@ -793,7 +793,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_gomez",
 		"name": "掠夺王·戈麦斯 (Gomez)",
 		"stars": 3, "min_wave": 11, "bounty": 850,
-		"hp": 7600.0, "armor": 68.0, "speed": 155.0, "dmg": 78.0, "radius": 44.0,
+		"hp": 7600.0, "armor": 68.0, "speed": 155.0, "dmg": 78.0, "radius": 58.0,
 		"color": Color(0.45, 0.32, 0.25),
 		"mechanic": "emp_stealth",
 		"reward_weapon": "cannon_cosmic_laser",
@@ -803,7 +803,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_chimera",
 		"name": "生化融合兽·奇美拉 (Bio-Chimera)",
 		"stars": 4, "min_wave": 13, "bounty": 1100,
-		"hp": 10200.0, "armor": 54.0, "speed": 135.0, "dmg": 86.0, "radius": 48.0,
+		"hp": 10200.0, "armor": 54.0, "speed": 135.0, "dmg": 86.0, "radius": 64.0,
 		"color": Color(0.62, 0.22, 0.68),
 		"mechanic": "regen_acid",
 		"reward_weapon": "cannon_220_gaia",
@@ -813,7 +813,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_desert_boat",
 		"name": "陆地战舰·沙漠之舟 (Desert Boat)",
 		"stars": 4, "min_wave": 15, "bounty": 1500,
-		"hp": 14000.0, "armor": 82.0, "speed": 100.0, "dmg": 96.0, "radius": 64.0,
+		"hp": 14000.0, "armor": 82.0, "speed": 100.0, "dmg": 96.0, "radius": 86.0,
 		"color": Color(0.65, 0.58, 0.45),
 		"mechanic": "battleship_parts",
 		"reward_weapon": "boss_yamato_cannon",
@@ -823,7 +823,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_bighemoth",
 		"name": "钢铁暴君·重装帕鲁 (Bighemoth)",
 		"stars": 5, "min_wave": 17, "bounty": 2200,
-		"hp": 18500.0, "armor": 92.0, "speed": 125.0, "dmg": 108.0, "radius": 58.0,
+		"hp": 18500.0, "armor": 92.0, "speed": 125.0, "dmg": 108.0, "radius": 76.0,
 		"color": Color(0.78, 0.25, 0.25),
 		"mechanic": "magnet_laser",
 		"reward_weapon": "cannon_220_gaia",
@@ -833,7 +833,7 @@ const WANTED_BOSSES: Array = [
 		"id": "boss_noah",
 		"name": "灭世主脑·诺亚核心 (Master NOAH)",
 		"stars": 5, "min_wave": 20, "bounty": 5000,
-		"hp": 26000.0, "armor": 100.0, "speed": 120.0, "dmg": 120.0, "radius": 68.0,
+		"hp": 26000.0, "armor": 100.0, "speed": 120.0, "dmg": 120.0, "radius": 88.0,
 		"color": Color(0.95, 0.20, 0.45),
 		"mechanic": "noah_core",
 		"reward_weapon": "boss_yamato_cannon",

@@ -12,7 +12,7 @@ const DropItemScript = preload("res://scripts/combat/DropItem.gd")
 const FloatingTextScript = preload("res://scripts/combat/FloatingText.gd")
 const PlayerTankScript = preload("res://scripts/combat/PlayerTank.gd")
 
-var arena_rect: Rect2 = Rect2(80, 76, 1280, 694)
+var arena_rect: Rect2 = Rect2(0, 0, 2800, 1900)
 var wave_active: bool = false
 var wave_time_left: float = 35.0
 var wave_elapsed: float = 0.0
@@ -21,16 +21,19 @@ var elite_spawn_timer: float = 11.0
 var boss_spawned_this_wave: bool = false
 var red_wolf_rescued_this_run: bool = false
 
-# --- 场景容器节点 ---
+# --- 场景容器节点与跟随镜头 ---
 var enemies_container: Node2D
 var projectiles_container: Node2D
 var drops_container: Node2D
 var fx_layer: Node2D
 var player_tank: Node2D
+var battle_cam: Camera2D
+var minimap_ctrl: Control
 
 # --- 视觉装饰与震屏 ---
 var tread_marks: Array = []
 var craters: Array = []
+var landmarks: Array = []
 var spawn_telegraphs: Array = []
 var shake_timer: float = 0.0
 var shake_intensity: float = 0.0
@@ -104,24 +107,45 @@ func _ready() -> void:
 	fx_layer.set_script(FloatingTextScript)
 	add_child(fx_layer)
 
+	battle_cam = Camera2D.new()
+	battle_cam.name = "BattleCamera"
+	battle_cam.zoom = Vector2(1.38, 1.38)
+	battle_cam.position_smoothing_enabled = true
+	battle_cam.position_smoothing_speed = 9.5
+	battle_cam.limit_left = -220
+	battle_cam.limit_top = -180
+	battle_cam.limit_right = 3020
+	battle_cam.limit_bottom = 2080
+	add_child(battle_cam)
+
 	_build_hud()
 	_update_arena_bounds()
 	_generate_wasteland_craters()
 
 func _update_arena_bounds() -> void:
-	var vp_size: Vector2 = get_viewport_rect().size
-	if vp_size.x > 400.0 and vp_size.y > 300.0:
-		var aw: float = clampf(vp_size.x - 120.0, 1100.0, 1560.0)
-		var ah: float = clampf(vp_size.y - 110.0, 620.0, 880.0)
-		arena_rect = Rect2((vp_size.x - aw) * 0.5, (vp_size.y - ah) * 0.5 + 18.0, aw, ah)
+	# 巨型卷轴废土竞技场 (2800 x 1900，约 4 倍单屏面积，需驾驶战车驰骋探索)
+	arena_rect = Rect2(0.0, 0.0, 2800.0, 1900.0)
+	if is_instance_valid(battle_cam):
+		battle_cam.limit_left = int(arena_rect.position.x - 220.0)
+		battle_cam.limit_top = int(arena_rect.position.y - 180.0)
+		battle_cam.limit_right = int(arena_rect.end.x + 220.0)
+		battle_cam.limit_bottom = int(arena_rect.end.y + 180.0)
 
 func _generate_wasteland_craters() -> void:
 	craters.clear()
-	for i in range(20):
+	landmarks.clear()
+	for i in range(52):
 		craters.append({
-			"pos": Vector2(randf_range(arena_rect.position.x + 40, arena_rect.end.x - 40), randf_range(arena_rect.position.y + 40, arena_rect.end.y - 40)),
-			"radius": randf_range(16.0, 44.0),
+			"pos": Vector2(randf_range(arena_rect.position.x + 80, arena_rect.end.x - 80), randf_range(arena_rect.position.y + 80, arena_rect.end.y - 80)),
+			"radius": randf_range(22.0, 64.0),
 			"shade": randf_range(0.08, 0.16)
+		})
+	for i in range(36):
+		landmarks.append({
+			"pos": Vector2(randf_range(arena_rect.position.x + 110, arena_rect.end.x - 110), randf_range(arena_rect.position.y + 110, arena_rect.end.y - 110)),
+			"size": Vector2(randf_range(28.0, 56.0), randf_range(18.0, 38.0)),
+			"angle": randf_range(0.0, TAU),
+			"kind": i % 3
 		})
 
 func _build_hud() -> void:
@@ -313,6 +337,37 @@ func _build_hud() -> void:
 	)
 	bottom_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	bot_margin.add_child(bottom_lbl)
+
+	# =========================================================================
+	# 4.5 右下角：废土战术雷达小地图 (Minimap Radar)
+	# =========================================================================
+	var br_margin := MarginContainer.new()
+	br_margin.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	br_margin.add_theme_constant_override("margin_right", 18)
+	br_margin.add_theme_constant_override("margin_bottom", 34)
+	br_margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud_root.add_child(br_margin)
+
+	var radar_panel := PanelContainer.new()
+	radar_panel.custom_minimum_size = Vector2(174, 122)
+	var rp_style := StyleBoxFlat.new()
+	rp_style.bg_color = Color(0.08, 0.09, 0.12, 0.88)
+	rp_style.border_color = Color(0.35, 0.75, 0.55, 0.90)
+	rp_style.set_border_width_all(2)
+	rp_style.set_corner_radius_all(6)
+	rp_style.content_margin_left = 4
+	rp_style.content_margin_right = 4
+	rp_style.content_margin_top = 4
+	rp_style.content_margin_bottom = 4
+	radar_panel.add_theme_stylebox_override("panel", rp_style)
+	radar_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	br_margin.add_child(radar_panel)
+
+	minimap_ctrl = Control.new()
+	minimap_ctrl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	minimap_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	radar_panel.add_child(minimap_ctrl)
+	minimap_ctrl.draw.connect(_draw_minimap)
 
 	# =========================================================================
 	# 5. 战场即时升级弹窗 (土豆兄弟风格：居中立式卡片三选一)
@@ -537,6 +592,10 @@ func start_wave() -> void:
 	fx_layer.mortar_strikes.clear()
 
 	player_tank.init_for_wave(arena_rect.get_center())
+	if is_instance_valid(battle_cam):
+		battle_cam.enabled = true
+		battle_cam.global_position = player_tank.get_active_position()
+		battle_cam.make_current()
 
 	var chest_cnt: int = 0
 	if int(GameState.bonus_stats.get("guaranteed_chest", 0)) > 0 and GameState.current_wave >= 3:
@@ -544,7 +603,7 @@ func start_wave() -> void:
 	if GameState.is_feature_unlocked("detector_unlock") and GameState.current_wave >= 4 and randf() < 0.40:
 		chest_cnt += 1
 	for i in range(chest_cnt):
-		var cpos := Vector2(randf_range(arena_rect.position.x + 120, arena_rect.end.x - 120), randf_range(arena_rect.position.y + 120, arena_rect.end.y - 120))
+		var cpos := Vector2(randf_range(arena_rect.position.x + 180, arena_rect.end.x - 180), randf_range(arena_rect.position.y + 180, arena_rect.end.y - 180))
 		spawn_drop("buried_chest", 1, cpos)
 
 func _clear_entities() -> void:
@@ -564,16 +623,20 @@ func _process(delta: float) -> void:
 	wave_elapsed += delta
 	wave_time_left -= delta
 
+	# 平滑镜头跟随战车 & 震屏处理
+	if is_instance_valid(player_tank) and is_instance_valid(battle_cam):
+		battle_cam.global_position = player_tank.get_active_position()
+		if shake_timer > 0.0:
+			shake_timer -= delta
+			battle_cam.offset = Vector2(randf_range(-shake_intensity, shake_intensity), randf_range(-shake_intensity, shake_intensity))
+		else:
+			battle_cam.offset = Vector2.ZERO
+	position = Vector2.ZERO
+
 	if banner_timer > 0.0:
 		banner_timer -= delta
 		if banner_timer <= 0.0:
 			banner_wanted.visible = false
-
-	if shake_timer > 0.0:
-		shake_timer -= delta
-		position = Vector2(randf_range(-shake_intensity, shake_intensity), randf_range(-shake_intensity, shake_intensity))
-	else:
-		position = Vector2.ZERO
 
 	# 1. 赏金首乱入
 	var boss_enter_delay: float = 2.5 if GameState.current_wave >= GameState.max_waves else 5.5
@@ -633,14 +696,13 @@ func _get_alive_boss() -> Node2D:
 func _queue_enemy_spawn() -> void:
 	if enemies_container.get_child_count() >= 80:
 		return
-	var pos := Vector2(
-		randf_range(arena_rect.position.x + 45, arena_rect.end.x - 45),
-		randf_range(arena_rect.position.y + 45, arena_rect.end.y - 45)
-	)
-	if pos.distance_to(player_tank.get_active_position()) < 220.0:
-		pos = arena_rect.get_center() + (pos - arena_rect.get_center()).normalized() * 340.0
-		pos.x = clampf(pos.x, arena_rect.position.x + 45, arena_rect.end.x - 45)
-		pos.y = clampf(pos.y, arena_rect.position.y + 45, arena_rect.end.y - 45)
+	var p_pos: Vector2 = player_tank.get_active_position()
+	# 在视野外围 520~750px 环状生成，向玩家合围冲击
+	var ang: float = randf() * TAU
+	var dist: float = randf_range(520.0, 750.0)
+	var pos: Vector2 = p_pos + Vector2.from_angle(ang) * dist
+	pos.x = clampf(pos.x, arena_rect.position.x + 45.0, arena_rect.end.x - 45.0)
+	pos.y = clampf(pos.y, arena_rect.position.y + 45.0, arena_rect.end.y - 45.0)
 
 	var m_pool: Array = GameState.get_current_map_def().get("enemy_pool", ["bio_ant", "kamikaze_wheel"])
 	var chosen: String = String(m_pool[randi() % m_pool.size()])
@@ -657,14 +719,11 @@ func _spawn_map_elite() -> void:
 	if e_pool.is_empty():
 		return
 	var chosen_id: String = String(e_pool[randi() % e_pool.size()])
-	var pos := Vector2(
-		randf_range(arena_rect.position.x + 80, arena_rect.end.x - 80),
-		randf_range(arena_rect.position.y + 80, arena_rect.end.y - 80)
-	)
-	if pos.distance_to(player_tank.get_active_position()) < 260.0:
-		pos = arena_rect.get_center() + (pos - arena_rect.get_center()).normalized() * 360.0
-		pos.x = clampf(pos.x, arena_rect.position.x + 60, arena_rect.end.x - 60)
-		pos.y = clampf(pos.y, arena_rect.position.y + 60, arena_rect.end.y - 60)
+	var p_pos: Vector2 = player_tank.get_active_position()
+	var ang: float = randf() * TAU
+	var pos: Vector2 = p_pos + Vector2.from_angle(ang) * randf_range(560.0, 750.0)
+	pos.x = clampf(pos.x, arena_rect.position.x + 60.0, arena_rect.end.x - 60.0)
+	pos.y = clampf(pos.y, arena_rect.position.y + 60.0, arena_rect.end.y - 60.0)
 	_do_spawn_enemy(chosen_id, pos)
 	fx_layer.spawn_text(pos + Vector2(0, -24), "⚡ 重装精英：%s !" % GameData.ENEMIES[chosen_id]["name"], Color(1.0, 0.85, 0.20), 1.25)
 
@@ -677,7 +736,11 @@ func _spawn_wanted_boss(boss_id: String) -> void:
 	if boss_def.is_empty():
 		return
 
-	var spawn_pos := Vector2(arena_rect.end.x - 120.0, arena_rect.get_center().y)
+	var p_pos: Vector2 = player_tank.get_active_position()
+	var ang: float = randf() * TAU
+	var spawn_pos: Vector2 = p_pos + Vector2.from_angle(ang) * 620.0
+	spawn_pos.x = clampf(spawn_pos.x, arena_rect.position.x + 120.0, arena_rect.end.x - 120.0)
+	spawn_pos.y = clampf(spawn_pos.y, arena_rect.position.y + 120.0, arena_rect.end.y - 120.0)
 	var boss := Node2D.new()
 	boss.set_script(EnemyScript)
 	enemies_container.add_child(boss)
@@ -1109,21 +1172,78 @@ func _update_hud() -> void:
 	else:
 		boss_hp_panel.visible = false
 
+	# 7. 更新战术雷达小地图
+	if is_instance_valid(minimap_ctrl):
+		minimap_ctrl.queue_redraw()
+
+func _draw_minimap() -> void:
+	if not is_instance_valid(minimap_ctrl):
+		return
+	var m_sz: Vector2 = minimap_ctrl.size
+	if m_sz.x < 10.0 or m_sz.y < 10.0 or arena_rect.size.x < 10.0:
+		return
+	var sx: float = m_sz.x / arena_rect.size.x
+	var sy: float = m_sz.y / arena_rect.size.y
+
+	# 1. 雷达底色与坐标网格
+	minimap_ctrl.draw_rect(Rect2(Vector2.ZERO, m_sz), Color(0.08, 0.12, 0.10, 0.85))
+	minimap_ctrl.draw_line(Vector2(m_sz.x * 0.5, 0), Vector2(m_sz.x * 0.5, m_sz.y), Color(0.20, 0.45, 0.32, 0.4), 1.0)
+	minimap_ctrl.draw_line(Vector2(0, m_sz.y * 0.5), Vector2(m_sz.x, m_sz.y * 0.5), Color(0.20, 0.45, 0.32, 0.4), 1.0)
+
+	# 2. 当前屏幕视野框 (Camera Viewport Frame)
+	if is_instance_valid(battle_cam):
+		var cam_p: Vector2 = battle_cam.global_position
+		var vp_sz: Vector2 = get_viewport_rect().size / battle_cam.zoom
+		var cam_min: Vector2 = cam_p - vp_sz * 0.5
+		var mini_vp := Rect2(cam_min.x * sx, cam_min.y * sy, vp_sz.x * sx, vp_sz.y * sy)
+		minimap_ctrl.draw_rect(mini_vp, Color(0.4, 0.85, 1.0, 0.40), false, 1.0)
+
+	# 3. 埋藏宝箱 (黄金菱形亮点)
+	for d in drops_container.get_children():
+		if is_instance_valid(d) and d.get("drop_type") == "buried_chest":
+			var d_pos: Vector2 = Vector2(d.global_position.x * sx, d.global_position.y * sy)
+			minimap_ctrl.draw_circle(d_pos, 3.5, Color(1.0, 0.85, 0.25))
+
+	# 4. 机械兽群、精英与赏金首
+	for e in enemies_container.get_children():
+		if is_instance_valid(e):
+			var e_pos: Vector2 = Vector2(e.global_position.x * sx, e.global_position.y * sy)
+			if e.is_boss:
+				var pulse: float = 1.0 + 0.3 * sin(wave_elapsed * 8.0)
+				minimap_ctrl.draw_circle(e_pos, 5.5 * pulse, Color(1.0, 0.20, 0.20))
+				minimap_ctrl.draw_arc(e_pos, 7.5 * pulse, 0.0, TAU, 12, Color(1.0, 0.90, 0.25), 1.5)
+			elif e.is_elite:
+				minimap_ctrl.draw_circle(e_pos, 3.5, Color(1.0, 0.65, 0.20))
+			else:
+				minimap_ctrl.draw_circle(e_pos, 1.8, Color(0.92, 0.28, 0.28, 0.85))
+
+	# 5. 玩家战车 (醒目绿色光标与行进方向指示)
+	if is_instance_valid(player_tank):
+		var p_pos: Vector2 = player_tank.get_active_position()
+		var pm := Vector2(p_pos.x * sx, p_pos.y * sy)
+		minimap_ctrl.draw_circle(pm, 3.5, Color(0.25, 1.0, 0.45))
+		var fwd := Vector2.from_angle(player_tank.chassis_angle) * 7.0
+		minimap_ctrl.draw_line(pm, pm + fwd, Color(0.25, 1.0, 0.45), 1.5)
+
+	# 6. 雷达标签与外框
+	minimap_ctrl.draw_rect(Rect2(Vector2.ZERO, m_sz), Color(0.35, 0.75, 0.55), false, 1.5)
+	minimap_ctrl.draw_string(ThemeDB.fallback_font, Vector2(5, 12), "📡 战术雷达", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.55, 0.95, 0.75, 0.90))
+
 func _draw() -> void:
 	var m_def: Dictionary = GameState.get_current_map_def()
 	var bg_col: Color = m_def.get("bg_color", Color(0.22, 0.18, 0.13))
 	var grid_col: Color = m_def.get("grid_color", Color(0.26, 0.21, 0.16))
 	var border_col: Color = m_def.get("border_color", Color(0.85, 0.52, 0.18))
 
-	# 1. 填充全屏远景暗底色 + 绘制战场贴图与网格
-	var vp_rect: Rect2 = get_viewport_rect()
-	draw_rect(vp_rect, bg_col.darkened(0.48))
+	# 1. 外部深渊边界底色与竞技场大地
+	draw_rect(arena_rect.grow(700.0), bg_col.darkened(0.55))
 	draw_rect(arena_rect, bg_col)
 
+	# 2. 地形贴图高精平铺 (4 列 x 3 行，使贴图在 2800x1900 上保持清晰度与真实比例)
 	var ter_tex: Texture2D = GameData.get_terrain_tex(String(m_def.get("id", "map_1")))
 	if ter_tex != null:
-		var cols: int = 3
-		var rows: int = 2
+		var cols: int = 4
+		var rows: int = 3
 		var cell_w: float = arena_rect.size.x / float(cols)
 		var cell_h: float = arena_rect.size.y / float(rows)
 		for rx in range(cols):
@@ -1134,34 +1254,55 @@ func _draw() -> void:
 					cell_w,
 					cell_h
 				)
-				draw_texture_rect(ter_tex, tile_rect, false, Color(0.82, 0.82, 0.82, 0.86))
+				draw_texture_rect(ter_tex, tile_rect, false, Color(0.85, 0.85, 0.85, 0.88))
 
-	var grid_line_col: Color = Color(grid_col.r, grid_col.g, grid_col.b, 0.32)
-	for x in range(int(arena_rect.position.x), int(arena_rect.end.x), 80):
+	# 3. 网格标线
+	var grid_line_col: Color = Color(grid_col.r, grid_col.g, grid_col.b, 0.25)
+	for x in range(int(arena_rect.position.x), int(arena_rect.end.x), 100):
 		draw_line(Vector2(x, arena_rect.position.y), Vector2(x, arena_rect.end.y), grid_line_col, 1.0)
-	for y in range(int(arena_rect.position.y), int(arena_rect.end.y), 80):
+	for y in range(int(arena_rect.position.y), int(arena_rect.end.y), 100):
 		draw_line(Vector2(arena_rect.position.x, y), Vector2(arena_rect.end.x, y), grid_line_col, 1.0)
 
-	# 2. 弹坑
+	# 4. 弹坑与沙地凹坑
 	for c in craters:
-		draw_circle(c["pos"], c["radius"], bg_col.darkened(0.35))
-		draw_arc(c["pos"], c["radius"], 0.0, TAU, 20, grid_col.lightened(0.15), 2.0)
+		draw_circle(c["pos"], c["radius"], bg_col.darkened(0.38))
+		draw_arc(c["pos"], c["radius"], 0.0, TAU, 24, grid_col.lightened(0.18), 2.5)
 
-	# 3. 战车履带车辙印
+	# 5. 废土战地废墟与残骸地貌 (Landmarks)
+	for lm in landmarks:
+		draw_set_transform(lm["pos"], lm["angle"], Vector2.ONE)
+		var sz: Vector2 = lm["size"]
+		match lm["kind"]:
+			0: # 废弃混凝土防御桩
+				draw_rect(Rect2(-sz * 0.5, sz), Color(0.18, 0.17, 0.16))
+				draw_rect(Rect2(-sz * 0.5, sz), Color(0.42, 0.40, 0.38), false, 2.0)
+				draw_line(Vector2(-sz.x * 0.4, 0), Vector2(sz.x * 0.4, 0), Color(0.65, 0.45, 0.25), 2.0)
+			1: # 锈蚀重坦残骸
+				draw_rect(Rect2(-sz * 0.5, sz), Color(0.28, 0.20, 0.14))
+				draw_rect(Rect2(-sz.x * 0.3, -sz.y * 0.3, sz.x * 0.6, sz.y * 0.6), Color(0.38, 0.26, 0.18))
+				draw_line(Vector2(0, 0), Vector2(sz.x * 0.6, 0), Color(0.15, 0.15, 0.15), 3.0)
+			2: # 废弃金属油桶堆
+				draw_circle(Vector2(-sz.x * 0.25, 0), sz.y * 0.35, Color(0.35, 0.22, 0.15))
+				draw_circle(Vector2(sz.x * 0.25, 0), sz.y * 0.35, Color(0.45, 0.28, 0.18))
+				draw_circle(Vector2(0, -sz.y * 0.25), sz.y * 0.32, Color(0.25, 0.18, 0.14))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+	# 6. 战车履带车辙印
 	for tm in tread_marks:
-		var dir: Vector2 = Vector2.from_angle(tm["angle"]).orthogonal() * 18.0
-		draw_circle(tm["pos"] + dir, 4.0, Color(0.08, 0.07, 0.06, 0.45))
-		draw_circle(tm["pos"] - dir, 4.0, Color(0.08, 0.07, 0.06, 0.45))
+		var dir: Vector2 = Vector2.from_angle(tm["angle"]).orthogonal() * 26.0
+		draw_circle(tm["pos"] + dir, 5.0, Color(0.08, 0.07, 0.06, 0.45))
+		draw_circle(tm["pos"] - dir, 5.0, Color(0.08, 0.07, 0.06, 0.45))
 
-	# 4. 刷怪红叉预警 (土豆兄弟式地面红叉)
+	# 7. 刷怪红叉预警 (土豆兄弟式地面红叉)
 	for st in spawn_telegraphs:
 		var p: Vector2 = st["pos"]
-		draw_arc(p, 18.0, 0.0, TAU, 16, Color(1.0, 0.2, 0.2, 0.75), 2.0)
-		draw_line(p - Vector2(9, 9), p + Vector2(9, 9), Color(1.0, 0.2, 0.2, 0.85), 3.0)
-		draw_line(p - Vector2(9, -9), p + Vector2(9, -9), Color(1.0, 0.2, 0.2, 0.85), 3.0)
+		draw_arc(p, 24.0, 0.0, TAU, 20, Color(1.0, 0.2, 0.2, 0.75), 2.5)
+		draw_line(p - Vector2(12, 12), p + Vector2(12, 12), Color(1.0, 0.2, 0.2, 0.85), 3.5)
+		draw_line(p - Vector2(12, -12), p + Vector2(12, -12), Color(1.0, 0.2, 0.2, 0.85), 3.5)
 
-	# 5. 警戒边界框
-	draw_rect(arena_rect, border_col, false, 4.0)
+	# 8. 废土警戒高压电网边界
+	draw_rect(arena_rect, border_col, false, 6.0)
+	draw_rect(arena_rect.grow(4.0), Color(1.0, 0.85, 0.25, 0.45), false, 1.5)
 
 # --- 土豆兄弟风格 UI 构建辅助函数 ---
 func _create_brotato_bar(min_sz: Vector2, fill_col: Color, font_sz: int) -> Dictionary:

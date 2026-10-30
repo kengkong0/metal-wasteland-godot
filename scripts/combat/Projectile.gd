@@ -32,26 +32,26 @@ func setup_player_proj(pos: Vector2, dir: Vector2, p_spd: float, p_dmg: float, p
 	pierce_left = p_pierce
 
 	if is_main_cannon:
-		radius = 8.0
+		radius = 12.0
 		color = Color(1.0, 0.55, 0.15) if not is_crit else Color(1.0, 0.25, 0.25)
 	elif effect_type == "homing":
-		radius = 6.0
+		radius = 8.5
 		color = Color(0.35, 0.85, 1.0)
 	elif effect_type == "acid":
-		radius = 6.0
+		radius = 8.5
 		color = Color(0.45, 1.0, 0.25)
 	elif effect_type == "burn":
-		radius = 7.0
+		radius = 10.0
 		color = Color(1.0, 0.42, 0.10)
 		lifetime = 0.65
 	elif effect_type == "electric":
-		radius = 6.0
+		radius = 8.5
 		color = Color(0.4, 0.85, 1.0)
 	else:
-		radius = 4.5
+		radius = 6.5
 		color = Color(1.0, 0.92, 0.45)
 
-func setup_enemy_proj(pos: Vector2, dir: Vector2, p_spd: float, p_dmg: float, p_col: Color = Color(1.0, 0.25, 0.35), p_rad: float = 6.5, p_eff: String = "") -> void:
+func setup_enemy_proj(pos: Vector2, dir: Vector2, p_spd: float, p_dmg: float, p_col: Color = Color(1.0, 0.25, 0.35), p_rad: float = 8.5, p_eff: String = "") -> void:
 	is_enemy = true
 	global_position = pos
 	speed = p_spd
@@ -170,14 +170,14 @@ func _on_hit_enemy(bf: Node, target: Node2D) -> void:
 func _draw() -> void:
 	if is_enemy:
 		draw_circle(Vector2.ZERO, radius, color)
-		draw_circle(Vector2.ZERO, radius * 0.5, Color.WHITE)
+		draw_circle(Vector2.ZERO, radius * 0.55, Color.WHITE)
 	elif effect_type == "homing":
 		# 导弹弹体 + 尾焰
-		draw_rect(Rect2(-8, -3, 16, 6), Color(0.88, 0.92, 0.96))
-		draw_circle(Vector2(6, 0), 3.5, Color(1.0, 0.3, 0.2))
-		draw_circle(Vector2(-10, 0), 4.5, Color(1.0, 0.65, 0.15, 0.85))
+		draw_rect(Rect2(-12, -4.5, 24, 9), Color(0.88, 0.92, 0.96))
+		draw_circle(Vector2(10, 0), 4.5, Color(1.0, 0.3, 0.2))
+		draw_circle(Vector2(-14, 0), 6.0, Color(1.0, 0.65, 0.15, 0.85))
 	elif is_main_cannon:
-		draw_rect(Rect2(-10, -4.5, 20, 9), color)
-		draw_circle(Vector2(8, 0), 4.5, Color(1.0, 0.95, 0.75))
+		draw_rect(Rect2(-14, -6.0, 28, 12), color)
+		draw_circle(Vector2(11, 0), 6.0, Color(1.0, 0.95, 0.75))
 	else:
 		draw_circle(Vector2.ZERO, radius, color)

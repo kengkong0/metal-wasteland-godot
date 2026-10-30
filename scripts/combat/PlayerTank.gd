@@ -232,7 +232,7 @@ func _process_human_mode(delta: float, bf: Node, move_input: Vector2) -> void:
 
 	# 战地抢修战车判定 (靠近战车残骸读条修复)
 	if not is_voluntary_unboard:
-		if human_pos.distance_to(global_position) <= 82.0:
+		if human_pos.distance_to(global_position) <= 98.0:
 			repair_progress += delta
 			if repair_progress >= repair_time_needed:
 				repair_progress = 0.0
@@ -439,7 +439,7 @@ func _trigger_all_out_attack(bf: Node) -> void:
 
 func _process_spike_balls(bf: Node, w_id: String, rarity: int, is_evo_star: bool = false) -> void:
 	var ball_cnt: int = 4 if is_evo_star else 2
-	var radius_dist: float = 82.0 if is_evo_star else 68.0
+	var radius_dist: float = 102.0 if is_evo_star else 86.0
 	var ball_dmg: float = GameState.get_weapon_effective_damage(w_id, rarity) + GameState.used_weight * 3.5
 	if is_evo_star:
 		ball_dmg += GameState.max_sp * 0.20
@@ -569,46 +569,46 @@ func _draw() -> void:
 
 	# 2. 绘制战车大破抢修圈与条形抢修进度条
 	if is_human_mode and not is_voluntary_unboard:
-		draw_arc(Vector2.ZERO, 80.0, 0.0, TAU, 32, Color(0.25, 1.0, 0.45, 0.75), 2.5)
+		draw_arc(Vector2.ZERO, 95.0, 0.0, TAU, 36, Color(0.25, 1.0, 0.45, 0.75), 3.0)
 		var rep_ratio: float = clampf(repair_progress / repair_time_needed, 0.0, 1.0)
-		draw_arc(Vector2.ZERO, 80.0, -PI * 0.5, -PI * 0.5 + TAU * rep_ratio, 32, Color(1.0, 0.92, 0.25), 6.0)
-		var rbw: float = 64.0
-		draw_rect(Rect2(-rbw * 0.5, -48.0, rbw, 8.0), Color(0.08, 0.08, 0.08, 0.90))
-		draw_rect(Rect2(-rbw * 0.5, -48.0, rbw * rep_ratio, 8.0), Color(0.25, 1.0, 0.45))
-		draw_rect(Rect2(-rbw * 0.5, -48.0, rbw, 8.0), Color(1.0, 0.92, 0.25), false, 1.5)
-		draw_string_outline(ThemeDB.fallback_font, Vector2(-36, -53), "🔧 抢修 %d%%" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 3, Color.BLACK)
-		draw_string(ThemeDB.fallback_font, Vector2(-36, -53), "🔧 抢修 %d%%" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.95, 0.35))
+		draw_arc(Vector2.ZERO, 95.0, -PI * 0.5, -PI * 0.5 + TAU * rep_ratio, 36, Color(1.0, 0.92, 0.25), 7.0)
+		var rbw: float = 82.0
+		draw_rect(Rect2(-rbw * 0.5, -62.0, rbw, 10.0), Color(0.08, 0.08, 0.08, 0.92))
+		draw_rect(Rect2(-rbw * 0.5, -62.0, rbw * rep_ratio, 10.0), Color(0.25, 1.0, 0.45))
+		draw_rect(Rect2(-rbw * 0.5, -62.0, rbw, 10.0), Color(1.0, 0.92, 0.25), false, 1.5)
+		draw_string_outline(ThemeDB.fallback_font, Vector2(-42, -68), "🔧 抢修 %d%%" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 3, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, Vector2(-42, -68), "🔧 抢修 %d%%" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.95, 0.35))
 
-	# 3. 绘制战车底盘与履带 (优先使用高精度 2D 废土战车俯视贴图)
+	# 3. 绘制战车底盘与履带 (优先使用高精度 2D 废土战车俯视贴图，放大尺寸使车身饱满清晰)
 	draw_set_transform(Vector2.ZERO, chassis_angle, Vector2.ONE)
 	var ch_tex: Texture2D = GameData.get_chassis_tex(GameState.selected_chassis_id)
 	if ch_tex != null:
 		var tex_sz: Vector2 = ch_tex.get_size()
-		var disp_w: float = 84.0 if GameState.selected_chassis_id in ["mammoth", "bus", "tyrannos"] else 74.0
+		var disp_w: float = 118.0 if GameState.selected_chassis_id in ["mammoth", "bus", "tyrannos"] else 104.0
 		var disp_h: float = disp_w * (tex_sz.y / maxf(1.0, tex_sz.x))
 		var mod_col: Color = Color(0.42, 0.42, 0.42, 0.92) if (is_human_mode and not is_voluntary_unboard) else Color.WHITE
 		draw_texture_rect(ch_tex, Rect2(-disp_w * 0.5, -disp_h * 0.5, disp_w, disp_h), false, mod_col)
 	else:
-		draw_rect(Rect2(-28, -24, 56, 10), Color(0.22, 0.20, 0.18))
-		draw_rect(Rect2(-28, 14, 56, 10), Color(0.22, 0.20, 0.18))
-		draw_rect(Rect2(-24, -18, 48, 36), hull_col)
-		draw_rect(Rect2(-24, -18, 48, 36), hull_col.lightened(0.35), false, 2.0)
+		draw_rect(Rect2(-38, -32, 76, 14), Color(0.22, 0.20, 0.18))
+		draw_rect(Rect2(-38, 18, 76, 14), Color(0.22, 0.20, 0.18))
+		draw_rect(Rect2(-32, -24, 64, 48), hull_col)
+		draw_rect(Rect2(-32, -24, 64, 48), hull_col.lightened(0.35), false, 2.5)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# 4. 绘制独立旋转主炮瞄准指示与副炮塔环
 	draw_set_transform(Vector2.ZERO, turret_angle, Vector2.ONE)
 	var main_cnt: int = GameState.count_equipped_slot_type("MAIN")
 	if main_cnt > 0 and not is_human_mode:
-		draw_line(Vector2(20, 0), Vector2(58, 0), Color(1.0, 0.85, 0.25, 0.45), 2.0)
-		draw_circle(Vector2(58, 0), 3.0, Color(1.0, 0.35, 0.20, 0.70))
+		draw_line(Vector2(28, 0), Vector2(78, 0), Color(1.0, 0.85, 0.25, 0.55), 2.5)
+		draw_circle(Vector2(78, 0), 4.0, Color(1.0, 0.35, 0.20, 0.80))
 	if ch_tex == null:
-		draw_circle(Vector2.ZERO, 13.0, hull_col.darkened(0.22))
-		draw_circle(Vector2.ZERO, 13.0, Color(0.95, 0.80, 0.35), false, 2.0)
+		draw_circle(Vector2.ZERO, 18.0, hull_col.darkened(0.22))
+		draw_circle(Vector2.ZERO, 18.0, Color(0.95, 0.80, 0.35), false, 2.0)
 		if main_cnt == 1:
-			draw_rect(Rect2(4, -4, 28, 8), Color(0.85, 0.85, 0.88))
+			draw_rect(Rect2(6, -5, 38, 10), Color(0.85, 0.85, 0.88))
 		elif main_cnt >= 2:
-			draw_rect(Rect2(4, -8, 28, 5), Color(0.85, 0.85, 0.88))
-			draw_rect(Rect2(4, 3, 28, 5), Color(0.85, 0.85, 0.88))
+			draw_rect(Rect2(6, -10, 38, 6), Color(0.85, 0.85, 0.88))
+			draw_rect(Rect2(6, 4, 38, 6), Color(0.85, 0.85, 0.88))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# 5. 绘制旋转刺球撞角、神盾粉碎星超武与浮游无人机
@@ -616,49 +616,49 @@ func _draw() -> void:
 		var eff: String = GameData.WEAPONS[w["id"]].get("effect", "")
 		if eff == "orbit_ball":
 			for b_idx in range(2):
-				var b_rel: Vector2 = Vector2.from_angle(orbit_angle + b_idx * PI) * 68.0
-				draw_line(Vector2.ZERO, b_rel, Color(0.6, 0.6, 0.6, 0.6), 2.0)
-				draw_circle(b_rel, 14.0, Color(0.35, 0.38, 0.42))
-				draw_arc(b_rel, 14.0, 0.0, TAU, 8, Color(0.95, 0.85, 0.35), 2.5)
+				var b_rel: Vector2 = Vector2.from_angle(orbit_angle + b_idx * PI) * 86.0
+				draw_line(Vector2.ZERO, b_rel, Color(0.6, 0.6, 0.6, 0.6), 2.5)
+				draw_circle(b_rel, 18.0, Color(0.35, 0.38, 0.42))
+				draw_arc(b_rel, 18.0, 0.0, TAU, 8, Color(0.95, 0.85, 0.35), 2.5)
 		elif eff == "evo_orbit_star":
 			for b_idx in range(4):
-				var b_rel: Vector2 = Vector2.from_angle(orbit_angle * 1.45 + b_idx * (TAU / 4.0)) * 82.0
+				var b_rel: Vector2 = Vector2.from_angle(orbit_angle * 1.45 + b_idx * (TAU / 4.0)) * 102.0
 				draw_line(Vector2.ZERO, b_rel, Color(0.35, 0.95, 1.0, 0.75), 3.0)
-				draw_circle(b_rel, 17.0, Color(1.0, 0.85, 0.20))
-				draw_arc(b_rel, 19.0, 0.0, TAU, 6, Color(0.35, 0.98, 1.0), 3.0)
+				draw_circle(b_rel, 21.0, Color(1.0, 0.85, 0.20))
+				draw_arc(b_rel, 23.0, 0.0, TAU, 6, Color(0.35, 0.98, 1.0), 3.0)
 		elif eff == "repair_drone":
-			var d_rel: Vector2 = Vector2.from_angle(orbit_angle * 1.4) * 52.0
-			draw_circle(d_rel, 8.0, Color(0.3, 0.95, 0.85))
-			draw_circle(d_rel, 4.0, Color(0.3, 0.95, 0.85))
+			var d_rel: Vector2 = Vector2.from_angle(orbit_angle * 1.4) * 66.0
+			draw_circle(d_rel, 10.0, Color(0.3, 0.95, 0.85))
+			draw_circle(d_rel, 5.0, Color.WHITE)
 
 	# 6. 土豆兄弟风格：战车头顶实时 SP 血条 + 全弹发射充能进度条
 	if not is_human_mode:
-		var sp_w: float = 58.0
-		var sp_h: float = 7.0
-		var sp_y: float = -42.0
+		var sp_w: float = 76.0
+		var sp_h: float = 9.0
+		var sp_y: float = -54.0
 		var sp_ratio: float = clampf(current_sp / maxf(1.0, GameState.max_sp), 0.0, 1.0)
-		draw_rect(Rect2(-sp_w * 0.5 - 1.0, sp_y - 1.0, sp_w + 2.0, sp_h + 2.0), Color(0.05, 0.05, 0.05, 0.92))
+		draw_rect(Rect2(-sp_w * 0.5 - 1.5, sp_y - 1.5, sp_w + 3.0, sp_h + 3.0), Color(0.05, 0.05, 0.05, 0.94))
 		var sp_col: Color = Color(0.22, 0.92, 0.42) if sp_ratio > 0.35 else Color(1.0, 0.32, 0.22)
 		draw_rect(Rect2(-sp_w * 0.5, sp_y, sp_w * sp_ratio, sp_h), sp_col)
 		var cd_ratio: float = clampf(1.0 - (all_out_timer / maxf(0.1, all_out_max_cd)), 0.0, 1.0)
-		draw_rect(Rect2(-sp_w * 0.5, sp_y + sp_h + 2.0, sp_w, 3.0), Color(0.1, 0.1, 0.1, 0.85))
-		draw_rect(Rect2(-sp_w * 0.5, sp_y + sp_h + 2.0, sp_w * cd_ratio, 3.0), Color(1.0, 0.85, 0.20) if cd_ratio >= 1.0 else Color(0.35, 0.75, 1.0))
+		draw_rect(Rect2(-sp_w * 0.5, sp_y + sp_h + 2.5, sp_w, 4.0), Color(0.1, 0.1, 0.1, 0.88))
+		draw_rect(Rect2(-sp_w * 0.5, sp_y + sp_h + 2.5, sp_w * cd_ratio, 4.0), Color(1.0, 0.85, 0.20) if cd_ratio >= 1.0 else Color(0.35, 0.75, 1.0))
 
 	# 7. 如果处于步兵模式，绘制猎人步兵俯视贴图与头顶鲜红生命条
 	if is_human_mode:
 		var rel_h: Vector2 = human_pos - global_position
 		var h_commando_tex: Texture2D = GameData.get_tex("human_commando")
-		draw_arc(rel_h, 16.0, 0.0, TAU, 20, Color(0.35, 1.0, 0.55, 0.85), 2.0)
+		draw_arc(rel_h, 22.0, 0.0, TAU, 24, Color(0.35, 1.0, 0.55, 0.85), 2.5)
 		if h_commando_tex != null:
 			draw_set_transform(rel_h, turret_angle, Vector2.ONE)
-			draw_texture_rect(h_commando_tex, Rect2(-22, -16, 44, 32), false)
+			draw_texture_rect(h_commando_tex, Rect2(-31, -23, 62, 46), false)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		else:
-			draw_circle(rel_h, 12.0, Color(0.95, 0.75, 0.25))
-			draw_circle(rel_h, 8.0, Color(0.92, 0.28, 0.22))
-		var h_bw: float = 46.0
-		var h_bh: float = 6.0
-		var h_by: float = rel_h.y - 26.0
+			draw_circle(rel_h, 16.0, Color(0.95, 0.75, 0.25))
+			draw_circle(rel_h, 11.0, Color(0.92, 0.28, 0.22))
+		var h_bw: float = 58.0
+		var h_bh: float = 7.5
+		var h_by: float = rel_h.y - 34.0
 		var h_ratio: float = clampf(human_hp / maxf(1.0, GameState.max_human_hp), 0.0, 1.0)
-		draw_rect(Rect2(rel_h.x - h_bw * 0.5 - 1.0, h_by - 1.0, h_bw + 2.0, h_bh + 2.0), Color(0.05, 0.05, 0.05, 0.92))
+		draw_rect(Rect2(rel_h.x - h_bw * 0.5 - 1.5, h_by - 1.5, h_bw + 3.0, h_bh + 3.0), Color(0.05, 0.05, 0.05, 0.94))
 		draw_rect(Rect2(rel_h.x - h_bw * 0.5, h_by, h_bw * h_ratio, h_bh), Color(1.0, 0.28, 0.25))

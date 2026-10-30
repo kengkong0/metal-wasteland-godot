@@ -157,7 +157,7 @@ func _process(delta: float) -> void:
 	global_position.y = clampf(global_position.y, bf.arena_rect.position.y + radius, bf.arena_rect.end.y - radius)
 
 	# 近身接触伤害与战车碾压判定
-	var hit_dist: float = radius + (16.0 if player.is_human_mode else 30.0)
+	var hit_dist: float = radius + (22.0 if player.is_human_mode else 40.0)
 	if global_position.distance_to(target_pos) <= hit_dist:
 		player.on_enemy_collision(self, delta)
 
@@ -591,42 +591,42 @@ func _draw() -> void:
 
 	# 绘制敌人血条、护盾条与护甲状态
 	if hp < max_hp or shield > 0.0 or is_boss or is_elite:
-		var bw: float = maxf(36.0, radius * 2.0)
-		var bh: float = 8.0 if is_boss else (6.5 if is_elite else 5.0)
-		var by: float = -radius - 15.0
-		draw_rect(Rect2(-bw * 0.5 - 1.0, by - 1.0, bw + 2.0, bh + 2.0), Color(0.05, 0.05, 0.05, 0.92))
+		var bw: float = maxf(46.0, radius * 2.15)
+		var bh: float = 10.0 if is_boss else (7.5 if is_elite else 6.0)
+		var by: float = -radius - 18.0
+		draw_rect(Rect2(-bw * 0.5 - 1.5, by - 1.5, bw + 3.0, bh + 3.0), Color(0.05, 0.05, 0.05, 0.94))
 		var ratio: float = clampf(hp / max_hp, 0.0, 1.0)
 		var bar_col: Color = Color(0.98, 0.22, 0.22) if is_boss else (Color(1.0, 0.78, 0.15) if is_elite else Color(0.95, 0.35, 0.20))
 		draw_rect(Rect2(-bw * 0.5, by, bw * ratio, bh), bar_col)
 		if shield > 0.0 and max_shield > 0.0:
 			var s_ratio: float = clampf(shield / max_shield, 0.0, 1.0)
-			draw_rect(Rect2(-bw * 0.5 - 1.0, by - 6.0, bw + 2.0, 5.0), Color(0.05, 0.05, 0.05, 0.90))
-			draw_rect(Rect2(-bw * 0.5, by - 5.0, bw * s_ratio, 3.5), Color(0.30, 0.85, 1.0))
+			draw_rect(Rect2(-bw * 0.5 - 1.0, by - 6.5, bw + 2.0, 5.5), Color(0.05, 0.05, 0.05, 0.90))
+			draw_rect(Rect2(-bw * 0.5, by - 5.5, bw * s_ratio, 4.0), Color(0.30, 0.85, 1.0))
 		if armor < 0.0:
-			draw_string_outline(ThemeDB.fallback_font, Vector2(-bw * 0.5, by - 7), "💧%d" % int(armor), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 2, Color.BLACK)
-			draw_string(ThemeDB.fallback_font, Vector2(-bw * 0.5, by - 7), "💧%d" % int(armor), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.5, 1.0, 0.3))
+			draw_string_outline(ThemeDB.fallback_font, Vector2(-bw * 0.5, by - 7), "💧%d" % int(armor), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 2, Color.BLACK)
+			draw_string(ThemeDB.fallback_font, Vector2(-bw * 0.5, by - 7), "💧%d" % int(armor), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.5, 1.0, 0.3))
 
 func _draw_regular(c: Color) -> void:
 	# 狙击手激光红线预警
 	if sniper_aim_timer > 0.0:
-		draw_line(Vector2.ZERO, sniper_aim_dir * 650.0, Color(1.0, 0.12, 0.25, 0.80), 2.5)
+		draw_line(Vector2.ZERO, sniper_aim_dir * 750.0, Color(1.0, 0.12, 0.25, 0.80), 3.0)
 
 	# 精英怪脚下金色脉冲光环与名称
 	if is_elite:
-		var r_aura: float = radius + 6.0 + sin(elite_pulse) * 2.5
-		draw_arc(Vector2.ZERO, r_aura, 0.0, TAU, 24, Color(1.0, 0.82, 0.20, 0.85), 2.5)
-		draw_string_outline(ThemeDB.fallback_font, Vector2(-42, -radius - 20), enemy_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 3, Color.BLACK)
-		draw_string(ThemeDB.fallback_font, Vector2(-42, -radius - 20), enemy_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1.0, 0.88, 0.25))
+		var r_aura: float = radius + 8.0 + sin(elite_pulse) * 3.0
+		draw_arc(Vector2.ZERO, r_aura, 0.0, TAU, 28, Color(1.0, 0.82, 0.20, 0.85), 3.0)
+		draw_string_outline(ThemeDB.fallback_font, Vector2(-50, -radius - 24), enemy_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 3, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, Vector2(-50, -radius - 24), enemy_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.88, 0.25))
 
 	# 电磁护盾外圈
 	if shield > 0.0:
-		draw_arc(Vector2.ZERO, radius + 4.0, 0.0, TAU, 20, Color(0.35, 0.85, 1.0, 0.85), 2.5)
+		draw_arc(Vector2.ZERO, radius + 5.0, 0.0, TAU, 24, Color(0.35, 0.85, 1.0, 0.85), 3.0)
 
 	draw_set_transform(Vector2.ZERO, facing_angle, Vector2.ONE)
 	var en_tex: Texture2D = GameData.get_enemy_tex(enemy_id)
 	if en_tex != null:
 		var t_sz: Vector2 = en_tex.get_size()
-		var max_d: float = radius * (2.65 if is_elite else 2.55)
+		var max_d: float = radius * (2.95 if is_elite else 2.85)
 		var m_max: float = maxf(1.0, maxf(t_sz.x, t_sz.y))
 		var dw: float = max_d * (t_sz.x / m_max)
 		var dh: float = max_d * (t_sz.y / m_max)
@@ -659,7 +659,7 @@ func _draw_boss(c: Color) -> void:
 		for i in range(train_segments_left):
 			var rel: Vector2 = segment_trail[i] - global_position
 			if boss_tex != null:
-				var seg_r: float = radius * 1.75
+				var seg_r: float = radius * 1.95
 				draw_texture_rect(boss_tex, Rect2(rel.x - seg_r * 0.5, rel.y - seg_r * 0.32, seg_r, seg_r * 0.64), false, Color(0.82, 0.82, 0.82))
 			else:
 				draw_circle(rel, radius * 0.78, c.darkened(0.18))
@@ -673,12 +673,12 @@ func _draw_boss(c: Color) -> void:
 
 	# 3. 推土机冲锋预警红线
 	if charge_windup > 0.0:
-		draw_line(Vector2.ZERO, charge_dir * 460.0, Color(1.0, 0.15, 0.15, 0.75), 4.0)
+		draw_line(Vector2.ZERO, charge_dir * 520.0, Color(1.0, 0.15, 0.15, 0.75), 4.5)
 
 	draw_set_transform(Vector2.ZERO, facing_angle, Vector2.ONE)
 	if boss_tex != null:
 		var b_sz: Vector2 = boss_tex.get_size()
-		var max_d: float = radius * (3.25 if enemy_id == "boss_desert_boat" else 2.75)
+		var max_d: float = radius * (3.45 if enemy_id == "boss_desert_boat" else 3.05)
 		var m_max: float = maxf(1.0, maxf(b_sz.x, b_sz.y))
 		var bw: float = max_d * (b_sz.x / m_max)
 		var bh: float = max_d * (b_sz.y / m_max)

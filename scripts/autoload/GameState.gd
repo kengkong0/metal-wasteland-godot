@@ -445,7 +445,7 @@ func recalculate_stats() -> void:
 
 	crit_chance = clampf(bonus_stats.get("crit_chance", 0.08) + float(cu.get("crit_bonus", 0.0)), 0.0, 0.90)
 	dodge_chance = clampf(bonus_stats.get("dodge", 0.05) + float(cu.get("dodge_bonus", 0.0)), 0.0, 0.75)
-	pickup_range = 140.0 * (1.0 + get_meta_level("meta_magnet_gold") * 0.20)
+	pickup_range = 185.0 * (1.0 + get_meta_level("meta_magnet_gold") * 0.20)
 
 	var h_mult: float = float(bonus_stats.get("human_hp_mult", 1.0))
 	if synergy_counts.get("lone_cub", 0) >= 2:
