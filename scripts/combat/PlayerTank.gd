@@ -238,7 +238,10 @@ func _process_human_mode(delta: float, bf: Node, move_input: Vector2) -> void:
 			if repair_progress >= repair_time_needed:
 				repair_progress = 0.0
 				is_human_mode = false
-				current_sp = GameState.max_sp * 0.42
+				var rep_sp: float = GameState.max_sp * 0.42
+				current_sp = rep_sp
+				GameState.report_metric("repair_success_count", 1, true)
+				GameState.report_metric("total_repaired_sp", rep_sp, true)
 				invuln_timer = 1.2
 				bf.fx_layer.spawn_text(global_position, "战车抢修完成! 重返战场!", Color(0.3, 1.0, 0.45), 1.45)
 				SoundManager.play("upgrade", 0.05, 2.0)
@@ -421,6 +424,7 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 
 func _trigger_all_out_attack(bf: Node) -> void:
 	all_out_timer = all_out_max_cd
+	GameState.report_metric("all_out_count", 1, true)
 	bf.fx_layer.spawn_text(global_position + Vector2(0, -28), "★ C装置：全弹发射 (ALL-OUT ATTACK)!! ★", Color(1.0, 0.85, 0.2), 1.45)
 	bf.trigger_screen_shake(9.0, 0.28)
 	SoundManager.play("se_missile", 0.04, 2.0)
@@ -499,6 +503,7 @@ func on_enemy_collision(enemy: Node2D, _delta: float) -> void:
 			crushed_enemy = true
 			enemy.take_damage(ram_dmg, true, "crush", global_position, false)
 			GameState.record_weapon_damage("chassis_ram", ram_dmg)
+			GameState.report_metric("crushed_enemies", 1, true)
 			bf.fx_layer.spawn_explosion(enemy.global_position, 55.0, Color(1.0, 0.45, 0.15))
 			bf.fx_layer.spawn_text(enemy.global_position, "💥 碾碎 CRUSH!", Color(1.0, 0.88, 0.2), 1.2)
 			SoundManager.play("explosion_small", 0.08, 1.4)
@@ -534,6 +539,7 @@ func take_damage(amount: float, _source_pos: Vector2 = Vector2.ZERO) -> void:
 
 	# 闪避判定 + 幻影全息诱饵脉冲
 	if randf() < GameState.dodge_chance:
+		GameState.report_metric("dodge_count", 1, true)
 		bf.fx_layer.spawn_text(get_active_position(), "闪避 MISS!", Color(0.45, 0.95, 1.0), 1.05)
 		if GameState.equipped_c_unit_id == "cu_mirage":
 			bf.fx_layer.spawn_explosion(get_active_position(), 95.0, Color(0.4, 0.85, 1.0))
@@ -549,6 +555,7 @@ func take_damage(amount: float, _source_pos: Vector2 = Vector2.ZERO) -> void:
 		if human_hp <= 0.0:
 			if GameState.field_defib_available:
 				GameState.field_defib_available = false
+				GameState.report_metric("defib_revive_count", 1, true)
 				is_human_mode = false
 				is_voluntary_unboard = false
 				global_position = human_pos
@@ -568,12 +575,14 @@ func take_damage(amount: float, _source_pos: Vector2 = Vector2.ZERO) -> void:
 			bf.on_player_total_defeat()
 	else:
 		current_sp -= amount
+		GameState.report_metric("tank_absorbed_dmg", amount, true)
 		bf.fx_layer.spawn_text(global_position, "-%d SP" % int(amount), Color(1.0, 0.65, 0.2), 1.05)
 		if current_sp <= 0.0:
 			current_sp = 0.0
 			_trigger_tank_wreck(bf)
 
 func _trigger_tank_wreck(bf: Node) -> void:
+	GameState.report_metric("tank_wreck_count", 1, true)
 	is_human_mode = true
 	is_voluntary_unboard = false
 	human_pos = global_position + Vector2(0, 28)
@@ -591,9 +600,36 @@ func _trigger_tank_wreck(bf: Node) -> void:
 			if not e.is_boss:
 				e.global_position += (e.global_position - global_position).normalized() * 65.0
 
+func get_effective_paint() -> Dictionary:
+	var ch_id: String = GameState.selected_chassis_id
+	var custom_paint: Dictionary = GameState.get_custom_chassis_paint(ch_id)
+	if not custom_paint.is_empty():
+		return custom_paint
+	var skin_id: String = GameState.get_chassis_skin(ch_id)
+	if skin_id != "default" and skin_id != "":
+		var skin_def: Dictionary = GameData.get_chassis_skin_def(ch_id, skin_id)
+		if not skin_def.is_empty():
+			return {
+				"body": skin_def.get("body", Color.WHITE),
+				"turret": skin_def.get("turret", Color.WHITE),
+				"treads": skin_def.get("treads", Color.WHITE),
+				"decal": skin_def.get("decal", Color.WHITE)
+			}
+	var ch: Dictionary = GameData.CHASSIS.get(ch_id, GameData.CHASSIS["buggy"])
+	var base_col: Color = ch.get("color", Color(0.8, 0.25, 0.2))
+	return {
+		"body": base_col,
+		"turret": base_col.darkened(0.2),
+		"treads": Color(0.22, 0.20, 0.18),
+		"decal": Color(0.95, 0.85, 0.35)
+	}
+
 func _draw() -> void:
-	var ch: Dictionary = GameData.CHASSIS.get(GameState.selected_chassis_id, GameData.CHASSIS["buggy"])
-	var hull_col: Color = ch.get("color", Color(0.8, 0.25, 0.2))
+	var paint: Dictionary = get_effective_paint()
+	var hull_col: Color = paint.get("body", Color(0.8, 0.25, 0.2))
+	var turret_col: Color = paint.get("turret", hull_col.darkened(0.2))
+	var treads_col: Color = paint.get("treads", Color(0.22, 0.20, 0.18))
+	var decal_col: Color = paint.get("decal", Color(0.95, 0.85, 0.35))
 	if is_human_mode and not is_voluntary_unboard:
 		hull_col = hull_col.darkened(0.55) # 大破残骸变暗冒烟
 
@@ -614,7 +650,7 @@ func _draw() -> void:
 		draw_string_outline(ThemeDB.fallback_font, Vector2(-42, -68), "🔧 抢修 %d%%" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 3, Color.BLACK)
 		draw_string(ThemeDB.fallback_font, Vector2(-42, -68), "🔧 抢修 %d%%" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.95, 0.35))
 
-	# 3. 绘制战车底盘与履带 (优先使用高精度 2D 废土战车俯视贴图，放大尺寸使车身饱满清晰)
+	# 3. 绘制战车底盘与履带 (优先使用高精度 2D 废土战车俯视贴图，支持自由涂装部位渲染)
 	draw_set_transform(Vector2.ZERO, chassis_angle, Vector2.ONE)
 	var ch_tex: Texture2D = GameData.get_chassis_tex(GameState.selected_chassis_id)
 	if ch_tex != null:
@@ -622,28 +658,34 @@ func _draw() -> void:
 		var disp_w: float = 118.0 if GameState.selected_chassis_id in ["mammoth", "bus", "tyrannos"] else 104.0
 		var disp_h: float = disp_w * (tex_sz.y / maxf(1.0, tex_sz.x))
 		var mod_col: Color = Color(0.42, 0.42, 0.42, 0.92) if (is_human_mode and not is_voluntary_unboard) else Color.WHITE
+		mod_col = mod_col * Color.WHITE.lerp(hull_col, 0.58)
 		draw_texture_rect(ch_tex, Rect2(-disp_w * 0.5, -disp_h * 0.5, disp_w, disp_h), false, mod_col)
+		# 履带边缘与战术荧光车标
+		draw_rect(Rect2(-disp_w * 0.46, -disp_h * 0.38, 4.0, disp_h * 0.76), treads_col)
+		draw_rect(Rect2(disp_w * 0.46 - 4.0, -disp_h * 0.38, 4.0, disp_h * 0.76), treads_col)
+		draw_circle(Vector2(0, -disp_h * 0.42), 4.5, decal_col)
+		draw_circle(Vector2(0, -disp_h * 0.42), 2.0, Color.WHITE)
 	else:
-		draw_rect(Rect2(-38, -32, 76, 14), Color(0.22, 0.20, 0.18))
-		draw_rect(Rect2(-38, 18, 76, 14), Color(0.22, 0.20, 0.18))
+		draw_rect(Rect2(-38, -32, 76, 14), treads_col)
+		draw_rect(Rect2(-38, 18, 76, 14), treads_col)
 		draw_rect(Rect2(-32, -24, 64, 48), hull_col)
-		draw_rect(Rect2(-32, -24, 64, 48), hull_col.lightened(0.35), false, 2.5)
+		draw_rect(Rect2(-32, -24, 64, 48), decal_col, false, 2.5)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# 4. 绘制独立旋转主炮瞄准指示与副炮塔环
 	draw_set_transform(Vector2.ZERO, turret_angle, Vector2.ONE)
 	var main_cnt: int = GameState.count_equipped_slot_type("MAIN")
 	if main_cnt > 0 and not is_human_mode:
-		draw_line(Vector2(28, 0), Vector2(78, 0), Color(1.0, 0.85, 0.25, 0.55), 2.5)
-		draw_circle(Vector2(78, 0), 4.0, Color(1.0, 0.35, 0.20, 0.80))
+		draw_line(Vector2(28, 0), Vector2(78, 0), decal_col.lightened(0.2), 2.5)
+		draw_circle(Vector2(78, 0), 4.0, decal_col)
 	if ch_tex == null:
-		draw_circle(Vector2.ZERO, 18.0, hull_col.darkened(0.22))
-		draw_circle(Vector2.ZERO, 18.0, Color(0.95, 0.80, 0.35), false, 2.0)
+		draw_circle(Vector2.ZERO, 18.0, turret_col)
+		draw_circle(Vector2.ZERO, 18.0, decal_col, false, 2.0)
 		if main_cnt == 1:
-			draw_rect(Rect2(6, -5, 38, 10), Color(0.85, 0.85, 0.88))
+			draw_rect(Rect2(6, -5, 38, 10), turret_col.lightened(0.35))
 		elif main_cnt >= 2:
-			draw_rect(Rect2(6, -10, 38, 6), Color(0.85, 0.85, 0.88))
-			draw_rect(Rect2(6, 4, 38, 6), Color(0.85, 0.85, 0.88))
+			draw_rect(Rect2(6, -10, 38, 6), turret_col.lightened(0.35))
+			draw_rect(Rect2(6, 4, 38, 6), turret_col.lightened(0.35))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# 5. 绘制旋转刺球撞角、神盾粉碎星超武与浮游无人机
@@ -684,9 +726,12 @@ func _draw() -> void:
 		var rel_h: Vector2 = human_pos - global_position
 		var h_commando_tex: Texture2D = GameData.get_tex("human_commando")
 		draw_arc(rel_h, 22.0, 0.0, TAU, 24, Color(0.35, 1.0, 0.55, 0.85), 2.5)
+		var h_skin_id: String = GameState.get_hunter_skin(GameState.selected_hunter_id)
+		var h_skin_def: Dictionary = GameData.get_hunter_skin_def(GameState.selected_hunter_id, h_skin_id)
+		var h_tint: Color = h_skin_def.get("tint", Color.WHITE)
 		if h_commando_tex != null:
 			draw_set_transform(rel_h, turret_angle, Vector2.ONE)
-			draw_texture_rect(h_commando_tex, Rect2(-31, -23, 62, 46), false)
+			draw_texture_rect(h_commando_tex, Rect2(-31, -23, 62, 46), false, h_tint)
 			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 		else:
 			draw_circle(rel_h, 16.0, Color(0.95, 0.75, 0.25))

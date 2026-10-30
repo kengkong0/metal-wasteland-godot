@@ -21,7 +21,9 @@ enum ScreenState {
 	SELECT_MAP,      # 步骤 3：战区与危险度
 	META_LAB,        # 局外科技所
 	BOUNTIES_CODEX,  # 赏金首通缉令图鉴
-	SETTINGS         # ⚙️ 系统设置 (画面/声音/键位)
+	SETTINGS,        # ⚙️ 系统设置 (画面/声音/键位)
+	ACHIEVEMENTS,    # 🏆 废土荣誉殿堂 (92大成就系统)
+	PAINT_WORKSHOP   # 🎨 战车改装涂装工坊 (自由涂装)
 }
 
 var current_screen: ScreenState = ScreenState.TITLE
@@ -40,6 +42,34 @@ var view_select_map: Control
 var view_meta_lab: Control
 var view_bounties: Control
 var view_settings: Control
+var view_achievements: Control
+var view_paint_workshop: Control
+
+# 成就界面变量
+var ach_filter_cat: String = "all"
+var ach_cards_container: GridContainer
+var lbl_ach_summary: Label
+var ach_tab_buttons: Array = []
+
+# 战车涂装工坊变量
+var paint_selected_chassis: String = "buggy"
+var paint_selected_part: String = "body"
+var paint_working_colors: Dictionary = {}
+var paint_preview_rect: ColorRect
+var paint_preview_tank: TextureRect
+var paint_part_tab_buttons: Array = []
+var paint_slider_r: HSlider
+var paint_slider_g: HSlider
+var paint_slider_b: HSlider
+var lbl_paint_hex: Label
+var paint_current_swatch: ColorRect
+
+# 成就飘字弹窗
+var ach_toast_panel: PanelContainer
+var lbl_ach_toast_title: Label
+var lbl_ach_toast_reward: Label
+var ach_toast_timer: float = 0.0
+
 
 # --- 系统设置界面引用 ---
 var settings_tab_idx: int = 0
@@ -116,6 +146,8 @@ func _ready() -> void:
 
 	_build_all_screens()
 	_build_mince_modal()
+	GameState.achievement_unlocked.connect(_on_achievement_unlocked_toast)
+	_build_achievement_toast()
 	_switch_to_screen(ScreenState.TITLE)
 
 # ============================================================================
@@ -138,6 +170,8 @@ func _build_all_screens() -> void:
 	_build_view_meta_lab()
 	_build_view_bounties()
 	_build_view_settings()
+		_build_view_achievements()
+	_build_view_paint_workshop()
 
 # ----------------------------------------------------------------------------
 # 1. 主界面 / 首页 (Title Screen) - 参考土豆兄弟，纯粹开门见山的主菜单
@@ -258,6 +292,20 @@ func _build_view_title() -> void:
 		_switch_to_screen(ScreenState.BOUNTIES_CODEX)
 	)
 	menu_btn_vbox.add_child(btn_bounties)
+
+	var btn_achievements := _make_styled_button("🏆 废土荣誉殿堂 (成就与勋章)", 16, Color(0.18, 0.18, 0.24), Color(1.0, 0.85, 0.35), Vector2(0, 46))
+	btn_achievements.pressed.connect(func():
+		SoundManager.play("coin", 0.08, 0.0)
+		_switch_to_screen(ScreenState.ACHIEVEMENTS)
+	)
+	menu_btn_vbox.add_child(btn_achievements)
+
+	var btn_paint := _make_styled_button("🎨 战车改装涂装工坊 (自由部位调色)", 16, Color(0.18, 0.18, 0.24), Color(0.40, 0.90, 1.0), Vector2(0, 46))
+	btn_paint.pressed.connect(func():
+		SoundManager.play("coin", 0.08, 0.0)
+		_switch_to_screen(ScreenState.PAINT_WORKSHOP)
+	)
+	menu_btn_vbox.add_child(btn_paint)
 
 	var btn_settings := _make_styled_button("⚙️ 系统设置 (画面/声音/键位)", 16, Color(0.18, 0.18, 0.24), Color(0.85, 0.75, 0.40), Vector2(0, 46))
 	btn_settings.pressed.connect(func():
@@ -661,7 +709,9 @@ func _build_view_meta_lab() -> void:
 # ----------------------------------------------------------------------------
 # 7. 系统设置界面 (System Settings) - 声音 / 分辨率 / 画面 / 键位
 # ----------------------------------------------------------------------------
-func _build_view_settings() -> void:
+func _build_view_settings()
+		_build_view_achievements()
+	_build_view_paint_workshop() -> void:
 	view_settings = Control.new()
 	view_settings.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	title_screen.add_child(view_settings)
@@ -1217,6 +1267,8 @@ func _switch_to_screen(new_state: ScreenState) -> void:
 	view_meta_lab.visible = (new_state == ScreenState.META_LAB)
 	view_bounties.visible = (new_state == ScreenState.BOUNTIES_CODEX)
 	view_settings.visible = (new_state == ScreenState.SETTINGS)
+	view_achievements.visible = (new_state == ScreenState.ACHIEVEMENTS)
+	view_paint_workshop.visible = (new_state == ScreenState.PAINT_WORKSHOP)
 
 	match new_state:
 		ScreenState.TITLE:
@@ -1241,6 +1293,10 @@ func _switch_to_screen(new_state: ScreenState) -> void:
 			_refresh_bounties_view()
 		ScreenState.SETTINGS:
 			_refresh_settings_view()
+		ScreenState.ACHIEVEMENTS:
+			_refresh_achievements_view()
+		ScreenState.PAINT_WORKSHOP:
+			_refresh_paint_workshop_view()
 
 # ============================================================================
 # 各子界面数据填充与刷新
@@ -1308,20 +1364,13 @@ func _refresh_hunter_view() -> void:
 		elif unlocked:
 			btn.text = "选择猎人"
 		else:
-			btn.text = "🔒 解锁 (%d💎)" % int(h_def["unlock_cost"])
+			btn.text = "🔒 达成成就解锁"
 
 		btn.pressed.connect(func():
 			chosen_hunter = String(h_id)
 			if not unlocked:
-				if GameState.noah_chips >= int(h_def["unlock_cost"]):
-					if GameState.unlock_hunter(String(h_id)):
-						SoundManager.play("upgrade", 0.04, 2.0)
-						lbl_hunter_toast.text = "🎉 成功招募新猎人：【%s】！" % h_def.get("char_name", h_def["name"])
-					else:
-						lbl_hunter_toast.text = "❌ 招募失败！"
-				else:
-					SoundManager.play("coin", 0.08, 0.0)
-					lbl_hunter_toast.text = "💡 查看【%s】的生平传记与立绘，招募需要 %d 💎。" % [h_def.get("char_name", h_def["name"]), int(h_def["unlock_cost"])]
+				SoundManager.play("coin", 0.08, 0.0)
+				lbl_hunter_toast.text = "🔒【%s】未解锁：%s" % [display_name, h_def.get("unlock_ach_desc", "需达成对应成就")]
 			else:
 				SoundManager.play("coin", 0.08, 0.0)
 			_refresh_hunter_view()
@@ -1554,23 +1603,63 @@ func _refresh_chassis_view() -> void:
 	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc_box.add_child(desc_lbl)
 
-	# 修复 / 就绪状态
+	# 修复 / 就绪状态与涂装切换
 	if not unlocked_sel:
-		var unlock_btn := _make_styled_button("💎 消耗 %d 晶片修复此战车底盘" % int(ch["unlock_cost"]), 15, Color(0.40, 0.22, 0.20), Color(1.0, 0.55, 0.38), Vector2(0, 42))
-		unlock_btn.pressed.connect(func():
-			if GameState.unlock_chassis(chosen_chassis):
-				SoundManager.play("upgrade", 0.04, 2.0)
-				lbl_chassis_toast.text = "🎉 成功修复战车底盘：【%s】！" % ch["name"]
-				_refresh_chassis_view()
-			else:
-				lbl_chassis_toast.text = "❌ 晶片不足！需要 %d 💎。" % int(ch["unlock_cost"])
-				SoundManager.play("cannon_empty", 0.1, 0.0)
-		)
-		chassis_preview_box.add_child(unlock_btn)
+		var lock_box := _make_box(Color(0.20, 0.12, 0.12), Color(0.85, 0.35, 0.35), 6, 8)
+		lock_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		chassis_preview_box.add_child(lock_box)
+		var lock_lbl := _make_outlined_label("🔒 该战车底盘尚未解锁！\n解锁条件：%s" % ch.get("unlock_ach_desc", "达成对应成就解锁"), 13, Color(1.0, 0.70, 0.70))
+		lock_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		lock_box.add_child(lock_lbl)
 	else:
 		var ready_lbl := _make_outlined_label("✅ 战车已在整备车位就绪，油料弹药满载！", 14, Color(0.40, 1.0, 0.55))
 		ready_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		chassis_preview_box.add_child(ready_lbl)
+
+		# 战车皮肤与涂装切换
+		var skin_box := VBoxContainer.new()
+		skin_box.add_theme_constant_override("separation", 6)
+		chassis_preview_box.add_child(skin_box)
+		skin_box.add_child(_make_outlined_label("🚜 战车专属涂装与改色:", 13, Color(1.0, 0.85, 0.35)))
+
+		var skin_hbox := HBoxContainer.new()
+		skin_hbox.add_theme_constant_override("separation", 8)
+		skin_box.add_child(skin_hbox)
+
+		var cur_cskin: String = GameState.get_chassis_skin(chosen_chassis)
+		var btn_def := Button.new()
+		btn_def.text = "原厂涂装" + (" (已应用)" if cur_cskin == "default" else "")
+		btn_def.custom_minimum_size = Vector2(90, 32)
+		btn_def.pressed.connect(func():
+			GameState.set_chassis_skin(chosen_chassis, "default")
+			_refresh_chassis_view()
+		)
+		skin_hbox.add_child(btn_def)
+
+		for s in GameData.get_chassis_skins(chosen_chassis):
+			var s_id: String = s["id"]
+			var s_unlocked: bool = GameState.is_chassis_skin_unlocked(chosen_chassis, s_id)
+			var btn_s := Button.new()
+			btn_s.text = s["name"].split(" ")[0] + (" (已应用)" if cur_cskin == s_id else ("" if s_unlocked else " 🔒"))
+			btn_s.custom_minimum_size = Vector2(110, 32)
+			var sid: String = s_id
+			btn_s.pressed.connect(func():
+				if s_unlocked:
+					GameState.set_chassis_skin(chosen_chassis, sid)
+					_refresh_chassis_view()
+				else:
+					lbl_chassis_toast.text = "🔒 皮肤【%s】未解锁！需达成成就【%s】" % [s["name"], s.get("unlock_ach_id", "")]
+			)
+			skin_hbox.add_child(btn_s)
+
+		var btn_paint_shop := Button.new()
+		btn_paint_shop.text = "🎨 涂装工坊自由改色"
+		btn_paint_shop.custom_minimum_size = Vector2(140, 32)
+		btn_paint_shop.pressed.connect(func():
+			paint_selected_chassis = chosen_chassis
+			_switch_to_screen(ScreenState.PAINT_WORKSHOP)
+		)
+		skin_hbox.add_child(btn_paint_shop)
 
 	btn_chassis_next.disabled = not unlocked_sel
 
@@ -1860,7 +1949,9 @@ func _refund_all_meta_tech() -> void:
 # ============================================================================
 # 特斯拉战地救护所与原核晶片结算弹窗
 # ============================================================================
-func _build_mince_modal() -> void:
+func _build_mince_modal()
+	GameState.achievement_unlocked.connect(_on_achievement_unlocked_toast)
+	_build_achievement_toast() -> void:
 	mince_modal = Control.new()
 	mince_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mince_modal.visible = false
@@ -2249,3 +2340,492 @@ func _make_tex_rect(tex: Texture2D, min_sz: Vector2, darkened: bool = false) -> 
 	if darkened:
 		tr.modulate = Color(0.35, 0.35, 0.38, 0.85)
 	return tr
+
+
+# ============================================================================
+# 🏆 废土荣誉殿堂 (92大成就系统视图)
+# ============================================================================
+func _build_view_achievements() -> void:
+	view_achievements = Control.new()
+	view_achievements.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	view_achievements.visible = false
+	title_screen.add_child(view_achievements)
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 36)
+	margin.add_theme_constant_override("margin_right", 36)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	view_achievements.add_child(margin)
+
+	var root_v := VBoxContainer.new()
+	root_v.add_theme_constant_override("separation", 12)
+	margin.add_child(root_v)
+
+	var top_bar := HBoxContainer.new()
+	top_bar.add_theme_constant_override("separation", 16)
+	root_v.add_child(top_bar)
+
+	var btn_back := _make_styled_button("⬅ 返回主菜单", 15, Color(0.18, 0.18, 0.22), Color(0.6, 0.6, 0.6), Vector2(140, 42))
+	btn_back.pressed.connect(func(): _switch_to_screen(ScreenState.TITLE))
+	top_bar.add_child(btn_back)
+
+	var title_lbl := _make_outlined_label("🏆 废土荣誉殿堂 (HALL OF FAME & ACHIEVEMENTS)", 22, Color(1.0, 0.88, 0.35))
+	top_bar.add_child(title_lbl)
+
+	lbl_ach_summary = _make_outlined_label("", 14, Color(0.40, 0.95, 1.0))
+	lbl_ach_summary.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lbl_ach_summary.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	top_bar.add_child(lbl_ach_summary)
+
+	# 页签
+	var tab_hbox := HBoxContainer.new()
+	tab_hbox.add_theme_constant_override("separation", 8)
+	root_v.add_child(tab_hbox)
+
+	ach_tab_buttons.clear()
+	for cat_key in GameData.ACHIEVEMENT_CATEGORIES.keys():
+		var cat_name: String = GameData.ACHIEVEMENT_CATEGORIES[cat_key]
+		var btn_t := Button.new()
+		btn_t.text = cat_name
+		btn_t.custom_minimum_size = Vector2(100, 34)
+		btn_t.add_theme_font_size_override("font_size", 13)
+		var k: String = cat_key
+		btn_t.pressed.connect(func():
+			ach_filter_cat = k
+			_refresh_achievements_view()
+		)
+		tab_hbox.add_child(btn_t)
+		ach_tab_buttons.append({"btn": btn_t, "cat": cat_key})
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root_v.add_child(scroll)
+
+	ach_cards_container = GridContainer.new()
+	ach_cards_container.columns = 3
+	ach_cards_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ach_cards_container.add_theme_constant_override("h_separation", 10)
+	ach_cards_container.add_theme_constant_override("v_separation", 10)
+	scroll.add_child(ach_cards_container)
+
+func _refresh_achievements_view() -> void:
+	for c in ach_cards_container.get_children():
+		c.queue_free()
+
+	for entry in ach_tab_buttons:
+		var b: Button = entry["btn"]
+		if entry["cat"] == ach_filter_cat:
+			b.modulate = Color(1.0, 0.9, 0.3)
+		else:
+			b.modulate = Color(0.8, 0.8, 0.8)
+
+	var total_cnt: int = GameData.ACHIEVEMENTS.size()
+	var unlocked_cnt: int = GameState.unlocked_achievements.size()
+	var pct: float = (float(unlocked_cnt) / float(total_cnt)) * 100.0 if total_cnt > 0 else 0.0
+	lbl_ach_summary.text = "🎖️ 达成进度: %d / %d (%.1f%%) | 猎人: %d/6 | 战车: %d/8 | 皮肤: %d/28" % [
+		unlocked_cnt, total_cnt, pct,
+		GameState.unlocked_hunters.size(),
+		GameState.unlocked_chassis.size(),
+		GameState.unlocked_hunter_skins.size() + GameState.unlocked_chassis_skins.size()
+	]
+
+	for ach in GameData.ACHIEVEMENTS:
+		if ach_filter_cat != "all" and ach["cat"] != ach_filter_cat:
+			continue
+		var is_unlocked: bool = GameState.is_achievement_unlocked(ach["id"])
+		var border_col: Color = Color(1.0, 0.82, 0.25) if is_unlocked else Color(0.30, 0.32, 0.36)
+		var bg_col: Color = Color(0.18, 0.16, 0.12) if is_unlocked else Color(0.12, 0.12, 0.14)
+
+		var card := _make_box(bg_col, border_col, 8, 10)
+		card.custom_minimum_size = Vector2(360, 115)
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ach_cards_container.add_child(card)
+
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", 5)
+		card.add_child(cv)
+
+		var top_row := HBoxContainer.new()
+		top_row.add_theme_constant_override("separation", 8)
+		cv.add_child(top_row)
+
+		var title_lbl := _make_outlined_label(ach["name"], 15, Color(1.0, 0.88, 0.35) if is_unlocked else Color(0.85, 0.85, 0.85))
+		top_row.add_child(title_lbl)
+
+		var cat_name: String = GameData.ACHIEVEMENT_CATEGORIES.get(ach["cat"], "")
+		var cat_lbl := _make_outlined_label("[%s]" % cat_name, 11, Color(0.65, 0.70, 0.78))
+		cat_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cat_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		top_row.add_child(cat_lbl)
+
+		var desc_lbl := _make_outlined_label(ach["desc"], 12, Color(0.80, 0.80, 0.80))
+		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		cv.add_child(desc_lbl)
+
+		var prog: float = GameState.get_achievement_progress(ach["id"])
+		var tgt: float = float(ach["target"])
+
+		var bot_row := HBoxContainer.new()
+		bot_row.add_theme_constant_override("separation", 10)
+		cv.add_child(bot_row)
+
+		if is_unlocked:
+			var r_lbl := _make_outlined_label("✅ 已达成! [%s]" % ach.get("rname", "已领"), 12, Color(0.35, 1.0, 0.55))
+			bot_row.add_child(r_lbl)
+		else:
+			var p_lbl := _make_outlined_label("进度: %d/%d" % [int(minf(prog, tgt)), int(tgt)], 11, Color(0.75, 0.85, 0.95))
+			bot_row.add_child(p_lbl)
+			var r_lbl := _make_outlined_label("🔒 奖励: %s" % ach.get("rname", ""), 11, Color(1.0, 0.85, 0.35))
+			r_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			r_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			bot_row.add_child(r_lbl)
+
+# ============================================================================
+# 🎨 局外战车改装涂装工坊视图
+# ============================================================================
+func _build_view_paint_workshop() -> void:
+	view_paint_workshop = Control.new()
+	view_paint_workshop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	view_paint_workshop.visible = false
+	title_screen.add_child(view_paint_workshop)
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 36)
+	margin.add_theme_constant_override("margin_right", 36)
+	margin.add_theme_constant_override("margin_top", 20)
+	margin.add_theme_constant_override("margin_bottom", 20)
+	view_paint_workshop.add_child(margin)
+
+	var root_v := VBoxContainer.new()
+	root_v.add_theme_constant_override("separation", 14)
+	margin.add_child(root_v)
+
+	var top_bar := HBoxContainer.new()
+	top_bar.add_theme_constant_override("separation", 16)
+	root_v.add_child(top_bar)
+
+	var btn_back := _make_styled_button("⬅ 返回主菜单", 15, Color(0.18, 0.18, 0.22), Color(0.6, 0.6, 0.6), Vector2(140, 42))
+	btn_back.pressed.connect(func(): _switch_to_screen(ScreenState.TITLE))
+	top_bar.add_child(btn_back)
+
+	var title_lbl := _make_outlined_label("🎨 战车改装涂装工坊 (CUSTOM PAINT WORKSHOP)", 22, Color(0.40, 0.92, 1.0))
+	top_bar.add_child(title_lbl)
+
+	var save_btn := _make_styled_button("💾 保存涂装并应用", 15, Color(0.20, 0.55, 0.30), Color(0.40, 1.0, 0.55), Vector2(160, 42))
+	save_btn.pressed.connect(_on_save_custom_paint_pressed)
+	top_bar.add_child(save_btn)
+
+	var reset_btn := _make_styled_button("🔄 重置原厂配色", 14, Color(0.35, 0.20, 0.20), Color(0.95, 0.45, 0.45), Vector2(130, 42))
+	reset_btn.pressed.connect(_on_reset_custom_paint_pressed)
+	top_bar.add_child(reset_btn)
+
+	var body_h := HBoxContainer.new()
+	body_h.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body_h.add_theme_constant_override("separation", 16)
+	root_v.add_child(body_h)
+
+	# 左侧栏
+	var left_p := _make_box(Color(0.12, 0.13, 0.16), Color(0.30, 0.35, 0.42), 8, 10)
+	left_p.custom_minimum_size = Vector2(280, 0)
+	body_h.add_child(left_p)
+
+	var left_v := VBoxContainer.new()
+	left_v.add_theme_constant_override("separation", 8)
+	left_p.add_child(left_v)
+	left_v.add_child(_make_outlined_label("🚜 选择改装战车底盘", 16, Color(1.0, 0.85, 0.35)))
+
+	var ch_scroll := ScrollContainer.new()
+	ch_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left_v.add_child(ch_scroll)
+
+	var ch_vbox := VBoxContainer.new()
+	ch_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	ch_vbox.add_theme_constant_override("separation", 6)
+	ch_scroll.add_child(ch_vbox)
+
+	for c_id in GameData.CHASSIS.keys():
+		var ch_def: Dictionary = GameData.CHASSIS[c_id]
+		var b := Button.new()
+		b.text = ch_def["name"]
+		b.custom_minimum_size = Vector2(0, 44)
+		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		var cid: String = String(c_id)
+		b.pressed.connect(func():
+			paint_selected_chassis = cid
+			_load_paint_for_chassis(cid)
+			_refresh_paint_workshop_view()
+		)
+		ch_vbox.add_child(b)
+
+	# 中间栏
+	var mid_p := _make_box(Color(0.10, 0.11, 0.14), Color(0.40, 0.85, 1.0), 8, 12)
+	mid_p.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body_h.add_child(mid_p)
+
+	var mid_v := VBoxContainer.new()
+	mid_v.add_theme_constant_override("separation", 10)
+	mid_p.add_child(mid_v)
+
+	mid_v.add_child(_make_outlined_label("🔍 战车全景涂装实时渲染", 16, Color(0.35, 0.95, 1.0)))
+
+	var preview_center := CenterContainer.new()
+	preview_center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	mid_v.add_child(preview_center)
+
+	paint_preview_rect = ColorRect.new()
+	paint_preview_rect.custom_minimum_size = Vector2(400, 280)
+	paint_preview_rect.color = Color(0.14, 0.16, 0.20)
+	preview_center.add_child(paint_preview_rect)
+
+	paint_preview_tank = TextureRect.new()
+	paint_preview_tank.custom_minimum_size = Vector2(220, 180)
+	paint_preview_tank.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	paint_preview_tank.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	paint_preview_tank.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	paint_preview_rect.add_child(paint_preview_tank)
+
+	var preset_box := VBoxContainer.new()
+	preset_box.add_theme_constant_override("separation", 6)
+	mid_v.add_child(preset_box)
+	preset_box.add_child(_make_outlined_label("⚡ 快速预设方案 (一键换色):", 14, Color(1.0, 0.85, 0.35)))
+
+	var preset_grid := GridContainer.new()
+	preset_grid.columns = 4
+	preset_grid.add_theme_constant_override("h_separation", 8)
+	preset_grid.add_theme_constant_override("v_separation", 6)
+	preset_box.add_child(preset_grid)
+
+	for p in GameData.PAINT_PRESETS:
+		var pb := Button.new()
+		pb.text = p["name"].split(" ")[0]
+		pb.custom_minimum_size = Vector2(100, 32)
+		var p_data: Dictionary = p
+		pb.pressed.connect(func():
+			_apply_preset_paint(p_data)
+		)
+		preset_grid.add_child(pb)
+
+	# 右侧栏
+	var right_p := _make_box(Color(0.12, 0.13, 0.16), Color(0.30, 0.35, 0.42), 8, 12)
+	right_p.custom_minimum_size = Vector2(360, 0)
+	body_h.add_child(right_p)
+
+	var right_v := VBoxContainer.new()
+	right_v.add_theme_constant_override("separation", 10)
+	right_p.add_child(right_v)
+
+	right_v.add_child(_make_outlined_label("🎨 涂装部位与色彩拾取", 16, Color(1.0, 0.85, 0.35)))
+
+	var part_vbox := VBoxContainer.new()
+	part_vbox.add_theme_constant_override("separation", 6)
+	right_v.add_child(part_vbox)
+
+	paint_part_tab_buttons.clear()
+	for p_part in GameData.PAINT_PARTS:
+		var part_btn := Button.new()
+		part_btn.text = p_part["name"]
+		part_btn.custom_minimum_size = Vector2(0, 34)
+		var pid: String = p_part["id"]
+		part_btn.pressed.connect(func():
+			paint_selected_part = pid
+			_refresh_paint_controls()
+		)
+		part_vbox.add_child(part_btn)
+		paint_part_tab_buttons.append({"btn": part_btn, "id": pid})
+
+	var sep := HSeparator.new()
+	right_v.add_child(sep)
+
+	var swatch_lbl := _make_outlined_label("常用废土色谱:", 13, Color(0.85, 0.85, 0.85))
+	right_v.add_child(swatch_lbl)
+
+	var swatch_grid := GridContainer.new()
+	swatch_grid.columns = 8
+	swatch_grid.add_theme_constant_override("h_separation", 6)
+	swatch_grid.add_theme_constant_override("v_separation", 6)
+	right_v.add_child(swatch_grid)
+
+	var palette_cols: Array = [
+		Color(0.85, 0.20, 0.18), Color(0.95, 0.50, 0.15), Color(0.95, 0.85, 0.20), Color(0.40, 0.85, 0.25),
+		Color(0.20, 0.75, 0.45), Color(0.25, 0.85, 0.95), Color(0.30, 0.55, 0.95), Color(0.65, 0.35, 0.95),
+		Color(0.92, 0.30, 0.75), Color(0.85, 0.68, 0.45), Color(0.55, 0.42, 0.30), Color(0.35, 0.42, 0.32),
+		Color(0.95, 0.95, 0.95), Color(0.65, 0.68, 0.72), Color(0.32, 0.34, 0.38), Color(0.14, 0.14, 0.16)
+	]
+
+	for c in palette_cols:
+		var sb := Button.new()
+		sb.custom_minimum_size = Vector2(34, 28)
+		sb.modulate = c
+		var sc: Color = c
+		sb.pressed.connect(func():
+			_set_current_part_color(sc)
+		)
+		swatch_grid.add_child(sb)
+
+	var slider_box := VBoxContainer.new()
+	slider_box.add_theme_constant_override("separation", 6)
+	right_v.add_child(slider_box)
+
+	paint_slider_r = _create_color_slider(slider_box, "红 (R):", Color(1.0, 0.3, 0.3))
+	paint_slider_g = _create_color_slider(slider_box, "绿 (G):", Color(0.3, 1.0, 0.3))
+	paint_slider_b = _create_color_slider(slider_box, "蓝 (B):", Color(0.3, 0.6, 1.0))
+
+	var hex_hbox := HBoxContainer.new()
+	hex_hbox.add_theme_constant_override("separation", 10)
+	right_v.add_child(hex_hbox)
+
+	paint_current_swatch = ColorRect.new()
+	paint_current_swatch.custom_minimum_size = Vector2(40, 30)
+	hex_hbox.add_child(paint_current_swatch)
+
+	lbl_paint_hex = _make_outlined_label("#FFFFFF", 14, Color.WHITE)
+	hex_hbox.add_child(lbl_paint_hex)
+
+func _create_color_slider(parent: VBoxContainer, label_txt: String, col: Color) -> HSlider:
+	var h := HBoxContainer.new()
+	parent.add_child(h)
+	var lbl := _make_outlined_label(label_txt, 12, col)
+	lbl.custom_minimum_size = Vector2(60, 0)
+	h.add_child(lbl)
+	var slider := HSlider.new()
+	slider.min_value = 0.0
+	slider.max_value = 1.0
+	slider.step = 0.01
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.value_changed.connect(func(_val): _on_paint_slider_changed())
+	h.add_child(slider)
+	return slider
+
+func _load_paint_for_chassis(c_id: String) -> void:
+	paint_working_colors.clear()
+	var custom_map: Dictionary = GameState.get_custom_chassis_paint(c_id)
+	if not custom_map.is_empty():
+		for k in custom_map.keys():
+			paint_working_colors[k] = custom_map[k]
+	else:
+		var ch_def: Dictionary = GameData.CHASSIS.get(c_id, GameData.CHASSIS["buggy"])
+		var base_col: Color = ch_def.get("color", Color(0.8, 0.25, 0.2))
+		paint_working_colors["body"] = base_col
+		paint_working_colors["turret"] = base_col.darkened(0.2)
+		paint_working_colors["treads"] = Color(0.22, 0.20, 0.18)
+		paint_working_colors["decal"] = Color(0.95, 0.85, 0.35)
+
+func _apply_preset_paint(preset: Dictionary) -> void:
+	paint_working_colors["body"] = preset.get("body", Color.WHITE)
+	paint_working_colors["turret"] = preset.get("turret", Color.WHITE)
+	paint_working_colors["treads"] = preset.get("treads", Color.WHITE)
+	paint_working_colors["decal"] = preset.get("decal", Color.WHITE)
+	_refresh_paint_controls()
+	_update_paint_preview()
+	SoundManager.play("coin", 0.08, 0.5)
+
+func _set_current_part_color(col: Color) -> void:
+	paint_working_colors[paint_selected_part] = col
+	_refresh_paint_controls()
+	_update_paint_preview()
+
+func _on_paint_slider_changed() -> void:
+	if not is_instance_valid(paint_slider_r) or not is_instance_valid(paint_slider_g) or not is_instance_valid(paint_slider_b):
+		return
+	var col := Color(paint_slider_r.value, paint_slider_g.value, paint_slider_b.value)
+	paint_working_colors[paint_selected_part] = col
+	if is_instance_valid(paint_current_swatch):
+		paint_current_swatch.color = col
+	if is_instance_valid(lbl_paint_hex):
+		lbl_paint_hex.text = "#" + col.to_html(false).to_upper()
+	_update_paint_preview()
+
+func _refresh_paint_controls() -> void:
+	var cur_col: Color = paint_working_colors.get(paint_selected_part, Color.WHITE)
+	if is_instance_valid(paint_slider_r):
+		paint_slider_r.set_value_no_signal(cur_col.r)
+		paint_slider_g.set_value_no_signal(cur_col.g)
+		paint_slider_b.set_value_no_signal(cur_col.b)
+	if is_instance_valid(paint_current_swatch):
+		paint_current_swatch.color = cur_col
+	if is_instance_valid(lbl_paint_hex):
+		lbl_paint_hex.text = "#" + cur_col.to_html(false).to_upper()
+
+	for entry in paint_part_tab_buttons:
+		var btn: Button = entry["btn"]
+		if entry["id"] == paint_selected_part:
+			btn.modulate = Color(1.0, 0.9, 0.3)
+		else:
+			btn.modulate = Color(0.8, 0.8, 0.8)
+
+func _update_paint_preview() -> void:
+	if not is_instance_valid(paint_preview_tank):
+		return
+	var tex: Texture2D = GameData.get_chassis_tex(paint_selected_chassis)
+	paint_preview_tank.texture = tex
+	var body_col: Color = paint_working_colors.get("body", Color.WHITE)
+	paint_preview_tank.modulate = Color.WHITE.lerp(body_col, 0.65)
+
+func _refresh_paint_workshop_view() -> void:
+	if paint_working_colors.is_empty():
+		_load_paint_for_chassis(paint_selected_chassis)
+	_refresh_paint_controls()
+	_update_paint_preview()
+
+func _on_save_custom_paint_pressed() -> void:
+	GameState.set_custom_chassis_paint(paint_selected_chassis, paint_working_colors)
+	SoundManager.play("upgrade", 0.04, 2.0)
+	lbl_ach_toast_title.text = "🎨 涂装已保存！"
+	lbl_ach_toast_reward.text = "已应用至【%s】，并在战场中生效！" % GameData.CHASSIS.get(paint_selected_chassis, {}).get("name", "")
+	ach_toast_panel.visible = true
+	ach_toast_timer = 3.5
+
+func _on_reset_custom_paint_pressed() -> void:
+	var ch_def: Dictionary = GameData.CHASSIS.get(paint_selected_chassis, GameData.CHASSIS["buggy"])
+	var base_col: Color = ch_def.get("color", Color(0.8, 0.25, 0.2))
+	paint_working_colors["body"] = base_col
+	paint_working_colors["turret"] = base_col.darkened(0.2)
+	paint_working_colors["treads"] = Color(0.22, 0.20, 0.18)
+	paint_working_colors["decal"] = Color(0.95, 0.85, 0.35)
+	GameState.custom_chassis_paints.erase(paint_selected_chassis)
+	GameState.save_meta_data()
+	SoundManager.play("coin", 0.08, 0.0)
+	_refresh_paint_controls()
+	_update_paint_preview()
+
+# ============================================================================
+# 成就飘字弹窗与计时器
+# ============================================================================
+func _build_achievement_toast() -> void:
+	ach_toast_panel = _make_box(Color(0.12, 0.12, 0.16, 0.95), Color(1.0, 0.85, 0.25), 8, 12)
+	ach_toast_panel.custom_minimum_size = Vector2(460, 68)
+	ach_toast_panel.position = Vector2(410, 18)
+	ach_toast_panel.visible = false
+	ui_layer.add_child(ach_toast_panel)
+
+	var tv := VBoxContainer.new()
+	tv.alignment = BoxContainer.ALIGNMENT_CENTER
+	tv.add_theme_constant_override("separation", 4)
+	ach_toast_panel.add_child(tv)
+
+	lbl_ach_toast_title = _make_outlined_label("🏆 成就达成！", 16, Color(1.0, 0.88, 0.25))
+	lbl_ach_toast_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tv.add_child(lbl_ach_toast_title)
+
+	lbl_ach_toast_reward = _make_outlined_label("🎁 解锁奖励", 13, Color(0.4, 0.95, 1.0))
+	lbl_ach_toast_reward.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	tv.add_child(lbl_ach_toast_reward)
+
+func _process(delta: float) -> void:
+	if ach_toast_timer > 0.0:
+		ach_toast_timer -= delta
+		if ach_toast_timer <= 0.0 and is_instance_valid(ach_toast_panel):
+			ach_toast_panel.visible = false
+
+func _on_achievement_unlocked_toast(ach_id: String, ach_data: Dictionary) -> void:
+	if not is_instance_valid(ach_toast_panel):
+		return
+	lbl_ach_toast_title.text = "🏆 成就达成: %s !" % ach_data.get("name", ach_id)
+	lbl_ach_toast_reward.text = "🎁 获得奖励: %s" % ach_data.get("rname", "无")
+	ach_toast_panel.visible = true
+	ach_toast_timer = 4.5
+	SoundManager.play("upgrade", 0.04, 2.5)

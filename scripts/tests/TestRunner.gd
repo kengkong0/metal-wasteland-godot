@@ -18,6 +18,7 @@ func _ready() -> void:
 	test_suite_7_super_weapons_and_drops()
 	test_suite_8_all_wanted_bosses()
 	test_suite_9_swarm_and_crush_mechanics()
+	test_suite_10_achievements_skins_and_paint_workshop()
 
 	print("\n========================================================")
 	print("📊 [TEST RESULTS] 测试统计汇总:")
@@ -503,3 +504,82 @@ func test_suite_9_swarm_and_crush_mechanics() -> void:
 	assert_true(test_e1.stun_timer == 0.0, "【困难/地狱模式】战时升级严格禁用EMP震荡波，保持硬核废土战斗节奏")
 
 	bf_node.queue_free()
+
+
+# ============================================================================
+# 10. 成就系统(90+)、双皮肤体系、货币完全隔离与战车自由涂装车间测试
+# ============================================================================
+func test_suite_10_achievements_skins_and_paint_workshop() -> void:
+	print("\n--- [Suite 10] 成就系统、双皮肤体系、货币隔离与涂装工坊 ---")
+
+	# 10.1 成就系统数量与数据完整性
+	assert_true(GameData.ACHIEVEMENTS.size() >= 80, "成就数量应不少于 80 项 (当前 %d 项)" % GameData.ACHIEVEMENTS.size())
+	for ach in GameData.ACHIEVEMENTS:
+		var has_fields: bool = ach.has("id") and ach.has("cat") and ach.has("name") and ach.has("desc") and ach.has("metric") and ach.has("target") and ach.has("rtype") and ach.has("rname")
+		assert_true(has_fields, "成就字段完整: %s" % ach["id"])
+
+	# 10.2 角色专属双皮肤校验 (6角色 × 2皮肤 = 12套)
+	assert_true(GameData.HUNTER_SKINS.size() == 6, "全 6 名猎人均配置有专属皮肤库")
+	for h_id in GameData.HUNTER_SKINS.keys():
+		var skins: Array = GameData.HUNTER_SKINS[h_id]
+		assert_true(skins.size() == 2, "猎人 %s 拥有 2 套专属战术皮肤" % h_id)
+		for s in skins:
+			assert_true(s.has("id") and s.has("name") and s.has("tint") and s.has("unlock_ach_id"), "猎人皮肤字段完整: %s -> %s" % [h_id, s["id"]])
+
+	# 10.3 战车底盘专属双皮肤校验 (8战车 × 2皮肤 = 16套)
+	assert_true(GameData.CHASSIS_SKINS.size() == 8, "全 8 台战车底盘均配置有专属皮肤库")
+	for c_id in GameData.CHASSIS_SKINS.keys():
+		var cskins: Array = GameData.CHASSIS_SKINS[c_id]
+		assert_true(cskins.size() == 2, "战车 %s 拥有 2 套专属涂装皮肤" % c_id)
+		for cs in cskins:
+			assert_true(cs.has("id") and cs.has("name") and cs.has("body") and cs.has("turret") and cs.has("treads") and cs.has("decal"), "战车皮肤部位涂色字段完整: %s -> %s" % [c_id, cs["id"]])
+
+	# 10.4 货币完全隔离校验 (原核晶片仅供科技树，角色与地图不消耗货币)
+	GameState.reset_meta_save()
+	var chips_pre: int = GameState.noah_chips
+	GameState.unlock_hunter("lone_wolf")
+	assert_true(GameState.noah_chips == chips_pre, "解锁猎人绝不扣除原核晶片货币 (原核晶片仅供科技树使用)")
+	GameState.unlock_chassis("r_wolf")
+	assert_true(GameState.noah_chips == chips_pre, "解锁战车底盘绝不扣除原核晶片货币 (原核晶片仅供科技树使用)")
+
+	GameState.start_new_run("bounty_hunter", "buggy", 0, "normal")
+	GameState.add_gold(400)
+	assert_true(GameState.gold >= 400, "单局战斗内金币获取正常")
+	GameState.start_new_run("bounty_hunter", "buggy", 0, "normal")
+	assert_true(GameState.gold < 150, "车库金币仅当次闯关有效，新局开启自动重置初始津贴")
+
+	# 10.5 成就达成与奖励解锁闭环联动
+	# 连击成就解锁猎人皮肤
+	GameState.report_metric("max_combo", 50, false)
+	assert_true(GameState.is_achievement_unlocked("ach_combo_50"), "达成 50 Combo 触发解锁成就【连击大师】")
+	assert_true(GameState.is_hunter_skin_unlocked("bounty_hunter", "bh_specops"), "成就【连击大师】自动解锁雷恩皮肤【荒原特战队】")
+
+	# 击败首领成就解锁新战车
+	GameState.report_metric("kill_boss_gomez", 1, false)
+	assert_true(GameState.is_achievement_unlocked("ach_boss_gomez"), "击败巴洛克触发解锁成就【劫掠王陨落】")
+	assert_true(GameState.is_chassis_unlocked("r_wolf"), "成就【劫掠王陨落】自动解锁传奇战车【绯红之狼】")
+
+	# 通关章节成就解锁新地图
+	GameState.report_metric("clear_map_1", 1, false)
+	assert_true(GameState.is_achievement_unlocked("ach_clear_map_1"), "通关第 1 章节解锁成就【荒原先遣队】")
+	assert_true(GameState.is_map_unlocked(1), "成就【荒原先遣队】自动解锁第 2 战区地图【死亡大沙漠】")
+
+	# 10.6 战车改装涂装工坊 (自由 4 大独立部位调色与存档读档验证)
+	var custom_paint_data: Dictionary = {
+		"body": Color(0.9, 0.2, 0.3),
+		"turret": Color(0.2, 0.4, 0.8),
+		"treads": Color(0.1, 0.1, 0.1),
+		"decal": Color(0.3, 0.9, 1.0)
+	}
+	GameState.set_custom_chassis_paint("buggy", custom_paint_data)
+	assert_true(GameState.is_achievement_unlocked("ach_custom_paint"), "保存自定义战车涂色成功解锁成就【涂装大师】")
+
+	var paint_read: Dictionary = GameState.get_custom_chassis_paint("buggy")
+	assert_true(paint_read.has("body") and paint_read.has("turret") and paint_read.has("treads") and paint_read.has("decal"), "战车改造车间自由 4 部位颜色读取正确")
+
+	GameState.save_meta_data()
+	GameState.load_meta_save()
+	var paint_after_load: Dictionary = GameState.get_custom_chassis_paint("buggy")
+	var body_col: Color = paint_after_load.get("body", Color.BLACK)
+	var is_color_match: bool = absf(body_col.r - 0.9) < 0.01 and absf(body_col.g - 0.2) < 0.01 and absf(body_col.b - 0.3) < 0.01
+	assert_true(is_color_match, "局外存档读档完整保留战车自定义涂装色值 (8-bit色域精确还原)")

@@ -5,6 +5,7 @@ signal stats_updated
 signal meta_updated
 signal level_up_triggered
 signal super_weapon_evolved(evo_info: Dictionary)
+signal achievement_unlocked(ach_id: String, ach_data: Dictionary)
 
 const SAVE_PATH: String = "user://metal_wasteland_save.json"
 const SETTINGS_PATH: String = "user://metal_wasteland_settings.json"
@@ -41,6 +42,14 @@ var unlocked_features: Array = []
 var meta_upgrade_levels: Dictionary = {}
 var unlocked_map_count: int = 1
 var map_cleared_difficulties: Dictionary = {} # {"map_1": ["easy", "normal"]}
+var unlocked_achievements: Array = []
+var achievement_progress: Dictionary = {}
+var unlocked_hunter_skins: Array = []
+var unlocked_chassis_skins: Array = []
+var selected_hunter_skin: Dictionary = {}
+var selected_chassis_skin: Dictionary = {}
+var custom_chassis_paints: Dictionary = {}
+
 
 var lifetime_runs: int = 0
 var lifetime_kills: int = 0
@@ -182,6 +191,13 @@ func save_meta_data() -> void:
 		"meta_upgrade_levels": meta_upgrade_levels,
 		"unlocked_map_count": unlocked_map_count,
 		"map_cleared_difficulties": map_cleared_difficulties,
+		"unlocked_achievements": unlocked_achievements,
+		"achievement_progress": achievement_progress,
+		"unlocked_hunter_skins": unlocked_hunter_skins,
+		"unlocked_chassis_skins": unlocked_chassis_skins,
+		"selected_hunter_skin": selected_hunter_skin,
+		"selected_chassis_skin": selected_chassis_skin,
+		"custom_chassis_paints": custom_chassis_paints,
 		"lifetime_runs": lifetime_runs,
 		"lifetime_kills": lifetime_kills,
 		"lifetime_bounties": lifetime_bounties,
@@ -211,6 +227,13 @@ func load_meta_save() -> void:
 		unlocked_features = d.get("unlocked_features", [])
 		unlocked_map_count = clampi(int(d.get("unlocked_map_count", 1)), 1, GameData.MAPS.size())
 		map_cleared_difficulties = d.get("map_cleared_difficulties", {})
+		unlocked_achievements = d.get("unlocked_achievements", [])
+		achievement_progress = d.get("achievement_progress", {})
+		unlocked_hunter_skins = d.get("unlocked_hunter_skins", [])
+		unlocked_chassis_skins = d.get("unlocked_chassis_skins", [])
+		selected_hunter_skin = d.get("selected_hunter_skin", {})
+		selected_chassis_skin = d.get("selected_chassis_skin", {})
+		custom_chassis_paints = d.get("custom_chassis_paints", {})
 		var saved_lv: Dictionary = d.get("meta_upgrade_levels", {})
 		for k in saved_lv.keys():
 			meta_upgrade_levels[k] = int(saved_lv[k])
@@ -227,6 +250,13 @@ func reset_meta_save() -> void:
 	unlocked_map_count = 1
 	map_cleared_difficulties = {}
 	_init_default_meta()
+	unlocked_achievements = []
+	achievement_progress = {}
+	unlocked_hunter_skins = []
+	unlocked_chassis_skins = []
+	selected_hunter_skin = {}
+	selected_chassis_skin = {}
+	custom_chassis_paints = {}
 	lifetime_runs = 0
 	lifetime_kills = 0
 	lifetime_bounties = 0
@@ -238,32 +268,45 @@ func reset_meta_save() -> void:
 	save_meta_data()
 
 func is_hunter_unlocked(h_id: String) -> bool:
-	return h_id in unlocked_hunters or int(GameData.HUNTERS.get(h_id, {}).get("unlock_cost", 0)) <= 0
+	if h_id in unlocked_hunters:
+		return true
+	var h_def: Dictionary = GameData.HUNTERS.get(h_id, {})
+	var req_ach: String = h_def.get("unlock_ach_id", "")
+	if req_ach == "" or is_achievement_unlocked(req_ach):
+		return true
+	return false
 
 func unlock_hunter(h_id: String) -> bool:
-	if is_hunter_unlocked(h_id):
-		return true
-	var cost: int = int(GameData.HUNTERS.get(h_id, {}).get("unlock_cost", 999))
-	if noah_chips < cost:
-		return false
-	noah_chips -= cost
-	unlocked_hunters.append(h_id)
-	save_meta_data()
+	if not (h_id in unlocked_hunters):
+		unlocked_hunters.append(h_id)
+		save_meta_data()
 	return true
 
 func is_chassis_unlocked(c_id: String) -> bool:
-	return c_id in unlocked_chassis or int(GameData.CHASSIS.get(c_id, {}).get("unlock_cost", 0)) <= 0
+	if c_id in unlocked_chassis:
+		return true
+	var c_def: Dictionary = GameData.CHASSIS.get(c_id, {})
+	var req_ach: String = c_def.get("unlock_ach_id", "")
+	if req_ach == "" or is_achievement_unlocked(req_ach):
+		return true
+	return false
 
 func unlock_chassis(c_id: String) -> bool:
-	if is_chassis_unlocked(c_id):
-		return true
-	var cost: int = int(GameData.CHASSIS.get(c_id, {}).get("unlock_cost", 999))
-	if noah_chips < cost:
-		return false
-	noah_chips -= cost
-	unlocked_chassis.append(c_id)
-	save_meta_data()
+	if not (c_id in unlocked_chassis):
+		unlocked_chassis.append(c_id)
+		save_meta_data()
 	return true
+
+func is_map_unlocked(map_idx: int) -> bool:
+	if map_idx <= 0:
+		return true
+	if map_idx >= GameData.MAPS.size():
+		return false
+	var m_def: Dictionary = GameData.MAPS[map_idx]
+	var req_ach: String = m_def.get("unlock_ach_id", "")
+	if req_ach != "" and is_achievement_unlocked(req_ach):
+		return true
+	return map_idx < unlocked_map_count
 
 func is_feature_unlocked(f_id: String) -> bool:
 	return f_id in unlocked_features
@@ -848,3 +891,121 @@ func get_sorted_weapon_damage() -> Array:
 	list.sort_custom(func(a, b): return a["damage"] > b["damage"])
 	return list
 
+
+
+# ============================================================================
+# 成就系统判定与奖励分发机制 (ACHIEVEMENTS PROGRESS & REWARDS)
+# ============================================================================
+func is_achievement_unlocked(ach_id: String) -> bool:
+	return ach_id in unlocked_achievements
+
+func get_achievement_progress(ach_id: String) -> float:
+	var ach: Dictionary = GameData.get_achievement(ach_id)
+	if ach.is_empty():
+		return 0.0
+	var metric: String = ach.get("metric", "")
+	return float(achievement_progress.get(metric, 0))
+
+func report_metric(metric_name: String, value: Variant, is_incremental: bool = false) -> void:
+	if is_incremental:
+		var curr: float = float(achievement_progress.get(metric_name, 0.0))
+		achievement_progress[metric_name] = curr + float(value)
+	else:
+		var prev: float = float(achievement_progress.get(metric_name, 0.0))
+		achievement_progress[metric_name] = maxf(prev, float(value))
+
+	var cur_val: float = float(achievement_progress.get(metric_name, 0.0))
+	for ach in GameData.ACHIEVEMENTS:
+		if ach["metric"] == metric_name:
+			var aid: String = ach["id"]
+			if not is_achievement_unlocked(aid):
+				if cur_val >= float(ach["target"]):
+					unlock_achievement(aid)
+
+func unlock_achievement(ach_id: String) -> bool:
+	if ach_id in unlocked_achievements:
+		return false
+	unlocked_achievements.append(ach_id)
+	var ach: Dictionary = GameData.get_achievement(ach_id)
+	if not ach.is_empty():
+		var r_type: String = ach.get("rtype", "")
+		var r_id: String = ach.get("rid", "")
+		match r_type:
+			"hunter":
+				if r_id != "" and not (r_id in unlocked_hunters):
+					unlocked_hunters.append(r_id)
+			"chassis":
+				if r_id != "" and not (r_id in unlocked_chassis):
+					unlocked_chassis.append(r_id)
+			"map":
+				for m in GameData.MAPS:
+					if m["id"] == r_id:
+						unlocked_map_count = maxi(unlocked_map_count, int(m["index"]) + 1)
+						break
+			"hunter_skin":
+				if r_id != "" and not (r_id in unlocked_hunter_skins):
+					unlocked_hunter_skins.append(r_id)
+			"chassis_skin":
+				if r_id != "" and not (r_id in unlocked_chassis_skins):
+					unlocked_chassis_skins.append(r_id)
+			"chips":
+				var reg := RegEx.new()
+				reg.compile(r"\d+")
+				var m := reg.search(ach.get("rname", ""))
+				var grant: int = m.get_string().to_int() if m != null else 50
+				noah_chips += grant
+		emit_signal("achievement_unlocked", ach_id, ach)
+	save_meta_data()
+	return true
+
+# --- 角色与战车皮肤装备与持久化 ---
+func is_hunter_skin_unlocked(hunter_id: String, skin_id: String) -> bool:
+	if skin_id == "default" or skin_id == "":
+		return true
+	if skin_id in unlocked_hunter_skins:
+		return true
+	var s_def: Dictionary = GameData.get_hunter_skin_def(hunter_id, skin_id)
+	var req_ach: String = s_def.get("unlock_ach_id", "")
+	return req_ach != "" and is_achievement_unlocked(req_ach)
+
+func is_chassis_skin_unlocked(chassis_id: String, skin_id: String) -> bool:
+	if skin_id == "default" or skin_id == "":
+		return true
+	if skin_id in unlocked_chassis_skins:
+		return true
+	var s_def: Dictionary = GameData.get_chassis_skin_def(chassis_id, skin_id)
+	var req_ach: String = s_def.get("unlock_ach_id", "")
+	return req_ach != "" and is_achievement_unlocked(req_ach)
+
+func set_hunter_skin(hunter_id: String, skin_id: String) -> void:
+	selected_hunter_skin[hunter_id] = skin_id
+	save_meta_data()
+
+func get_hunter_skin(hunter_id: String) -> String:
+	return selected_hunter_skin.get(hunter_id, "default")
+
+func set_chassis_skin(chassis_id: String, skin_id: String) -> void:
+	selected_chassis_skin[chassis_id] = skin_id
+	save_meta_data()
+
+func get_chassis_skin(chassis_id: String) -> String:
+	return selected_chassis_skin.get(chassis_id, "default")
+
+func set_custom_chassis_paint(chassis_id: String, paint_data: Dictionary) -> void:
+	var hex_dict: Dictionary = {}
+	for k in paint_data.keys():
+		var val = paint_data[k]
+		if val is Color:
+			hex_dict[k] = val.to_html(false)
+		else:
+			hex_dict[k] = String(val)
+	custom_chassis_paints[chassis_id] = hex_dict
+	report_metric("custom_paint_saved", 1.0, true)
+	save_meta_data()
+
+func get_custom_chassis_paint(chassis_id: String) -> Dictionary:
+	var raw: Dictionary = custom_chassis_paints.get(chassis_id, {})
+	var col_dict: Dictionary = {}
+	for k in raw.keys():
+		col_dict[k] = Color.from_string(raw[k], Color.WHITE)
+	return col_dict

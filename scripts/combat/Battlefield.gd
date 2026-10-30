@@ -956,6 +956,11 @@ func on_enemy_killed(_enemy_node: Node2D) -> void:
 	combo_count += 1
 	combo_timer = 2.4
 	max_combo = maxi(max_combo, combo_count)
+	GameState.total_kills += 1
+	GameState.report_metric("total_kills", 1, true)
+	GameState.report_metric("max_combo", combo_count, false)
+	if is_instance_valid(player_tank) and player_tank.is_human_mode:
+		GameState.report_metric("human_kills", 1, true)
 
 	if combo_count in [15, 30, 50, 75, 100, 150, 200, 300]:
 		var p_pos: Vector2 = player_tank.get_active_position()
@@ -995,6 +1000,10 @@ func on_wanted_boss_defeated(boss_node: Node2D) -> void:
 		GameState.defeated_wanted_ids.append(b_id)
 	GameState.active_wanted_boss_id = ""
 	GameState.bounties_hunted += 1
+	GameState.report_metric("kill_" + b_id, 1, false)
+	GameState.report_metric("total_bounties", 1, true)
+	if wave_timer <= 30.0:
+		GameState.report_metric("fast_boss_kill", 1, false)
 	var final_bounty: int = boss_node.bounty_gold
 	if GameState.is_feature_unlocked("black_market_wanted"):
 		final_bounty = int(final_bounty * 1.25)
@@ -1306,12 +1315,24 @@ func _on_super_weapon_evolved(evo_info: Dictionary) -> void:
 	lbl_wanted_banner.text = "🌟 【神话超武合成！】 [%s] + [%s] ➔ %s 🌟" % [
 		evo_info["comp_a_name"], evo_info["comp_b_name"], evo_info["evo_name"]
 	]
+	GameState.report_metric("super_weapon_count", 1, true)
+	var evo_w_id: String = evo_info.get("evo_id", "")
+	match evo_w_id:
+		"evo_crimson_stars": GameState.report_metric("evo_crimson_stars", 1, false)
+		"evo_aurora_storm": GameState.report_metric("evo_aurora_storm", 1, false)
+		"evo_zeus_orbit": GameState.report_metric("evo_zeus_orbit", 1, false)
+		"evo_damocles": GameState.report_metric("evo_damocles", 1, false)
 	if is_instance_valid(player_tank) and is_instance_valid(fx_layer):
 		fx_layer.spawn_explosion(player_tank.get_active_position(), 200.0, Color(1.0, 0.88, 0.20))
 		fx_layer.spawn_text(player_tank.get_active_position() + Vector2(0, -36), "★ 神话超武：%s ★" % evo_info["evo_name"], Color(1.0, 0.90, 0.20), 1.55)
 
 func _finish_wave_success() -> void:
 	wave_active = false
+	if is_instance_valid(player_tank):
+		if player_tank.current_sp >= GameState.max_sp * 0.99:
+			GameState.report_metric("flawless_wave_count", 1, true)
+		if player_tank.current_sp <= GameState.max_sp * 0.15:
+			GameState.report_metric("clutch_wave_clear", 1, true)
 	# 全图战利品全域磁暴回收：将所有遗留掉落物100%吸附结算给玩家，零资源浪费
 	var vacuumed_scrap: int = 0
 	var vacuumed_gold: int = 0

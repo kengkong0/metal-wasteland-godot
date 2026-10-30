@@ -119,7 +119,8 @@ const HUNTERS: Dictionary = {
 		"bio": "在钢铁与风沙中长大的热血赤发少年。为了寻找失踪的父亲以及传说中击溃终末智脑的‘绯红孤狼’战车，他驾驶着由废铁手工打磨拼装的巴吉越野车踏上荒漠。凭借天生敏锐的直觉，他能在极限绝境中捕捉到赏金首的装甲弱点与地下埋藏的金属宝箱。",
 		"recommended_chassis": "荒野巴吉 (Buggy) / 复合重坦 (Abrams)",
 		"trait_tags": ["主炮高爆", "赏金宝箱", "热血少年"],
-		"unlock_cost": 0,
+		"unlock_ach_id": "",
+		"unlock_ach_desc": "初始已解锁",
 		"color": Color(0.95, 0.65, 0.20),
 		"desc": "【正面】主炮伤害+20%，装填速度+15%，对赏金首伤害+25%；每波必刷1个埋藏金属箱。\n【代价】副炮与S-E改孔费用+25%。",
 		"mods": {
@@ -138,7 +139,8 @@ const HUNTERS: Dictionary = {
 		"bio": "身裹染血深红防风斗篷的冷冽赏金猎人。黑发赤瞳，沉默少言，贯彻‘一发入魂’的绝对炮术美学。传闻他曾在雷鸣要塞一人一车击落三架近地巡航战舰。当他如狼般的血色眼眸锁定目标时，死亡倒计时便已开始。",
 		"recommended_chassis": "绯红之狼 (Crimson-Wolf) / 暴龙双炮车 (Tyrannos)",
 		"trait_tags": ["单炮极致", "超高暴击", "冷酷孤狼"],
-		"unlock_cost": 120,
+		"unlock_ach_id": "ach_kill_500",
+		"unlock_ach_desc": "达成成就【荒原猎王·五百人斩】解锁",
 		"color": Color(0.92, 0.22, 0.18),
 		"desc": "【正面】当战车仅安装 1 门主炮时，主炮伤害+60%、暴击率+25%，暴击击杀返还1发弹药。\n【代价】无法安装浮游无人机；商店武器价格+15%。",
 		"mods": {
@@ -156,7 +158,8 @@ const HUNTERS: Dictionary = {
 		"bio": "废铁镇公认的首席天才少女机械技师。留着充满元气的金褐色双马尾，鼻尖常常挂着一抹可爱的机油痕迹。对重工业机甲和大马力柴油引擎有着近乎痴迷的热爱，拥有无与伦比的心灵手巧——哪怕战车被打得只剩底盘装甲，她也能在十秒内让其满血复活！",
 		"recommended_chassis": "猛犸要塞 (Mammoth) / 野战救护车 (Ambulance)",
 		"trait_tags": ["超载极限", "极速抢修", "元气少女"],
-		"unlock_cost": 0,
+		"unlock_ach_id": "",
+		"unlock_ach_desc": "初始已解锁",
 		"color": Color(0.28, 0.78, 0.95),
 		"desc": "【正面】引擎最大载重+25%，每秒自动恢复1.5%最大SP，刷新费用-40%，底盘改孔免费，修车仅需2秒。\n【代价】主炮基础伤害-15%，步兵肉搏伤害-30%。",
 		"mods": {
@@ -177,7 +180,8 @@ const HUNTERS: Dictionary = {
 		"bio": "来自隐秘东方避难所的古武道传人。身着融合了高弹纳米纤维的无袖战术旗袍，双臂配备重工业碳纤维格斗外骨骼。性格英气豪爽，坚信人类血肉之躯在极限锤炼与东方内劲加持下，不仅能凌驾于冰冷的钢铁之上，甚至能将战车视作发射飞踢的弹药！",
 		"recommended_chassis": "荒野巴吉 (Buggy) / 暴风导弹车 (Missile Carrier)",
 		"trait_tags": ["肉搏飞踢", "自爆核击", "飒爽英气"],
-		"unlock_cost": 160,
+		"unlock_ach_id": "ach_tank_dmg_2500",
+		"unlock_ach_desc": "达成成就【钢筋铁骨】单局吸收2500伤害解锁",
 		"color": Color(0.95, 0.40, 0.65),
 		"desc": "【正面】步兵HP+200%，肉搏攻速与移速+40%；按[E]可主动引爆战车造成 8倍最大SP 全屏核爆伤害！\n【代价】战车引擎载重上限-25%。",
 		"mods": {
@@ -196,7 +200,8 @@ const HUNTERS: Dictionary = {
 		"bio": "特斯拉博士最引以为傲的生化奇迹改造萌宠。一只眼神聪明机警、毛发蓬松金黄的秋田柴犬，脖子上戴着红色冒险围巾与风镜。背部搭载高科技轻量化旋转加特林机枪，拥有远超普通猎犬的极速飞奔能力与惊人的基因吞噬本能，是废土每位老猎人梦寐以求的灵魂战友。",
 		"recommended_chassis": "武装大巴 (Battle Bus) / 荒野巴吉 (Buggy)",
 		"trait_tags": ["极速游击", "基因成长", "萌系战犬"],
-		"unlock_cost": 220,
+		"unlock_ach_id": "ach_human_kill_20",
+		"unlock_ach_desc": "达成成就【步兵奇迹】步兵肉搏击杀20敌怪解锁",
 		"color": Color(0.90, 0.82, 0.35),
 		"desc": "【正面】基础移速+35%，闪避率+20%；击杀敌人有概率掉落【基因肉块】永久增加SP与攻速。\n【代价】无法使用重型主炮，所有主炮孔自动转为副炮/SE。",
 		"mods": {
@@ -215,7 +220,8 @@ const HUNTERS: Dictionary = {
 		"bio": "随身悬挂神秘符文电极管的银发紫瞳少年，特斯拉博士唯一的亲传炼金术士兼东方雷法修习者。性格优雅慵懒却心怀玄机，擅长将古老东方五行雷火与现代赛博生化科技交织。谈笑间即可召唤布满特斯拉电弧的高压机甲傀儡，将整座机械兽潮化为灰烬。",
 		"recommended_chassis": "暴风导弹车 (Missile Carrier) / 复合重坦 (Abrams)",
 		"trait_tags": ["雷火元素", "电击傀儡", "神秘方士"],
-		"unlock_cost": 280,
+		"unlock_ach_id": "ach_boss_noah",
+		"unlock_ach_desc": "达成成就【人类黎明】击败终焉主脑解锁",
 		"color": Color(0.65, 0.42, 0.95),
 		"desc": "【正面】电击、火焰、酸液伤害+35%；元素击杀有20%概率召唤【带电僵尸炮塔】协助作战10秒。\n【代价】实弹物理伤害-20%，每吨SP转化率-15%。",
 		"mods": {
@@ -234,7 +240,8 @@ const CHASSIS: Dictionary = {
 	"buggy": {
 		"id": "buggy",
 		"name": "荒野巴吉 (Buggy)",
-		"unlock_cost": 0,
+		"unlock_ach_id": "",
+		"unlock_ach_desc": "初始已解锁",
 		"slots": ["MAIN", "SUB", "SUB", "SE"],
 		"base_weight": 3.5,
 		"sp_per_ton": 16.0,
@@ -249,7 +256,8 @@ const CHASSIS: Dictionary = {
 	"r_wolf": {
 		"id": "r_wolf",
 		"name": "绯红之狼 (Crimson Wolf)",
-		"unlock_cost": 150,
+		"unlock_ach_id": "ach_boss_gomez",
+		"unlock_ach_desc": "达成成就【劫掠王陨落】击败荒原劫掠王·巴洛克解锁",
 		"slots": ["MAIN", "MAIN", "SUB", "SE", "SE"],
 		"base_weight": 8.0,
 		"sp_per_ton": 20.0,
@@ -264,7 +272,8 @@ const CHASSIS: Dictionary = {
 	"abrams": {
 		"id": "abrams",
 		"name": "复合重坦 M1 (Abrams)",
-		"unlock_cost": 0,
+		"unlock_ach_id": "",
+		"unlock_ach_desc": "初始已解锁",
 		"slots": ["MAIN", "MAIN", "SUB", "SUB", "SE"],
 		"base_weight": 9.5,
 		"sp_per_ton": 26.0,
@@ -279,7 +288,8 @@ const CHASSIS: Dictionary = {
 	"missile_carrier": {
 		"id": "missile_carrier",
 		"name": "暴风导弹车 (Missile Carrier)",
-		"unlock_cost": 150,
+		"unlock_ach_id": "ach_all_out_10",
+		"unlock_ach_desc": "达成成就【全弹风暴】累计触发10次全弹发射解锁",
 		"slots": ["SUB", "SE", "SE", "SE", "SE", "SE"],
 		"base_weight": 6.5,
 		"sp_per_ton": 18.0,
@@ -294,7 +304,8 @@ const CHASSIS: Dictionary = {
 	"mammoth": {
 		"id": "mammoth",
 		"name": "猛犸象要塞 (Mammoth)",
-		"unlock_cost": 320,
+		"unlock_ach_id": "ach_crush_30",
+		"unlock_ach_desc": "达成成就【压路狂飙】单局碾碎30只小怪解锁",
 		"slots": ["MAIN", "MAIN", "MAIN", "SUB", "SUB", "SE", "SE"],
 		"base_weight": 15.0,
 		"sp_per_ton": 30.0,
@@ -310,7 +321,8 @@ const CHASSIS: Dictionary = {
 	"ambulance": {
 		"id": "ambulance",
 		"name": "白色恶魔救护车 (Ambulance)",
-		"unlock_cost": 200,
+		"unlock_ach_id": "ach_repair_sp_3000",
+		"unlock_ach_desc": "达成成就【战场天使】累计抢修战车3000 SP解锁",
 		"slots": ["SUB", "SUB", "SUB", "SUB", "SE", "SE"],
 		"base_weight": 5.0,
 		"sp_per_ton": 19.0,
@@ -325,7 +337,8 @@ const CHASSIS: Dictionary = {
 	"bus": {
 		"id": "bus",
 		"name": "武装大巴 (Wasteland Bus)",
-		"unlock_cost": 240,
+		"unlock_ach_id": "ach_survive_waves_15",
+		"unlock_ach_desc": "达成成就【废土观光客】存活超过15个战斗波次解锁",
 		"slots": ["MAIN", "SUB", "SUB", "SE", "SE"],
 		"base_weight": 8.5,
 		"sp_per_ton": 22.0,
@@ -340,7 +353,8 @@ const CHASSIS: Dictionary = {
 	"tyrannos": {
 		"id": "tyrannos",
 		"name": "暴龙生物战车 (Bio-Tyrannos)",
-		"unlock_cost": 400,
+		"unlock_ach_id": "ach_clear_hell",
+		"unlock_ach_desc": "达成成就【梦魇主宰】地狱模式通关第1章解锁",
 		"slots": ["MAIN", "SUB", "SE", "MAIN"],
 		"base_weight": 5.5,
 		"sp_per_ton": 24.0,
@@ -1016,7 +1030,9 @@ const MAPS: Array = [
 		"bg_color": Color(0.22, 0.18, 0.13),
 		"grid_color": Color(0.27, 0.22, 0.16),
 		"border_color": Color(0.85, 0.52, 0.18),
-		"desc": "【荒野起点】小怪：机械蚁/猎犬/滚雷车/机枪塔 | 精英：杀戮重坦 | 赏金首：【杀人推土机】&【加农水母】"
+		"desc": "【荒野起点】小怪：机械蚁/猎犬/滚雷车/机枪塔 | 精英：杀戮重坦 | 赏金首：【杀人推土机】&【加农水母】",
+		"unlock_ach_id": "",
+		"unlock_ach_desc": "初始已解锁"
 	},
 	{
 		"id": "map_2",
@@ -1033,7 +1049,9 @@ const MAPS: Array = [
 		"bg_color": Color(0.28, 0.19, 0.11),
 		"grid_color": Color(0.35, 0.24, 0.14),
 		"border_color": Color(0.95, 0.65, 0.20),
-		"desc": "【炽热沙海】小怪：猎犬/毒气桶/酸蜗牛/迫击炮蟹 | 精英：喷火装甲车 | 赏金首：【深沙巨鲛】&【狂飙斯卡普】"
+		"desc": "【炽热沙海】小怪：猎犬/毒气桶/酸蜗牛/迫击炮蟹 | 精英：喷火装甲车 | 赏金首：【深沙巨鲛】&【狂飙斯卡普】",
+		"unlock_ach_id": "ach_clear_map_1",
+		"unlock_ach_desc": "达成成就【荒原先遣队】通关第1章解锁"
 	},
 	{
 		"id": "map_3",
@@ -1050,7 +1068,9 @@ const MAPS: Array = [
 		"bg_color": Color(0.15, 0.16, 0.18),
 		"grid_color": Color(0.21, 0.22, 0.25),
 		"border_color": Color(0.50, 0.75, 0.92),
-		"desc": "【工业废墟】小怪：远程狙击炮/护盾卫士/战地维修蜂 | 精英：导弹巨兽 | 赏金首：【百足列车】&【劫掠王巴洛克】"
+		"desc": "【工业废墟】小怪：远程狙击炮/护盾卫士/战地维修蜂 | 精英：导弹巨兽 | 赏金首：【百足列车】&【劫掠王巴洛克】",
+		"unlock_ach_id": "ach_clear_map_2",
+		"unlock_ach_desc": "达成成就【沙海征服者】通关第2章解锁"
 	},
 	{
 		"id": "map_4",
@@ -1067,7 +1087,9 @@ const MAPS: Array = [
 		"bg_color": Color(0.10, 0.18, 0.15),
 		"grid_color": Color(0.15, 0.25, 0.21),
 		"border_color": Color(0.35, 0.92, 0.55),
-		"desc": "【生化海床】小怪：迫击炮蟹/磁暴蛛/毒气桶/维修蜂 | 精英：导弹巨兽 | 赏金首：【奇美拉】&【沙漠之舟】"
+		"desc": "【生化海床】小怪：迫击炮蟹/磁暴蛛/毒气桶/维修蜂 | 精英：导弹巨兽 | 赏金首：【奇美拉】&【沙漠之舟】",
+		"unlock_ach_id": "ach_clear_map_3",
+		"unlock_ach_desc": "达成成就【百足终结者】通关第3章解锁"
 	},
 	{
 		"id": "map_5",
@@ -1084,7 +1106,9 @@ const MAPS: Array = [
 		"bg_color": Color(0.13, 0.09, 0.18),
 		"grid_color": Color(0.20, 0.13, 0.28),
 		"border_color": Color(0.95, 0.25, 0.60),
-		"desc": "【终局要塞】全特种军团混编 | 精英：天穹量子处决者 | 赏金首：【重装帕鲁】&【终焉主脑·原核矩阵】"
+		"desc": "【终局要塞】全特种军团混编 | 精英：天穹量子处决者 | 赏金首：【重装帕鲁】&【终焉主脑·原核矩阵】",
+		"unlock_ach_id": "ach_clear_map_4",
+		"unlock_ach_desc": "达成成就【海床突围】通关第4章解锁"
 	}
 ]
 
@@ -1184,3 +1208,227 @@ func get_enemy_tex(enemy_id: String) -> Texture2D:
 func get_terrain_tex(map_id: String) -> Texture2D:
 	return get_tex("terrain_" + map_id)
 
+
+
+# ============================================================================
+# 15. 角色专属双皮肤 (HUNTER_SKINS - 6大猎人各2套)
+# ============================================================================
+const HUNTER_SKINS: Dictionary = {
+	"bounty_hunter": [
+		{"id": "bh_specops", "name": "荒原特战队 (Spec-Ops)", "desc": "硬派数码迷彩防弹背心与战术战术目镜，适合极端沙暴侦察", "tint": Color(0.95, 0.82, 0.55), "accent": Color(0.35, 0.90, 0.40), "unlock_ach_id": "ach_combo_50"},
+		{"id": "bh_cyberpunk", "name": "赛博极夜·霓虹追捕 (Neon Hunt)", "desc": "流光黑曜合金战甲配青蓝霓虹光刃，天穹都市高阶赏金刺客装束", "tint": Color(0.35, 0.45, 0.95), "accent": Color(0.95, 0.25, 0.90), "unlock_ach_id": "ach_super_weapon_1"}
+	],
+	"lone_wolf": [
+		{"id": "lw_blood", "name": "血锈荒魂·复仇战痕 (Blood Rust)", "desc": "暗红重型战痕风衣与血色眼罩，无数次濒死绝境铸就的恶鬼姿态", "tint": Color(0.92, 0.25, 0.20), "accent": Color(1.0, 0.85, 0.25), "unlock_ach_id": "ach_kill_1000"},
+		{"id": "lw_phantom", "name": "幽灵白狼·极地巡猎 (Ghost Wolf)", "desc": "冰川雪白迷彩风衣配银白战盔，犹如游弋于永冻荒原的极寒幽灵", "tint": Color(0.85, 0.92, 1.0), "accent": Color(0.30, 0.85, 1.0), "unlock_ach_id": "ach_boss_10"}
+	],
+	"mechanic": [
+		{"id": "mc_industrial", "name": "特斯拉重工·黄黑工业 (Heavy Hazard)", "desc": "工程高亮荧光黄防化背带裤与重型绝缘扳手背架，安全至上的天才少女", "tint": Color(1.0, 0.85, 0.20), "accent": Color(0.15, 0.15, 0.15), "unlock_ach_id": "ach_engine_tune_1"},
+		{"id": "mc_cybermaid", "name": "机巧战术·战地女仆 (Combat Maid)", "desc": "黑白古典战术女仆装与纳米医疗注射臂，哪怕在战火中也能优雅救护", "tint": Color(0.95, 0.95, 0.98), "accent": Color(0.95, 0.40, 0.65), "unlock_ach_id": "ach_repair_5"}
+	],
+	"iron_fist": [
+		{"id": "if_riot", "name": "重装防暴·深灰要塞 (Riot Heavy)", "desc": "厚实碳素深灰防暴护甲与全覆式防毒面罩，不动如山的移动钢铁壁垒", "tint": Color(0.40, 0.42, 0.46), "accent": Color(0.35, 0.75, 1.0), "unlock_ach_id": "ach_dodge_20"},
+		{"id": "if_molten", "name": "熔岩狂战·炎狱重铠 (Molten Berserk)", "desc": "地热岩浆龟裂动力装甲，伴随高压蒸汽喷射出的炽热战神之拳", "tint": Color(0.95, 0.35, 0.15), "accent": Color(1.0, 0.80, 0.20), "unlock_ach_id": "ach_burn_50"}
+	],
+	"pochi": [
+		{"id": "pc_mecha", "name": "钢铁塞伯·全械波奇 (Cyber Hound)", "desc": "全金属银钛合金义肢与红外电子眼，冷酷背负微型旋转机枪的未来兵器", "tint": Color(0.75, 0.82, 0.90), "accent": Color(1.0, 0.20, 0.20), "unlock_ach_id": "ach_crush_10"},
+		{"id": "pc_rescue", "name": "荒原救援·高亮防化 (Rescue Pup)", "desc": "明亮橘红战术防寒背心与战地急救水壶项圈，废土幸存者最温暖的阳光", "tint": Color(1.0, 0.55, 0.15), "accent": Color(0.25, 0.95, 0.55), "unlock_ach_id": "ach_survive_100_sp"}
+	],
+	"mince_aide": [
+		{"id": "ma_mad", "name": "疯狂电极·特斯拉紫袍 (Volt Magus)", "desc": "紫黑高领放电风衣与流窜蓝白高压电弧的特斯拉背囊，掌控天罚雷电", "tint": Color(0.65, 0.35, 0.95), "accent": Color(0.40, 0.90, 1.0), "unlock_ach_id": "ach_emp_50"},
+		{"id": "ma_alchemist", "name": "鸟嘴死医·荒原炼金 (Plague Alchemist)", "desc": "复古皮质鸟嘴面罩与暗金滚边学者长袍，腰间挂满咕嘟冒泡的生化药剂瓶", "tint": Color(0.28, 0.35, 0.32), "accent": Color(0.85, 0.75, 0.35), "unlock_ach_id": "ach_toxic_20"}
+	]
+}
+
+# ============================================================================
+# 16. 战车专属双皮肤 (CHASSIS_SKINS - 8大底盘各2套)
+# ============================================================================
+const CHASSIS_SKINS: Dictionary = {
+	"buggy": [
+		{"id": "ch_buggy_camo", "name": "荒野沙狐·沙漠迷彩 (Desert Fox)", "desc": "经典沙黄数码迷彩哑光漆面，防沙滤网与车头加固防撞杠", "body": Color(0.82, 0.68, 0.42), "turret": Color(0.55, 0.45, 0.32), "treads": Color(0.25, 0.22, 0.18), "decal": Color(0.95, 0.85, 0.35), "unlock_ach_id": "ach_drill_1"},
+		{"id": "ch_buggy_cyber", "name": "极夜疾驰·赛博炫彩 (Neon Velocity)", "desc": "哑光曜黑底漆搭配紫粉渐变荧光线条，废土夜幕下最刺眼的流光", "body": Color(0.18, 0.15, 0.24), "turret": Color(0.35, 0.20, 0.50), "treads": Color(0.12, 0.10, 0.16), "decal": Color(0.95, 0.30, 0.85), "unlock_ach_id": "ach_gold_1000"}
+	],
+	"r_wolf": [
+		{"id": "ch_wolf_crimson", "name": "血色彗星·重装战痕 (Scarlet Comet)", "desc": "耀眼烈焰绯红烤漆，炮塔带有等离子灼烧战痕与孤狼图腾", "body": Color(0.85, 0.18, 0.15), "turret": Color(0.60, 0.12, 0.10), "treads": Color(0.22, 0.20, 0.20), "decal": Color(1.0, 0.88, 0.25), "unlock_ach_id": "ach_boss_killdozer"},
+		{"id": "ch_wolf_stealth", "name": "黑夜幽灵·隐形碳纤 (Stealth Carbon)", "desc": "全覆式碳纤维吸波黑装甲，隐藏在雷达盲区的致命荒原幽灵", "body": Color(0.16, 0.16, 0.18), "turret": Color(0.25, 0.25, 0.28), "treads": Color(0.10, 0.10, 0.12), "decal": Color(0.35, 0.85, 1.0), "unlock_ach_id": "ach_crit_50"}
+	],
+	"abrams": [
+		{"id": "ch_abrams_woodland", "name": "重型战线·北约丛林 (Woodland Armor)", "desc": "军绿与泥褐三色交织林地迷彩，挂载重型爆炸反应装甲块", "body": Color(0.32, 0.42, 0.28), "turret": Color(0.25, 0.32, 0.22), "treads": Color(0.18, 0.18, 0.18), "decal": Color(0.85, 0.85, 0.55), "unlock_ach_id": "ach_equip_4"},
+		{"id": "ch_abrams_desert", "name": "海湾风暴·重装沙暴 (Gulf Storm)", "desc": "重型防反光耐磨沙土涂层，附带高位进气管与排沙格栅", "body": Color(0.78, 0.65, 0.45), "turret": Color(0.62, 0.52, 0.36), "treads": Color(0.24, 0.20, 0.16), "decal": Color(0.95, 0.45, 0.20), "unlock_ach_id": "ach_tank_dmg_5000"}
+	],
+	"missile_carrier": [
+		{"id": "ch_carrier_arctic", "name": "极地霜冻·冰川几何 (Arctic Frost)", "desc": "永冻冰原雪白与海蓝几何数码迷彩，飞弹发射舱覆有防结冰电热膜", "body": Color(0.80, 0.88, 0.95), "turret": Color(0.45, 0.62, 0.80), "treads": Color(0.22, 0.25, 0.30), "decal": Color(0.35, 0.95, 1.0), "unlock_ach_id": "ach_evo_orbit"},
+		{"id": "ch_carrier_hazard", "name": "辐射禁区·核黄警示 (Bio-Hazard)", "desc": "高反差黑黄斑马条纹涂装，醒目的核警示三叶草徽章与强化防化涂层", "body": Color(0.92, 0.78, 0.18), "turret": Color(0.20, 0.20, 0.20), "treads": Color(0.15, 0.15, 0.15), "decal": Color(0.95, 0.25, 0.20), "unlock_ach_id": "ach_synergy_4_cannon"}
+	],
+	"mammoth": [
+		{"id": "ch_mammoth_iron", "name": "荒原重锈·工业钢铁 (Iron Rust)", "desc": "粗犷铆接厚装甲钢板与被油污浸润的重锈车身，推平一切的机械巨兽", "body": Color(0.45, 0.35, 0.30), "turret": Color(0.32, 0.26, 0.22), "treads": Color(0.18, 0.15, 0.14), "decal": Color(0.85, 0.40, 0.20), "unlock_ach_id": "ach_crush_50"},
+		{"id": "ch_mammoth_glacier", "name": "极地战象·白金神将 (Glacier Titan)", "desc": "钛银灰与冰晶钢蓝护甲，巨大推土铲镀以金黄耐磨合金，威仪万千", "body": Color(0.70, 0.78, 0.85), "turret": Color(0.40, 0.52, 0.68), "treads": Color(0.22, 0.24, 0.28), "decal": Color(1.0, 0.85, 0.25), "unlock_ach_id": "ach_max_weight_35"}
+	],
+	"ambulance": [
+		{"id": "ch_amb_medic", "name": "战地守护·白鸽红十字 (White Medic)", "desc": "象牙白车身镶嵌醒目急救红十字，蓝红双闪警示爆闪灯，希望的灯塔", "body": Color(0.92, 0.94, 0.95), "turret": Color(0.75, 0.20, 0.22), "treads": Color(0.25, 0.25, 0.26), "decal": Color(0.95, 0.22, 0.25), "unlock_ach_id": "ach_boss_jelly"},
+		{"id": "ch_amb_hazmat", "name": "生化消毒·荧光应援 (Hazmat Neon)", "desc": "荧光翠绿防腐酸涂料搭配紫外消毒光环，在毒沼毒海中来去自如", "body": Color(0.25, 0.80, 0.45), "turret": Color(0.18, 0.55, 0.32), "treads": Color(0.16, 0.22, 0.18), "decal": Color(0.40, 0.98, 0.85), "unlock_ach_id": "ach_toxic_gas_kill_30"}
+	],
+	"bus": [
+		{"id": "ch_bus_police", "name": "特警战术·铁壁防暴 (Tactical Riot)", "desc": "黑白经典警务防暴涂漆，车窗加装厚重防爆钢栅栏与高音扩音喇叭", "body": Color(0.22, 0.24, 0.28), "turret": Color(0.85, 0.85, 0.88), "treads": Color(0.15, 0.15, 0.16), "decal": Color(0.35, 0.65, 0.95), "unlock_ach_id": "ach_clear_map_2"},
+		{"id": "ch_bus_wasteland", "name": "狂暴摇滚·狂欢朋克 (Punk Festival)", "desc": "车身布满喷漆涂鸦、烈火图腾与带刺防护角，摇滚重金属的废土狂欢", "body": Color(0.75, 0.22, 0.45), "turret": Color(0.85, 0.60, 0.18), "treads": Color(0.20, 0.16, 0.22), "decal": Color(1.0, 0.35, 0.15), "unlock_ach_id": "ach_spend_1500"}
+	],
+	"tyrannos": [
+		{"id": "ch_tyrannos_mech", "name": "原核神兵·黑曜金煞 (Obsidian Core)", "desc": "深黑曜石吸能装甲流淌着黄金原核回路，仿佛从古代智脑中苏醒的歼灭神", "body": Color(0.15, 0.15, 0.17), "turret": Color(0.28, 0.28, 0.32), "treads": Color(0.12, 0.12, 0.14), "decal": Color(1.0, 0.82, 0.20), "unlock_ach_id": "ach_clear_map_5"},
+		{"id": "ch_tyrannos_volcano", "name": "熔岩暴龙·深渊炎魔 (Volcano Rex)", "desc": "暗红灼烧玄武岩甲壳，炮口喷薄着灼热硫磺与岩浆烈火", "body": Color(0.65, 0.18, 0.14), "turret": Color(0.42, 0.12, 0.10), "treads": Color(0.20, 0.15, 0.14), "decal": Color(1.0, 0.45, 0.18), "unlock_ach_id": "ach_clear_hard_all"}
+	]
+}
+
+# ============================================================================
+# 17. 局外战车涂装工坊部位与预设方案 (PAINT_PARTS & PRESETS)
+# ============================================================================
+const PAINT_PARTS: Array = [
+	{"id": "body", "name": "车身主装甲 (Hull/Chassis)", "desc": "战车车体外壳与前置冲撞装甲"},
+	{"id": "turret", "name": "炮塔与主炮架 (Turret/Mount)", "desc": "主炮回转塔台与副炮基座外框"},
+	{"id": "treads", "name": "履带与负重轮 (Treads/Wheels)", "desc": "底盘履带链片、负重轮毂与侧翼挡泥板"},
+	{"id": "decal", "name": "战术拉花/能量荧光 (Decal/Glow)", "desc": "军徽拉花条纹、能量管线与车灯涂装"}
+]
+
+const PAINT_PRESETS: Array = [
+	{"id": "scarlet", "name": "赤色风暴 (Crimson Storm)", "body": Color(0.85, 0.20, 0.18), "turret": Color(0.55, 0.12, 0.12), "treads": Color(0.22, 0.20, 0.20), "decal": Color(1.0, 0.85, 0.25)},
+	{"id": "desert", "name": "沙暴迷彩 (Desert Dune)", "body": Color(0.80, 0.68, 0.45), "turret": Color(0.58, 0.48, 0.32), "treads": Color(0.24, 0.20, 0.16), "decal": Color(0.95, 0.50, 0.20)},
+	{"id": "arctic", "name": "极地雪原 (Arctic Snow)", "body": Color(0.88, 0.92, 0.98), "turret": Color(0.45, 0.65, 0.85), "treads": Color(0.25, 0.28, 0.32), "decal": Color(0.35, 0.95, 1.0)},
+	{"id": "cyber", "name": "赛博霓虹 (Cyber Neon)", "body": Color(0.18, 0.15, 0.24), "turret": Color(0.32, 0.20, 0.48), "treads": Color(0.12, 0.10, 0.15), "decal": Color(0.95, 0.25, 0.85)},
+	{"id": "hazard", "name": "工业明黄 (Hazard Yellow)", "body": Color(0.95, 0.82, 0.18), "turret": Color(0.22, 0.22, 0.22), "treads": Color(0.18, 0.18, 0.18), "decal": Color(0.95, 0.25, 0.20)},
+	{"id": "military", "name": "军工重装 (Military Olive)", "body": Color(0.35, 0.42, 0.30), "turret": Color(0.26, 0.32, 0.22), "treads": Color(0.18, 0.18, 0.18), "decal": Color(0.90, 0.85, 0.50)},
+	{"id": "stealth", "name": "隐形黑曜 (Stealth Dark)", "body": Color(0.16, 0.16, 0.18), "turret": Color(0.25, 0.25, 0.28), "treads": Color(0.10, 0.10, 0.12), "decal": Color(0.40, 0.85, 1.0)},
+	{"id": "purple_core", "name": "原核紫晶 (Noah Amethyst)", "body": Color(0.25, 0.18, 0.35), "turret": Color(0.42, 0.25, 0.60), "treads": Color(0.14, 0.12, 0.18), "decal": Color(0.95, 0.40, 0.95)}
+]
+
+# ============================================================================
+# 18. 废土荣誉殿堂 - 全 92 项成就系统 (ACHIEVEMENTS)
+# ============================================================================
+const ACHIEVEMENT_CATEGORIES: Dictionary = {
+	"all": "全部成就",
+	"career": "猎人生涯",
+	"boss": "通缉猎杀",
+	"chassis": "战车车间",
+	"weapon": "神话流派",
+	"survival": "铁血生存",
+	"tactics": "战术身法",
+	"chapter": "章节征程",
+	"meta": "科技特权"
+}
+
+const ACHIEVEMENTS: Array = [
+	{"id": "ach_kill_10", "cat": "career", "name": "🌱 荒原初啼", "desc": "在战斗中累计消灭 10 只机械怪物", "metric": "total_kills", "target": 10, "rtype": "chips", "rid": "", "rname": "💎 20 原核晶片"},
+	{"id": "ach_kill_100", "cat": "career", "name": "🎯 赏金学徒", "desc": "在战斗中累计消灭 100 只机械怪物", "metric": "total_kills", "target": 100, "rtype": "chips", "rid": "", "rname": "💎 40 原核晶片"},
+	{"id": "ach_kill_300", "cat": "career", "name": "⚔️ 荒原百人斩", "desc": "在战斗中累计消灭 300 只机械怪物", "metric": "total_kills", "target": 300, "rtype": "chips", "rid": "", "rname": "💎 60 原核晶片"},
+	{"id": "ach_kill_500", "cat": "career", "name": "🐺 荒原猎王", "desc": "在战斗中累计消灭 500 只机械怪物", "metric": "total_kills", "target": 500, "rtype": "hunter", "rid": "lone_wolf", "rname": "解锁新猎人【克莱因·绯红孤狼】"},
+	{"id": "ach_kill_1000", "cat": "career", "name": "🩸 千人屠夫", "desc": "在战斗中累计消灭 1000 只机械怪物", "metric": "total_kills", "target": 1000, "rtype": "hunter_skin", "rid": "lw_blood", "rname": "解锁孤狼皮肤【血锈荒魂】"},
+	{"id": "ach_kill_3000", "cat": "career", "name": "💀 废土死神", "desc": "在战斗中累计消灭 3000 只机械怪物", "metric": "total_kills", "target": 3000, "rtype": "chips", "rid": "", "rname": "💎 150 原核晶片"},
+	{"id": "ach_kill_10000", "cat": "career", "name": "🌌 万械俱灭", "desc": "在战斗中累计消灭 10000 只机械怪物", "metric": "total_kills", "target": 10000, "rtype": "chips", "rid": "", "rname": "💎 300 原核晶片"},
+	{"id": "ach_combo_20", "cat": "career", "name": "⚡ 连击新星", "desc": "单局击杀计数器达成 20 Combo 连击", "metric": "max_combo", "target": 20, "rtype": "chips", "rid": "", "rname": "💎 30 原核晶片"},
+	{"id": "ach_combo_35", "cat": "career", "name": "🔥 杀戮沸腾", "desc": "单局击杀计数器达成 35 Combo 连击", "metric": "max_combo", "target": 35, "rtype": "chips", "rid": "", "rname": "💎 50 原核晶片"},
+	{"id": "ach_combo_50", "cat": "career", "name": "🌪️ 连击大师", "desc": "单局击杀计数器达成 50 Combo 连击", "metric": "max_combo", "target": 50, "rtype": "hunter_skin", "rid": "bh_specops", "rname": "解锁雷恩皮肤【荒原特战队】"},
+	{"id": "ach_combo_100", "cat": "career", "name": "🌪️ 狂飙风暴", "desc": "单局击杀计数器达成 100 Combo 极限连击", "metric": "max_combo", "target": 100, "rtype": "chips", "rid": "", "rname": "💎 120 原核晶片"},
+	{"id": "ach_combo_200", "cat": "career", "name": "👑 割草至尊", "desc": "单局击杀计数器达成 200 Combo 绝世割草", "metric": "max_combo", "target": 200, "rtype": "chips", "rid": "", "rname": "💎 250 原核晶片"},
+	{"id": "ach_boss_killdozer", "cat": "boss", "name": "🚜 推土机终结者", "desc": "成功讨伐赏金首【杀人推土机 (Killdozer)】", "metric": "kill_boss_killdozer", "target": 1, "rtype": "chassis_skin", "rid": "ch_wolf_crimson", "rname": "解锁红狼皮肤【血色彗星】"},
+	{"id": "ach_boss_jelly", "cat": "boss", "name": "⚡ 水母电击疗法", "desc": "成功讨伐赏金首【加农水母 (Cannon Jelly)】", "metric": "kill_boss_jelly", "target": 1, "rtype": "chassis_skin", "rid": "ch_amb_medic", "rname": "解锁救护车皮肤【白鸽红十字】"},
+	{"id": "ach_boss_sand_shark", "cat": "boss", "name": "🦈 沙海钓龙者", "desc": "成功讨伐赏金首【深沙巨鲛·地龙 (Sand Maw)】", "metric": "kill_boss_sand_shark", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 60 原核晶片"},
+	{"id": "ach_boss_skunks", "cat": "boss", "name": "🦨 沙盗死期", "desc": "成功讨伐赏金首【狂飙沙盗首领·斯卡普 (Scarp)】", "metric": "kill_boss_skunks", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 60 原核晶片"},
+	{"id": "ach_boss_centipede", "cat": "boss", "name": "🚂 脱轨时刻", "desc": "成功讨伐赏金首【百足装甲列车 (Centipede)】", "metric": "kill_boss_centipede", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 80 原核晶片"},
+	{"id": "ach_boss_gomez", "cat": "boss", "name": "👑 劫掠王陨落", "desc": "成功讨伐赏金首【荒原劫掠王·巴洛克 (Baroque)】", "metric": "kill_boss_gomez", "target": 1, "rtype": "chassis", "rid": "r_wolf", "rname": "解锁新战车【绯红之狼】"},
+	{"id": "ach_boss_chimera", "cat": "boss", "name": "🧬 终结生化兽", "desc": "成功讨伐赏金首【生化融合兽·奇美拉 (Bio-Chimera)】", "metric": "kill_boss_chimera", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 90 原核晶片"},
+	{"id": "ach_boss_desert_boat", "cat": "boss", "name": "⚓ 击沉巨舰", "desc": "成功讨伐赏金首【陆地战舰·沙漠之舟 (Desert Boat)】", "metric": "kill_boss_desert_boat", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 100 原核晶片"},
+	{"id": "ach_boss_bighemoth", "cat": "boss", "name": "🦾 暴君伏诛", "desc": "成功讨伐赏金首【钢铁暴君·重装帕鲁 (Bighemoth)】", "metric": "kill_boss_bighemoth", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 120 原核晶片"},
+	{"id": "ach_boss_noah", "cat": "boss", "name": "☀️ 人类黎明", "desc": "成功讨伐终极赏金首【终焉主脑·原核矩阵 (Master OMEGA)】", "metric": "kill_boss_noah", "target": 1, "rtype": "hunter", "rid": "mince_aide", "rname": "解锁新猎人【伊戈尔·赛博方士】"},
+	{"id": "ach_boss_3", "cat": "boss", "name": "🎖️ 初出茅庐", "desc": "累计击败 3 名通缉赏金首", "metric": "total_bounties", "target": 3, "rtype": "chips", "rid": "", "rname": "💎 50 原核晶片"},
+	{"id": "ach_boss_10", "cat": "boss", "name": "🏅 传奇猎手", "desc": "累计击败 10 名通缉赏金首", "metric": "total_bounties", "target": 10, "rtype": "hunter_skin", "rid": "lw_phantom", "rname": "解锁孤狼皮肤【幽灵白狼】"},
+	{"id": "ach_boss_30", "cat": "boss", "name": "🏆 荒原清道夫", "desc": "累计击败 30 名通缉赏金首", "metric": "total_bounties", "target": 30, "rtype": "chips", "rid": "", "rname": "💎 180 原核晶片"},
+	{"id": "ach_boss_100", "cat": "boss", "name": "🌟 赏金神话", "desc": "累计击败 100 名通缉赏金首", "metric": "total_bounties", "target": 100, "rtype": "chips", "rid": "", "rname": "💎 350 原核晶片"},
+	{"id": "ach_boss_fast_kill", "cat": "boss", "name": "⏱️ 极速处决", "desc": "在 30 秒内迅速击杀任意一名赏金首", "metric": "fast_boss_kill", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 80 原核晶片"},
+	{"id": "ach_drill_1", "cat": "chassis", "name": "🔧 激光始动", "desc": "在多拉姆车库完成 1 次战车底盘激光打孔扩充槽位", "metric": "drill_slot_count", "target": 1, "rtype": "chassis_skin", "rid": "ch_buggy_camo", "rname": "解锁越野车皮肤【荒野沙狐】"},
+	{"id": "ach_drill_2", "cat": "chassis", "name": "🌟 六孔全开", "desc": "单局将战车底盘槽位打孔扩充至 6 孔全满上限", "metric": "max_slots_reached", "target": 6, "rtype": "chips", "rid": "", "rname": "💎 100 原核晶片"},
+	{"id": "ach_engine_tune_1", "cat": "chassis", "name": "⚡ 引擎超频", "desc": "在车库完成 1 次引擎出力扩容调校 (+2.5t 载重)", "metric": "engine_tune_count", "target": 1, "rtype": "hunter_skin", "rid": "mc_industrial", "rname": "解锁爱丽丝皮肤【黄黑工业装】"},
+	{"id": "ach_engine_tune_3", "cat": "chassis", "name": "🚀 动力澎湃", "desc": "单局在车库累计完成 3 次引擎出力扩容", "metric": "engine_tune_count", "target": 3, "rtype": "chips", "rid": "", "rname": "💎 80 原核晶片"},
+	{"id": "ach_max_weight_25", "cat": "chassis", "name": "⚖️ 重装先锋", "desc": "战车最大引擎载重达到 25.0t 以上", "metric": "max_weight", "target": 25.0, "rtype": "chips", "rid": "", "rname": "💎 50 原核晶片"},
+	{"id": "ach_max_weight_35", "cat": "chassis", "name": "🏰 移动堡垒", "desc": "战车最大引擎载重达到 35.0t 以上", "metric": "max_weight", "target": 35.0, "rtype": "chassis_skin", "rid": "ch_mammoth_glacier", "rname": "解锁猛犸皮肤【极地战象】"},
+	{"id": "ach_switch_chassis_1", "cat": "chassis", "name": "🔄 换乘体验", "desc": "在多拉姆车库成功换乘一次其他战车底盘", "metric": "switch_chassis_count", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 40 原核晶片"},
+	{"id": "ach_mod_slot_1", "cat": "chassis", "name": "🔩 武器改孔", "desc": "在车库完成 1 次槽位类型改装切换 (主炮/副炮/SE)", "metric": "mod_slot_count", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 30 原核晶片"},
+	{"id": "ach_mod_slot_5", "cat": "chassis", "name": "🛠️ 车间常客", "desc": "累计完成 5 次槽位属性改孔", "metric": "mod_slot_count", "target": 5, "rtype": "chips", "rid": "", "rname": "💎 80 原核晶片"},
+	{"id": "ach_gold_500", "cat": "chassis", "name": "💰 赏金丰厚", "desc": "单局内手头持有的废土多拉姆达到 500 G", "metric": "max_gold_held", "target": 500, "rtype": "chips", "rid": "", "rname": "💎 40 原核晶片"},
+	{"id": "ach_gold_1000", "cat": "chassis", "name": "💎 废土富豪", "desc": "单局内手头持有的废土多拉姆达到 1000 G", "metric": "max_gold_held", "target": 1000, "rtype": "chassis_skin", "rid": "ch_buggy_cyber", "rname": "解锁越野车皮肤【极夜疾驰】"},
+	{"id": "ach_spend_1500", "cat": "chassis", "name": "🛍️ 挥金如土", "desc": "单局在多拉姆车库中累计消费 1500 G 赏金", "metric": "gold_spent_run", "target": 1500, "rtype": "chassis_skin", "rid": "ch_bus_wasteland", "rname": "解锁大巴皮肤【狂暴摇滚】"},
+	{"id": "ach_equip_4", "cat": "weapon", "name": "⚔️ 全副武装", "desc": "战车挂架上同时装配满 4 门武器", "metric": "equipped_weapons_count", "target": 4, "rtype": "chassis_skin", "rid": "ch_abrams_woodland", "rname": "解锁重坦皮肤【北约丛林】"},
+	{"id": "ach_equip_6", "cat": "weapon", "name": "🚀 移动军火库", "desc": "战车挂架上同时装配满 6 门武器", "metric": "equipped_weapons_count", "target": 6, "rtype": "chips", "rid": "", "rname": "💎 80 原核晶片"},
+	{"id": "ach_weapon_rarity_2", "cat": "weapon", "name": "⭐ 质的飞跃", "desc": "在战斗中将任意武器合成升至 ★2 精良稀有度", "metric": "max_weapon_rarity", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 30 原核晶片"},
+	{"id": "ach_weapon_rarity_3", "cat": "weapon", "name": "🔷 稀有精炼", "desc": "在战斗中拥有至少 1 门 ★3 稀有蓝色武器", "metric": "max_weapon_rarity", "target": 2, "rtype": "chips", "rid": "", "rname": "💎 40 原核晶片"},
+	{"id": "ach_weapon_rarity_4", "cat": "weapon", "name": "🟣 史诗重炮", "desc": "在战斗中拥有至少 1 门 ★4 史诗紫色武器", "metric": "max_weapon_rarity", "target": 3, "rtype": "chips", "rid": "", "rname": "💎 60 原核晶片"},
+	{"id": "ach_weapon_rarity_5", "cat": "weapon", "name": "🔴 绯红传奇", "desc": "获得至少 1 门 ★5 绯红传奇武器", "metric": "max_weapon_rarity", "target": 4, "rtype": "chips", "rid": "", "rname": "💎 100 原核晶片"},
+	{"id": "ach_super_weapon_1", "cat": "weapon", "name": "🌟 神话降临", "desc": "成功合成出第 1 把 ★6 神话级超武", "metric": "super_weapon_count", "target": 1, "rtype": "hunter_skin", "rid": "bh_cyberpunk", "rname": "解锁雷恩皮肤【赛博极夜】"},
+	{"id": "ach_evo_cannon", "cat": "weapon", "name": "💥 双星交辉", "desc": "合成神话超武【★超武：绯红双星·超重歼灭炮】", "metric": "evo_crimson_stars", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 80 原核晶片"},
+	{"id": "ach_evo_aurora", "cat": "weapon", "name": "🌌 全域死光", "desc": "合成神话超武【★超武：天穹极光·暴风近防阵列】", "metric": "evo_aurora_storm", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 80 原核晶片"},
+	{"id": "ach_evo_orbit", "cat": "weapon", "name": "⚡ 磁暴天罚", "desc": "合成神话超武【★超武：宙斯裁决·泰坦重装震荡球】", "metric": "evo_zeus_orbit", "target": 1, "rtype": "chassis_skin", "rid": "ch_carrier_arctic", "rname": "解锁导弹车皮肤【极地霜冻】"},
+	{"id": "ach_evo_damocles", "cat": "weapon", "name": "🛰️ 终焉轨道", "desc": "合成神话超武【★超武：达摩克利斯·原核湮灭激光柱】", "metric": "evo_damocles", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 100 原核晶片"},
+	{"id": "ach_synergy_4_cannon", "cat": "weapon", "name": "💣 狂轰滥炸", "desc": "战车装备同时凑齐 4 门【重炮】流派羁绊", "metric": "synergy_cannon_4", "target": 1, "rtype": "chassis_skin", "rid": "ch_carrier_hazard", "rname": "解锁导弹车皮肤【核黄警示】"},
+	{"id": "ach_synergy_4_rapid", "cat": "weapon", "name": "🔥 弹幕倾泻", "desc": "战车装备同时凑齐 4 门【速射】流派羁绊", "metric": "synergy_rapid_4", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 60 原核晶片"},
+	{"id": "ach_synergy_4_electric", "cat": "weapon", "name": "⚡ 磁暴电网", "desc": "战车装备同时凑齐 4 门【电磁】流派羁绊", "metric": "synergy_electric_4", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 60 原核晶片"},
+	{"id": "ach_tank_wreck_1", "cat": "survival", "name": "🩸 大难不死", "desc": "战车 SP 归零大破跳车，成功进入步兵肉搏形态存活", "metric": "tank_wreck_count", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 30 原核晶片"},
+	{"id": "ach_repair_1", "cat": "survival", "name": "🔧 绝境焊匠", "desc": "在步兵肉搏状态下靠近残骸读条抢修成功重回战车", "metric": "repair_success_count", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 40 原核晶片"},
+	{"id": "ach_repair_5", "cat": "survival", "name": "🔨 抢修老手", "desc": "累计完成 5 次大破紧急抢修重回战车", "metric": "repair_success_count", "target": 5, "rtype": "hunter_skin", "rid": "mc_cybermaid", "rname": "解锁爱丽丝皮肤【战地女仆】"},
+	{"id": "ach_repair_sp_3000", "cat": "survival", "name": "👼 战场天使", "desc": "累计抢修战车恢复 3000 点 SP 装甲片", "metric": "total_repaired_sp", "target": 3000, "rtype": "chassis", "rid": "ambulance", "rname": "解锁新战车【野战救护车】"},
+	{"id": "ach_survive_100_sp", "cat": "survival", "name": "🛡️ 毫发无损", "desc": "单波次战斗结束时战车 SP 保持 100% 满状态", "metric": "flawless_wave_count", "target": 1, "rtype": "hunter_skin", "rid": "pc_rescue", "rname": "解锁波奇皮肤【荒原救援犬】"},
+	{"id": "ach_tank_dmg_2500", "cat": "survival", "name": "🦾 钢筋铁骨", "desc": "单局战车装甲片累计承受吸收 2500 点伤害", "metric": "tank_absorbed_dmg", "target": 2500, "rtype": "hunter", "rid": "iron_fist", "rname": "解锁新猎人【凛·废土武道家】"},
+	{"id": "ach_tank_dmg_5000", "cat": "survival", "name": "🧱 叹息之壁", "desc": "单局战车装甲片累计承受吸收 5000 点伤害", "metric": "tank_absorbed_dmg", "target": 5000, "rtype": "chassis_skin", "rid": "ch_abrams_desert", "rname": "解锁重坦皮肤【海湾风暴】"},
+	{"id": "ach_human_kill_1", "cat": "survival", "name": "🔫 绝地步兵", "desc": "以步兵肉搏状态手枪击杀 1 名机械怪物", "metric": "human_kills", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 30 原核晶片"},
+	{"id": "ach_human_kill_20", "cat": "survival", "name": "🐕 步兵奇迹", "desc": "累计以步兵肉搏状态击杀 20 名机械怪物", "metric": "human_kills", "target": 20, "rtype": "hunter", "rid": "pochi", "rname": "解锁新猎人【麦克斯·战术柴犬】"},
+	{"id": "ach_low_sp_wave", "cat": "survival", "name": "⏱️ 绝境求生", "desc": "战车 SP 低于 15% 濒死状态下完成波次读秒胜利", "metric": "clutch_wave_clear", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 60 原核晶片"},
+	{"id": "ach_defib_revive", "cat": "survival", "name": "🛰️ 轨道除颤", "desc": "触发特斯拉轨道除颤卫星满血复苏 1 次", "metric": "defib_revive_count", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 50 原核晶片"},
+	{"id": "ach_crush_10", "cat": "tactics", "name": "🚜 钢铁履带", "desc": "高速驾驶战车物理碾碎 10 只轻甲小怪", "metric": "crushed_enemies", "target": 10, "rtype": "hunter_skin", "rid": "pc_mecha", "rname": "解锁波奇皮肤【钢铁赛博】"},
+	{"id": "ach_crush_30", "cat": "tactics", "name": "💥 压路狂飙", "desc": "单局驾驶战车物理碾碎 30 只轻甲小怪", "metric": "crushed_enemies", "target": 30, "rtype": "chassis", "rid": "mammoth", "rname": "解锁新战车【猛犸重装突进要塞】"},
+	{"id": "ach_crush_50", "cat": "tactics", "name": "🦣 猛犸横行", "desc": "单局驾驶战车物理碾碎 50 只轻甲小怪", "metric": "crushed_enemies", "target": 50, "rtype": "chassis_skin", "rid": "ch_mammoth_iron", "rname": "解锁猛犸皮肤【荒原重锈】"},
+	{"id": "ach_all_out_1", "cat": "tactics", "name": "🎯 全弹齐发", "desc": "触发 1 次 C装置【全弹发射】终极指令", "metric": "all_out_count", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 30 原核晶片"},
+	{"id": "ach_all_out_10", "cat": "tactics", "name": "🌪️ 全弹风暴", "desc": "累计触发 10 次 C装置【全弹发射】终极指令", "metric": "all_out_count", "target": 10, "rtype": "chassis", "rid": "missile_carrier", "rname": "解锁新战车【暴风导弹车】"},
+	{"id": "ach_dodge_20", "cat": "tactics", "name": "💨 闪电身法", "desc": "单局战斗中成功触发 20 次战车闪避 (MISS)", "metric": "dodge_count", "target": 20, "rtype": "hunter_skin", "rid": "if_riot", "rname": "解锁凛皮肤【重装防暴】"},
+	{"id": "ach_crit_50", "cat": "tactics", "name": "🎯 致命火控", "desc": "单局战车综合暴击率提升至 50% 以上", "metric": "crit_chance", "target": 0.5, "rtype": "chassis_skin", "rid": "ch_wolf_stealth", "rname": "解锁红狼皮肤【黑夜幽灵】"},
+	{"id": "ach_toxic_gas_kill_30", "cat": "tactics", "name": "☣️ 生化毒沼", "desc": "利用救护车生化毒雾腐蚀消灭 30 只小怪", "metric": "toxic_aura_kills", "target": 30, "rtype": "chassis_skin", "rid": "ch_amb_hazmat", "rname": "解锁救护车皮肤【生化隔离】"},
+	{"id": "ach_burn_50", "cat": "tactics", "name": "🔥 烈火燎原", "desc": "使用火焰武器使累计 50 名敌人燃烧", "metric": "burned_enemies", "target": 50, "rtype": "hunter_skin", "rid": "if_molten", "rname": "解锁凛皮肤【熔岩狂战】"},
+	{"id": "ach_emp_50", "cat": "tactics", "name": "⚡ 磁暴震荡", "desc": "使用电击武器使累计 50 名敌人感电瘫痪", "metric": "emp_stunned_enemies", "target": 50, "rtype": "hunter_skin", "rid": "ma_mad", "rname": "解锁伊戈尔皮肤【疯狂电极】"},
+	{"id": "ach_clear_map_1", "cat": "chapter", "name": "🚩 荒原先遣队", "desc": "成功通关第 1 章节【废土哨站·荒野起点】", "metric": "clear_map_1", "target": 1, "rtype": "map", "rid": "map_2", "rname": "解锁新地图【第2章·流沙遗迹】"},
+	{"id": "ach_clear_map_2", "cat": "chapter", "name": "🏜️ 沙海征服者", "desc": "成功通关第 2 章节【死亡大沙漠·流沙遗迹】", "metric": "clear_map_2", "target": 1, "rtype": "map", "rid": "map_3", "rname": "解锁新地图【第3章·百足峡谷】"},
+	{"id": "ach_clear_map_3", "cat": "chapter", "name": "🚂 百足终结者", "desc": "成功通关第 3 章节【铁道废墟·百足峡谷】", "metric": "clear_map_3", "target": 1, "rtype": "map", "rid": "map_4", "rname": "解锁新地图【第4章·枯竭海床】"},
+	{"id": "ach_clear_map_4", "cat": "chapter", "name": "🌉 海床突围", "desc": "成功通关第 4 章节【恶魔跨海大桥·枯竭海床】", "metric": "clear_map_4", "target": 1, "rtype": "map", "rid": "map_5", "rname": "解锁新地图【第5章·深层地核】"},
+	{"id": "ach_clear_map_5", "cat": "chapter", "name": "🏆 废土救世主", "desc": "成功通关第 5 章节【人类终焉中枢·深层地核】", "metric": "clear_map_5", "target": 1, "rtype": "chassis_skin", "rid": "ch_tyrannos_mech", "rname": "解锁暴龙车皮肤【原核神兵】"},
+	{"id": "ach_survive_waves_15", "cat": "chapter", "name": "🚌 废土观光客", "desc": "在任意关卡累计存活超过 15 个战斗波次", "metric": "total_waves_survived", "target": 15, "rtype": "chassis", "rid": "bus", "rname": "解锁新战车【末日防暴武装巴士】"},
+	{"id": "ach_survive_waves_50", "cat": "chapter", "name": "🎖️ 废土常胜军", "desc": "累计存活超过 50 个战斗波次", "metric": "total_waves_survived", "target": 50, "rtype": "chips", "rid": "", "rname": "💎 150 原核晶片"},
+	{"id": "ach_clear_hard_1", "cat": "chapter", "name": "💪 赏金硬汉", "desc": "在【困难模式】下成功通关任意章节", "metric": "clear_hard_count", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 80 原核晶片"},
+	{"id": "ach_clear_hard_all", "cat": "chapter", "name": "🌋 末日行者", "desc": "在【困难模式】下成功通关全部 5 大章节", "metric": "clear_hard_all", "target": 1, "rtype": "chassis_skin", "rid": "ch_tyrannos_volcano", "rname": "解锁暴龙车皮肤【熔岩暴龙】"},
+	{"id": "ach_clear_hell", "cat": "chapter", "name": "👹 梦魇主宰", "desc": "在【地狱模式】下成功通关第 1 章节", "metric": "clear_hell_count", "target": 1, "rtype": "chassis", "rid": "tyrannos", "rname": "解锁新战车【暴龙机神】"},
+	{"id": "ach_meta_up_1", "cat": "meta", "name": "💡 初窥门径", "desc": "在特斯拉实验室使用原核晶片升级 1 次永久科技", "metric": "meta_upgrades_purchased", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 20 原核晶片"},
+	{"id": "ach_meta_up_10", "cat": "meta", "name": "🔬 科技先锋", "desc": "在特斯拉实验室累计升级 10 次永久科技", "metric": "meta_upgrades_purchased", "target": 10, "rtype": "chips", "rid": "", "rname": "💎 60 原核晶片"},
+	{"id": "ach_meta_max_1", "cat": "meta", "name": "⚙️ 极限科技", "desc": "将特斯拉实验室中任意一项永久科技提升至满级", "metric": "meta_maxed_count", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 100 原核晶片"},
+	{"id": "ach_chips_1000", "cat": "meta", "name": "💎 晶片达人", "desc": "生涯累计获得超过 1000 颗原核晶片", "metric": "total_chips_earned", "target": 1000, "rtype": "chips", "rid": "", "rname": "💎 100 原核晶片"},
+	{"id": "ach_chips_5000", "cat": "meta", "name": "🏦 晶片巨贾", "desc": "生涯累计获得超过 5000 颗原核晶片", "metric": "total_chips_earned", "target": 5000, "rtype": "chips", "rid": "", "rname": "💎 250 原核晶片"},
+	{"id": "ach_feature_lock", "cat": "meta", "name": "🔒 商业战术", "desc": "在实验室解锁【军火库商品锁定器】局外特性", "metric": "feature_shop_lock", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 50 原核晶片"},
+	{"id": "ach_custom_paint", "cat": "meta", "name": "🎨 涂装大师", "desc": "在局外战车涂装工坊中成功保存 1 次自定义车体涂色", "metric": "custom_paint_saved", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 50 原核晶片"},
+	{"id": "ach_toxic_20", "cat": "meta", "name": "🧪 毒抗淬炼", "desc": "在毒沼毒雾中承受累计 20 次接触腐蚀未阵亡", "metric": "toxic_survived", "target": 20, "rtype": "hunter_skin", "rid": "ma_alchemist", "rname": "解锁伊戈尔皮肤【鸟嘴炼金】"},
+]
+
+func get_achievement(ach_id: String) -> Dictionary:
+	for a in ACHIEVEMENTS:
+		if a["id"] == ach_id:
+			return a
+	return {}
+
+func get_hunter_skins(hunter_id: String) -> Array:
+	return HUNTER_SKINS.get(hunter_id, [])
+
+func get_chassis_skins(chassis_id: String) -> Array:
+	return CHASSIS_SKINS.get(chassis_id, [])
+
+func get_chassis_skin_def(chassis_id: String, skin_id: String) -> Dictionary:
+	for s in get_chassis_skins(chassis_id):
+		if s["id"] == skin_id:
+			return s
+	return {}
+
+func get_hunter_skin_def(hunter_id: String, skin_id: String) -> Dictionary:
+	for s in get_hunter_skins(hunter_id):
+		if s["id"] == skin_id:
+			return s
+	return {}
