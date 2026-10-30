@@ -29,8 +29,9 @@ func _process(delta: float) -> void:
 		magnetized = true
 
 	if magnetized:
-		global_position = global_position.move_toward(target_pos, 560.0 * delta)
-		if dist < 24.0:
+		var pull_spd: float = 620.0 + (dist * 1.5)
+		global_position = global_position.move_toward(target_pos, pull_spd * delta)
+		if dist < 28.0:
 			_collect(bf, player)
 	queue_redraw()
 

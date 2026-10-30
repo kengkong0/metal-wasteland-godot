@@ -147,6 +147,12 @@ func _process(delta: float) -> void:
 	var dist: float = to_player.length()
 	var dir: Vector2 = to_player.normalized() if dist > 1.0 else Vector2.RIGHT
 
+	# 荒原群聚向心冲锋：若远离玩家视野(>620px)，获得高额移速加成迅速突进合流；狂潮暴动期间全面加速
+	if dist > 620.0:
+		spd_mult *= 1.85
+	elif bf.get("is_horde_active") == true:
+		spd_mult *= 1.15
+
 	if is_boss:
 		_process_boss_ai(delta, bf, player, target_pos, dir, dist, spd_mult)
 	else:
@@ -541,6 +547,8 @@ func take_damage(raw_dmg: float, is_crit: bool, effect: String, hit_pos: Vector2
 
 func _die(bf: Node, crit_main_kill: bool) -> void:
 	GameState.total_kills += 1
+	if is_instance_valid(bf) and bf.has_method("on_enemy_killed"):
+		bf.on_enemy_killed(self)
 	# 绯红孤狼：主炮暴击击杀返还1发弹药
 	if crit_main_kill and GameState.selected_hunter_id == "lone_wolf" and is_instance_valid(bf.player_tank):
 		bf.player_tank.refill_all_ammo(1)

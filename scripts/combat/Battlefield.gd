@@ -21,6 +21,16 @@ var elite_spawn_timer: float = 11.0
 var boss_spawned_this_wave: bool = false
 var red_wolf_rescued_this_run: bool = false
 
+# --- 敌人狂潮、合围机制与连击系统 ---
+var current_max_enemies: int = 240
+var is_horde_active: bool = false
+var horde_announced: bool = false
+var ring_spawn_timer: float = 8.0
+var combo_count: int = 0
+var combo_timer: float = 0.0
+var max_combo: int = 0
+var lbl_combo: Label
+
 # --- 场景容器节点与跟随镜头 ---
 var enemies_container: Node2D
 var projectiles_container: Node2D
@@ -257,6 +267,11 @@ func _build_hud() -> void:
 	lbl_wave_countdown = _make_outlined_label("30", 34, Color(1.0, 0.92, 0.30))
 	lbl_wave_countdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tc_vbox.add_child(lbl_wave_countdown)
+
+	lbl_combo = _make_outlined_label("", 16, Color(1.0, 0.45, 0.20))
+	lbl_combo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl_combo.visible = false
+	tc_vbox.add_child(lbl_combo)
 
 	# 赏金首 BOSS 巨型血条容器 (平时隐藏，Boss 登场时显示)
 	var boss_center := CenterContainer.new()
@@ -683,6 +698,11 @@ func start_wave() -> void:
 		GameState.active_wanted_boss_id = GameState.get_current_map_def()["final_boss_id"]
 
 	boss_spawned_this_wave = false
+	is_horde_active = false
+	horde_announced = false
+	combo_count = 0
+	combo_timer = 0.0
+	ring_spawn_timer = 7.0
 	spawn_timer = 0.4
 	elite_spawn_timer = 7.5
 	fx_layer.mortar_strikes.clear()
@@ -746,20 +766,68 @@ func _process(delta: float) -> void:
 		if player_tank.current_sp > 0.0 and player_tank.current_sp <= GameState.max_sp * 0.25:
 			_trigger_red_wolf_rescue()
 
-	# 3. 定时刷重装精英与小怪
+	# 3. 动态波次敌人容量计算与狂暴冲锋 (Horde Surge)
+	current_max_enemies = mini(320, 85 + GameState.current_wave * 14)
+	var is_horde_wave: bool = (GameState.current_wave in [4, 8, 12, 16])
+	var is_surge_time: bool = (wave_time_left <= 15.0 and wave_time_left > 1.0 and GameState.current_wave >= 2)
+	is_horde_active = is_horde_wave or is_surge_time
+	if is_horde_active:
+		current_max_enemies = mini(340, current_max_enemies + 60)
+
+	if is_horde_active and not horde_announced:
+		horde_announced = true
+		SoundManager.play("wanted_siren", 0.05, 1.8)
+		trigger_screen_shake(9.0, 0.4)
+		banner_wanted.visible = true
+		banner_timer = 4.0
+		lbl_wanted_banner.text = "⚠️ 警报：机械狂潮集群来袭 (HORDE SURGE)！全速突围！⚠️"
+
+	# 连击倒计时衰减与急速增益
+	if combo_timer > 0.0:
+		combo_timer -= delta
+		if combo_timer <= 0.0:
+			combo_count = 0
+			GameState.bonus_stats["combo_reload_pct"] = 0.0
+			GameState.bonus_stats["combo_speed_pct"] = 0.0
+	else:
+		combo_count = 0
+
+	if combo_count >= 30:
+		GameState.bonus_stats["combo_reload_pct"] = 0.15
+		GameState.bonus_stats["combo_speed_pct"] = 0.12
+	elif combo_count >= 15:
+		GameState.bonus_stats["combo_reload_pct"] = 0.08
+		GameState.bonus_stats["combo_speed_pct"] = 0.06
+	else:
+		GameState.bonus_stats["combo_reload_pct"] = 0.0
+		GameState.bonus_stats["combo_speed_pct"] = 0.0
+
+	# 4. 定时刷重装精英与360°环形包围突袭
 	elite_spawn_timer -= delta
 	if elite_spawn_timer <= 0.0:
-		elite_spawn_timer = maxf(6.0, 9.5 - GameState.current_wave * 0.25)
+		elite_spawn_timer = maxf(5.5, 9.0 - GameState.current_wave * 0.25)
 		_spawn_map_elite()
+
+	ring_spawn_timer -= delta
+	if ring_spawn_timer <= 0.0:
+		ring_spawn_timer = randf_range(6.5, 9.5) if is_horde_active else randf_range(9.0, 14.0)
+		_queue_ring_spawn(14 if is_horde_active else 8)
 
 	spawn_timer -= delta
 	if spawn_timer <= 0.0:
 		var spawn_mult: float = float(GameState.get_current_difficulty_def().get("spawn_mult", 1.0))
-		var interval: float = maxf(0.26, (1.05 - GameState.current_wave * 0.045) / spawn_mult)
+		var interval: float = maxf(0.12, (0.75 - GameState.current_wave * 0.035) / spawn_mult)
+		if is_horde_active:
+			interval = maxf(0.08, interval * 0.45)
 		spawn_timer = interval
-		var batch: int = 2 + int(GameState.current_wave / 2)
-		for i in range(batch):
-			_queue_enemy_spawn()
+
+		var batch: int = 3 + int(GameState.current_wave * 0.8)
+		if is_horde_active:
+			batch = int(batch * 2.0)
+		while batch > 0:
+			var s_size: int = mini(batch, randi_range(3, 6))
+			_queue_squad_spawn(s_size)
+			batch -= s_size
 
 	for i in range(spawn_telegraphs.size() - 1, -1, -1):
 		spawn_telegraphs[i]["timer"] -= delta
@@ -789,20 +857,36 @@ func _get_alive_boss() -> Node2D:
 			return e
 	return null
 
-func _queue_enemy_spawn() -> void:
-	if enemies_container.get_child_count() >= 80:
+func _queue_enemy_spawn(is_ring: bool = false, ring_angle: float = 0.0) -> void:
+	if enemies_container.get_child_count() >= current_max_enemies:
 		return
 	var p_pos: Vector2 = player_tank.get_active_position()
-	# 在视野外围 520~750px 环状生成，向玩家合围冲击
-	var ang: float = randf() * TAU
-	var dist: float = randf_range(520.0, 750.0)
+	var ang: float = ring_angle if is_ring else (randf() * TAU)
+	var dist: float = randf_range(520.0, 720.0) if not is_ring else randf_range(540.0, 650.0)
 	var pos: Vector2 = p_pos + Vector2.from_angle(ang) * dist
 	pos.x = clampf(pos.x, arena_rect.position.x + 45.0, arena_rect.end.x - 45.0)
 	pos.y = clampf(pos.y, arena_rect.position.y + 45.0, arena_rect.end.y - 45.0)
 
 	var m_pool: Array = GameState.get_current_map_def().get("enemy_pool", ["bio_ant", "kamikaze_wheel"])
 	var chosen: String = String(m_pool[randi() % m_pool.size()])
-	spawn_telegraphs.append({"id": chosen, "pos": pos, "timer": 0.65})
+	var tele_timer: float = 0.35 if is_horde_active else 0.55
+	spawn_telegraphs.append({"id": chosen, "pos": pos, "timer": tele_timer})
+
+func _queue_squad_spawn(squad_size: int = 5) -> void:
+	if enemies_container.get_child_count() + squad_size > current_max_enemies:
+		return
+	var center_ang: float = randf() * TAU
+	for i in range(squad_size):
+		var ang: float = center_ang + randf_range(-0.25, 0.25)
+		_queue_enemy_spawn(true, ang)
+
+func _queue_ring_spawn(count: int = 12) -> void:
+	if enemies_container.get_child_count() + count > current_max_enemies:
+		return
+	var base_ang: float = randf() * TAU
+	for i in range(count):
+		var ang: float = base_ang + TAU * float(i) / float(count)
+		_queue_enemy_spawn(true, ang)
 
 func _do_spawn_enemy(e_id: String, pos: Vector2) -> void:
 	var e := Node2D.new()
@@ -867,6 +951,43 @@ func _trigger_red_wolf_rescue() -> void:
 	player_tank.heal_sp(GameState.max_sp * 0.45)
 	player_tank.refill_all_ammo(8)
 	spawn_drop("buried_chest", 1, p_pos + Vector2(60, 0))
+
+func on_enemy_killed(_enemy_node: Node2D) -> void:
+	combo_count += 1
+	combo_timer = 2.4
+	max_combo = maxi(max_combo, combo_count)
+
+	if combo_count in [15, 30, 50, 75, 100, 150, 200, 300]:
+		var p_pos: Vector2 = player_tank.get_active_position()
+		var tag_txt: String = ""
+		var col: Color = Color(1.0, 0.85, 0.25)
+		var s_shake: float = 3.5
+
+		if combo_count == 15:
+			tag_txt = "🔥 15 连斩 COMBO! [急速+6%]"
+			col = Color(1.0, 0.75, 0.2)
+		elif combo_count == 30:
+			tag_txt = "⚡ 30 连破 MULTI-KILL! [装填+15%]"
+			col = Color(0.35, 0.9, 1.0)
+			s_shake = 5.0
+		elif combo_count == 50:
+			tag_txt = "💥 50 狂轰 RAMPAGE! [急速+20%]"
+			col = Color(1.0, 0.4, 0.15)
+			s_shake = 7.0
+		elif combo_count == 100:
+			tag_txt = "💀 100 狂飙百斩 MASSACRE! [SP恢复+10%]"
+			col = Color(1.0, 0.2, 0.3)
+			s_shake = 9.0
+			player_tank.heal_sp(GameState.max_sp * 0.10)
+		elif combo_count >= 150:
+			tag_txt = "🌟 %d 荒原主宰 ANNIHILATION! [全场割草]" % combo_count
+			col = Color(1.0, 0.9, 0.25)
+			s_shake = 11.0
+			player_tank.heal_sp(GameState.max_sp * 0.15)
+
+		fx_layer.spawn_text(p_pos + Vector2(0, -32), tag_txt, col, 1.45)
+		trigger_screen_shake(s_shake, 0.18)
+		SoundManager.play("upgrade", 0.06, 1.2)
 
 func on_wanted_boss_defeated(boss_node: Node2D) -> void:
 	var b_id: String = boss_node.enemy_id
@@ -1166,6 +1287,22 @@ func _on_super_weapon_evolved(evo_info: Dictionary) -> void:
 
 func _finish_wave_success() -> void:
 	wave_active = false
+	# 全图战利品全域磁暴回收：将所有遗留掉落物100%吸附结算给玩家，零资源浪费
+	var vacuumed_scrap: int = 0
+	var vacuumed_gold: int = 0
+	for d in drops_container.get_children():
+		if is_instance_valid(d) and not d.is_queued_for_deletion():
+			match d.drop_type:
+				"scrap":
+					vacuumed_scrap += d.value
+				"gold":
+					vacuumed_gold += d.value
+			d._collect(self, player_tank)
+
+	if vacuumed_scrap > 0 or vacuumed_gold > 0:
+		SoundManager.play("coin", 0.04, 2.0)
+		fx_layer.spawn_text(player_tank.get_active_position() + Vector2(0, -42), "⚡ 全域磁暴回收: +%d 零件(XP) | +%d 赏金!" % [vacuumed_scrap, vacuumed_gold], Color(0.45, 0.95, 1.0), 1.6)
+
 	if GameState.synergy_counts.get("tycoon", 0) >= 2:
 		var interest: int = int(GameState.gold * 0.15)
 		GameState.gold += interest
@@ -1294,6 +1431,17 @@ func _update_hud() -> void:
 		lbl_wave_countdown.text = "%d" % sec_left
 		lbl_wave_countdown.add_theme_color_override("font_color", Color(1.0, 0.28, 0.25) if sec_left <= 5 else Color(1.0, 0.92, 0.30))
 
+	# 5.1 更新狂飙连杀 Combo 计数器
+	if is_instance_valid(lbl_combo):
+		if combo_count >= 5 and combo_timer > 0.0:
+			lbl_combo.visible = true
+			var heat_color: Color = Color(1.0, 0.85, 0.20) if combo_count < 30 else (Color(1.0, 0.50, 0.15) if combo_count < 75 else Color(1.0, 0.22, 0.28))
+			var buff_desc: String = " (+15%急速)" if combo_count >= 30 else (" (+8%急速)" if combo_count >= 15 else "")
+			lbl_combo.text = "🔥 %d COMBO 狂飙连杀!%s (%.1fs)" % [combo_count, buff_desc, combo_timer]
+			lbl_combo.add_theme_color_override("font_color", heat_color)
+		else:
+			lbl_combo.visible = false
+
 	# 6. 更新顶部赏金首 BOSS 巨型血条
 	var boss_node: Node2D = _get_alive_boss()
 	if is_instance_valid(boss_node):
@@ -1383,7 +1531,7 @@ func _draw_danger_vignette() -> void:
 	var is_human: bool = player_tank.is_human_mode
 	var sp_ratio: float = player_tank.current_sp / maxf(1.0, GameState.max_sp)
 
-	if not is_human and sp_ratio >= 0.30:
+	if not is_human and sp_ratio >= 0.30 and not is_horde_active:
 		return
 
 	var t: float = float(Time.get_ticks_msec()) * 0.005
@@ -1397,11 +1545,15 @@ func _draw_danger_vignette() -> void:
 		base_col = Color(0.95, 0.22, 0.08, 0.45 * pulse)
 		border_depth = 64.0
 		alert_text = "🚨 战车大破！猎人肉身脱出，快靠近残骸抢修！"
-	else:
+	elif sp_ratio < 0.30:
 		var danger_mult: float = 1.0 - (sp_ratio / 0.30)
 		base_col = Color(0.85, 0.06, 0.06, (0.28 + 0.35 * danger_mult) * pulse)
 		border_depth = 44.0 + 26.0 * danger_mult
 		alert_text = "⚠️ 警告：战车装甲濒临大破 (SP < 30%)！"
+	elif is_horde_active:
+		base_col = Color(1.0, 0.38, 0.08, 0.24 * pulse)
+		border_depth = 42.0
+		alert_text = "⚠️ 机械狂潮暴动中 (HORDE SURGE)！全速突围！"
 
 	# 绘制四周边框暗角阶梯渐变
 	vignette_ctrl.draw_rect(Rect2(0, 0, vp_sz.x, border_depth * 0.5), base_col)

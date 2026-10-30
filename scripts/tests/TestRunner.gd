@@ -17,6 +17,7 @@ func _ready() -> void:
 	test_suite_6_combat_simulation()
 	test_suite_7_super_weapons_and_drops()
 	test_suite_8_all_wanted_bosses()
+	test_suite_9_swarm_and_crush_mechanics()
 
 	print("\n========================================================")
 	print("📊 [TEST RESULTS] 测试统计汇总:")
@@ -406,5 +407,68 @@ func test_suite_8_all_wanted_bosses() -> void:
 		assert_true(b_id in GameState.defeated_wanted_ids, "赏金首已收录至已讨伐通缉档案: %s" % b_id)
 
 		spawned_boss.queue_free()
+
+	bf_node.queue_free()
+
+# ============================================================================
+# 9. 狂潮压迫感与战车履带碾压、连击割草测试
+# ============================================================================
+func test_suite_9_swarm_and_crush_mechanics() -> void:
+	print("\n--- [Suite 9] 狂潮合围、履带碾压与连击割草机制测试 ---")
+
+	var bf_scene: PackedScene = load("res://scenes/Battlefield.tscn")
+	var bf_node: Node2D = bf_scene.instantiate()
+	add_child(bf_node)
+
+	GameState.start_new_run("iron_fist", "mammoth", 0, "normal")
+	bf_node.start_wave()
+
+	# 1. 验证敌人容量扩展与狂潮判定
+	assert_true(bf_node.current_max_enemies >= 90, "怪物波次动态容量扩展正常 (初始 %d)" % bf_node.current_max_enemies)
+	bf_node.is_horde_active = true
+	assert_true(bf_node.is_horde_active == true, "机械狂潮暴动状态正常激活")
+
+	# 2. 验证小队与360°环形包围刷怪
+	var pre_telegraphs: int = bf_node.spawn_telegraphs.size()
+	bf_node._queue_squad_spawn(4)
+	assert_true(bf_node.spawn_telegraphs.size() == pre_telegraphs + 4, "战术小队集群冲锋生成队列正常 (+4)")
+
+	bf_node._queue_ring_spawn(8)
+	assert_true(bf_node.spawn_telegraphs.size() == pre_telegraphs + 12, "360° 环形铁桶包围圈生成队列正常 (+8)")
+
+	# 3. 验证战车重型物理履带碾压 (Crush)
+	var p_tank = bf_node.player_tank
+	p_tank.current_sp = 500.0
+	p_tank.current_velocity = Vector2(240.0, 0.0) # 高速巡航
+	p_tank.invuln_timer = 0.0
+
+	var dummy_enemy := Node2D.new()
+	dummy_enemy.set_script(load("res://scripts/combat/Enemy.gd"))
+	bf_node.enemies_container.add_child(dummy_enemy)
+	dummy_enemy.setup_regular(GameData.ENEMIES["bio_ant"], 1, p_tank.global_position + Vector2(10, 0))
+	dummy_enemy.hp = 20.0 # 极低HP轻量小怪
+
+	var sp_before: float = p_tank.current_sp
+	p_tank.on_enemy_collision(dummy_enemy, 0.016)
+
+	assert_true(p_tank.current_sp == sp_before, "高速猛犸战车物理碾碎轻甲小怪，战车毫发无损 (0 SP损耗)")
+	assert_true(dummy_enemy.hp <= 0.0, "小怪受到重型履带吨位直接碾碎致死")
+
+	# 4. 验证狂飙连击与战术急速增益
+	for i in range(35):
+		bf_node.on_enemy_killed(dummy_enemy)
+	assert_true(bf_node.combo_count >= 35, "连击杀戮计数器累加正常 (当前 %d Combo)" % bf_node.combo_count)
+	bf_node._process(0.016)
+	assert_true(float(GameState.bonus_stats.get("combo_reload_pct", 0.0)) >= 0.15, "达到 30+ Combo 触发 +15% 极速装填割草增益")
+
+	# 5. 验证波次结束全图战利品全域磁暴吸附
+	var drop1 := Node2D.new()
+	drop1.set_script(load("res://scripts/combat/DropItem.gd"))
+	bf_node.drops_container.add_child(drop1)
+	drop1.setup("gold", 50, Vector2(1000, 1000))
+
+	var gold_before: int = GameState.gold
+	bf_node._finish_wave_success()
+	assert_true(GameState.gold >= gold_before + 50, "波次结束全域磁暴回收全场掉落物，零资源浪费")
 
 	bf_node.queue_free()

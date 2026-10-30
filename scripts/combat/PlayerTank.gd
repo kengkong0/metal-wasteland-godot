@@ -165,7 +165,8 @@ func _process_tank_mode(delta: float, bf: Node, move_input: Vector2) -> void:
 	if GameState.sp_regen_per_sec > 0.0:
 		current_sp = minf(GameState.max_sp, current_sp + GameState.sp_regen_per_sec * delta)
 
-	var eff_spd: float = GameState.move_speed * (0.58 if emp_slow_timer > 0.0 else 1.0)
+	var combo_spd_boost: float = float(GameState.bonus_stats.get("combo_speed_pct", 0.0))
+	var eff_spd: float = GameState.move_speed * (0.58 if emp_slow_timer > 0.0 else 1.0) * (1.0 + combo_spd_boost)
 	var target_vel: Vector2 = move_input * eff_spd
 	current_velocity = current_velocity.lerp(target_vel, 10.0 * delta)
 	global_position += current_velocity * delta
@@ -268,7 +269,7 @@ func _process_tank_weapons(delta: float, bf: Node) -> void:
 			if bf.enemies_container.get_child_count() > 0:
 				_trigger_all_out_attack(bf)
 
-	var reload_mult: float = 1.0 + GameState.bonus_stats.get("reload_speed_pct", 0.0)
+	var reload_mult: float = 1.0 + GameState.bonus_stats.get("reload_speed_pct", 0.0) + GameState.bonus_stats.get("combo_reload_pct", 0.0)
 	var is_moving: bool = current_velocity.length() > 25.0
 
 	for i in range(GameState.equipped_weapons.size()):
@@ -472,30 +473,56 @@ func on_enemy_collision(enemy: Node2D, _delta: float) -> void:
 	var key: String = "ram_%d" % enemy.get_instance_id()
 	if ram_cooldowns.has(key):
 		return
-	ram_cooldowns[key] = 0.45
+	ram_cooldowns[key] = 0.35
 
-	# 战车高速碾压伤害 (基于战车总吨位)
-	if not is_human_mode and current_velocity.length() > 65.0:
+	var is_tank_moving_fast: bool = (not is_human_mode) and (current_velocity.length() > 85.0)
+	var crushed_enemy: bool = false
+
+	# 1. 战车重型履带高速物理碾压 (基于战车总吨位与行驶速度)
+	if is_tank_moving_fast and not enemy.is_boss:
 		var eng: Dictionary = GameData.ENGINES.get(GameState.equipped_engine_id, {})
 		var ram_mult: float = 1.0 + float(eng.get("ram_bonus", 0.0))
 		if GameState.selected_chassis_id == "mammoth":
-			ram_mult += 2.0
-		var ram_dmg: float = (GameState.used_weight * 4.5 + 30.0) * ram_mult
-		if GameState.synergy_counts.get("juggernaut", 0) >= 6:
-			ram_dmg += current_sp * 0.15
-			bf.fx_layer.spawn_explosion(enemy.global_position, 80.0, Color(0.95, 0.75, 0.25))
-		enemy.take_damage(ram_dmg, false, "", global_position, false)
-		GameState.record_weapon_damage("chassis_ram", ram_dmg)
-		if not enemy.is_boss:
-			enemy.global_position += (enemy.global_position - global_position).normalized() * 34.0
+			ram_mult += 2.5
+		elif GameState.selected_chassis_id == "tyrannos":
+			ram_mult += 1.8
+		var speed_factor: float = clampf(current_velocity.length() / 150.0, 0.8, 2.5)
+		var ram_dmg: float = (GameState.used_weight * 6.0 + 45.0) * ram_mult * speed_factor
 
-	# 钢铁碾压 (4) 荆棘反伤
+		# 钢铁碾压 (6) 羁绊追加装甲反震爆破
+		if GameState.synergy_counts.get("juggernaut", 0) >= 6:
+			ram_dmg += current_sp * 0.20
+			bf.fx_layer.spawn_explosion(enemy.global_position, 85.0, Color(0.95, 0.75, 0.25))
+
+		# 判定是否致死直接碾碎
+		if ram_dmg >= enemy.hp:
+			crushed_enemy = true
+			enemy.take_damage(ram_dmg, true, "crush", global_position, false)
+			GameState.record_weapon_damage("chassis_ram", ram_dmg)
+			bf.fx_layer.spawn_explosion(enemy.global_position, 55.0, Color(1.0, 0.45, 0.15))
+			bf.fx_layer.spawn_text(enemy.global_position, "💥 碾碎 CRUSH!", Color(1.0, 0.88, 0.2), 1.2)
+			SoundManager.play("explosion_small", 0.08, 1.4)
+			bf.trigger_screen_shake(3.2, 0.08)
+		else:
+			enemy.take_damage(ram_dmg, false, "ram", global_position, false)
+			GameState.record_weapon_damage("chassis_ram", ram_dmg)
+			enemy.global_position += (enemy.global_position - global_position).normalized() * 45.0
+
+	# 2. 钢铁碾压 (4) 荆棘反伤
 	if not is_human_mode and GameState.synergy_counts.get("juggernaut", 0) >= 4:
 		var thorn_dmg: float = GameState.used_weight * 5.0
 		enemy.take_damage(thorn_dmg, false, "", global_position, false)
 		GameState.record_weapon_damage("chassis_ram", thorn_dmg)
 
+	# 3. 若成功碾碎小怪，战车毫发无损！仅受微小阻力
+	if crushed_enemy:
+		current_velocity *= 0.95
+		return
+
+	# 4. 未能碾碎（强敌/精英/低速撞击），承受接触伤害（冲撞时获得撞角动量保护减伤）
 	var incoming: float = enemy.contact_dmg
+	if is_tank_moving_fast:
+		incoming *= 0.40 # 高速冲撞撞角保护大幅削减
 	if not is_human_mode and GameState.selected_chassis_id == "abrams":
 		incoming *= 0.70
 	take_damage(incoming, enemy.global_position)
