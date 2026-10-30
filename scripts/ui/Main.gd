@@ -333,38 +333,40 @@ func _build_view_select_hunter() -> void:
 	body_hbox.add_theme_constant_override("separation", 16)
 	root_vbox.add_child(body_hbox)
 
-	# 左侧网格区
-	var grid_panel := _make_box(Color(0.12, 0.12, 0.15), Color(0.65, 0.50, 0.25))
+	# 左侧猎人名册选人区
+	var grid_panel := _make_box(Color(0.12, 0.12, 0.15), Color(0.65, 0.50, 0.25), 8, 12)
 	grid_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	grid_panel.size_flags_stretch_ratio = 1.25
+	grid_panel.size_flags_stretch_ratio = 0.85
 	body_hbox.add_child(grid_panel)
 
 	var g_vbox := VBoxContainer.new()
 	g_vbox.add_theme_constant_override("separation", 10)
 	grid_panel.add_child(g_vbox)
 
-	g_vbox.add_child(_make_outlined_label("🎖️ 选择出击猎人 (共 6 名)", 17, Color(1.0, 0.88, 0.35)))
-	g_vbox.add_child(_make_outlined_label("每位猎人具备截然不同的被动天赋、战车改造倾向与初始能力", 12, Color(0.78, 0.82, 0.88)))
+	g_vbox.add_child(_make_outlined_label("🎖️ 猎人名册 (6位先锋领航者)", 17, Color(1.0, 0.88, 0.35)))
+	g_vbox.add_child(_make_outlined_label("点击猎人卡片查看专属东方立绘、生平背景与改装专精", 12, Color(0.78, 0.82, 0.88)))
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	g_vbox.add_child(scroll)
 
 	hunter_cards_container = GridContainer.new()
-	hunter_cards_container.columns = 3
+	hunter_cards_container.columns = 2
 	hunter_cards_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hunter_cards_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	hunter_cards_container.add_theme_constant_override("h_separation", 12)
-	hunter_cards_container.add_theme_constant_override("v_separation", 12)
+	hunter_cards_container.add_theme_constant_override("h_separation", 10)
+	hunter_cards_container.add_theme_constant_override("v_separation", 10)
 	scroll.add_child(hunter_cards_container)
 
-	# 右侧详情区
-	var preview_panel := _make_box(Color(0.14, 0.14, 0.18), Color(0.95, 0.65, 0.25))
+	# 右侧：专属东方立绘与全景档案大卡
+	var preview_panel := _make_box(Color(0.13, 0.13, 0.16), Color(0.95, 0.65, 0.25), 10, 14)
 	preview_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	preview_panel.size_flags_stretch_ratio = 0.95
+	preview_panel.size_flags_stretch_ratio = 1.45
 	body_hbox.add_child(preview_panel)
 
 	hunter_preview_box = VBoxContainer.new()
+	hunter_preview_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hunter_preview_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	hunter_preview_box.add_theme_constant_override("separation", 10)
 	preview_panel.add_child(hunter_preview_box)
 
@@ -1272,7 +1274,7 @@ func _refresh_hunter_view() -> void:
 		var h_def: Dictionary = GameData.HUNTERS[h_id]
 		var unlocked: bool = GameState.is_hunter_unlocked(String(h_id))
 		var is_sel: bool = (chosen_hunter == String(h_id))
-		var short_name: String = String(h_def["name"]).split(" ")[0]
+		var display_name: String = h_def.get("char_name", String(h_def["name"]).split(" ")[0])
 
 		var border_col: Color = Color(1.0, 0.88, 0.22) if is_sel else (Color(0.45, 0.50, 0.58) if unlocked else Color(0.26, 0.26, 0.30))
 		var bg_col: Color = Color(0.24, 0.20, 0.14) if is_sel else Color(0.15, 0.15, 0.18)
@@ -1288,84 +1290,165 @@ func _refresh_hunter_view() -> void:
 
 		var icon_c := CenterContainer.new()
 		cv.add_child(icon_c)
-		icon_c.add_child(_make_tex_rect(GameData.get_hunter_tex(String(h_id)), Vector2(76, 76), not unlocked))
+		icon_c.add_child(_make_tex_rect(GameData.get_hunter_tex(String(h_id)), Vector2(80, 80), not unlocked))
 
-		var name_lbl := _make_outlined_label(short_name, 14, Color(1.0, 0.88, 0.35) if is_sel else Color.WHITE)
+		var name_lbl := _make_outlined_label(display_name, 14, Color(1.0, 0.88, 0.35) if is_sel else Color.WHITE)
 		name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cv.add_child(name_lbl)
 
+		var title_sub := _make_outlined_label(h_def.get("title", ""), 11, Color(0.70, 0.75, 0.82))
+		title_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		cv.add_child(title_sub)
+
 		var btn := Button.new()
-		btn.custom_minimum_size = Vector2(0, 32)
+		btn.custom_minimum_size = Vector2(0, 30)
 		btn.add_theme_font_size_override("font_size", 12)
 		if is_sel:
-			btn.text = "👉 已选定"
+			btn.text = "👉 派遣中"
 		elif unlocked:
-			btn.text = "选择此猎人"
+			btn.text = "选择猎人"
 		else:
 			btn.text = "🔒 解锁 (%d💎)" % int(h_def["unlock_cost"])
 
 		btn.pressed.connect(func():
 			chosen_hunter = String(h_id)
 			if not unlocked:
-				if GameState.unlock_hunter(String(h_id)):
-					SoundManager.play("upgrade", 0.04, 2.0)
-					lbl_hunter_toast.text = "🎉 成功招募新猎人：【%s】！" % h_def["name"]
+				if GameState.noah_chips >= int(h_def["unlock_cost"]):
+					if GameState.unlock_hunter(String(h_id)):
+						SoundManager.play("upgrade", 0.04, 2.0)
+						lbl_hunter_toast.text = "🎉 成功招募新猎人：【%s】！" % h_def.get("char_name", h_def["name"])
+					else:
+						lbl_hunter_toast.text = "❌ 招募失败！"
 				else:
-					lbl_hunter_toast.text = "❌ 诺亚晶片不足！招募【%s】需要 %d 💎。" % [h_def["name"], int(h_def["unlock_cost"])]
+					SoundManager.play("coin", 0.08, 0.0)
+					lbl_hunter_toast.text = "💡 查看【%s】的生平传记与立绘，招募需要 %d 💎。" % [h_def.get("char_name", h_def["name"]), int(h_def["unlock_cost"])]
 			else:
 				SoundManager.play("coin", 0.08, 0.0)
 			_refresh_hunter_view()
 		)
 		cv.add_child(btn)
 
-	# 刷新右侧猎人详情面板
+	# 刷新右侧猎人全景立绘与深度档案面板
 	for c in hunter_preview_box.get_children():
 		c.queue_free()
 
 	var h: Dictionary = GameData.HUNTERS[chosen_hunter]
 	var unlocked_sel: bool = GameState.is_hunter_unlocked(chosen_hunter)
 
-	var h_top := HBoxContainer.new()
-	h_top.add_theme_constant_override("separation", 14)
-	hunter_preview_box.add_child(h_top)
+	var showcase_row := HBoxContainer.new()
+	showcase_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	showcase_row.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	showcase_row.add_theme_constant_override("separation", 14)
+	hunter_preview_box.add_child(showcase_row)
 
-	h_top.add_child(_make_tex_rect(GameData.get_hunter_tex(chosen_hunter), Vector2(96, 96), not unlocked_sel))
+	# 左侧立绘卡片 (精细东方风格独立立绘与名言)
+	var portrait_card := _make_box(Color(0.08, 0.09, 0.12), Color(1.0, 0.75, 0.25) if unlocked_sel else Color(0.35, 0.35, 0.40), 10, 10)
+	portrait_card.custom_minimum_size = Vector2(285, 0)
+	portrait_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	showcase_row.add_child(portrait_card)
 
-	var h_titles := VBoxContainer.new()
-	h_titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h_titles.add_theme_constant_override("separation", 4)
-	h_top.add_child(h_titles)
+	var p_vbox := VBoxContainer.new()
+	p_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	p_vbox.add_theme_constant_override("separation", 8)
+	portrait_card.add_child(p_vbox)
 
-	h_titles.add_child(_make_outlined_label("🎖️ 领航猎人档案", 13, Color(0.85, 0.80, 0.65)))
-	h_titles.add_child(_make_outlined_label(h["name"], 20, Color(1.0, 0.88, 0.35)))
-	h_titles.add_child(_make_outlined_label(h["title"], 14, Color(0.40, 0.92, 1.0)))
+	var p_badge := _make_outlined_label("🎨 领航猎人立绘档案", 12, Color(0.95, 0.85, 0.60))
+	p_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	p_vbox.add_child(p_badge)
 
-	# 详细词条解释卡
-	var desc_box := _make_box(Color(0.10, 0.10, 0.12), Color(0.35, 0.38, 0.45))
-	desc_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	hunter_preview_box.add_child(desc_box)
-
-	var desc_lbl := _make_outlined_label(h["desc"], 13, Color(0.55, 1.0, 0.68))
-	desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	desc_box.add_child(desc_lbl)
-
-	# 招募 / 已就绪按钮状态
+	var p_rect := TextureRect.new()
+	p_rect.texture = GameData.get_hunter_portrait_tex(chosen_hunter)
+	p_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	p_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	p_rect.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p_rect.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	p_rect.custom_minimum_size = Vector2(260, 310)
 	if not unlocked_sel:
-		var unlock_btn := _make_styled_button("💎 消耗 %d 晶片立即招募此猎人" % int(h["unlock_cost"]), 15, Color(0.20, 0.45, 0.60), Color(0.40, 0.95, 1.0), Vector2(0, 42))
+		p_rect.modulate = Color(0.38, 0.38, 0.42, 0.85)
+	p_vbox.add_child(p_rect)
+
+	var quote_box := _make_box(Color(0.12, 0.12, 0.16, 0.95), Color(0.55, 0.45, 0.25), 6, 8)
+	p_vbox.add_child(quote_box)
+	var quote_lbl := _make_outlined_label("“%s”" % h.get("quote", "..."), 12, Color(1.0, 0.88, 0.50))
+	quote_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	quote_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	quote_box.add_child(quote_lbl)
+
+	# 右侧档案与技能属性 (支持滚动，防止在小分辨率下溢出)
+	var d_scroll := ScrollContainer.new()
+	d_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	d_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	showcase_row.add_child(d_scroll)
+
+	var d_vbox := VBoxContainer.new()
+	d_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	d_vbox.add_theme_constant_override("separation", 10)
+	d_scroll.add_child(d_vbox)
+
+	# 标题与职阶
+	var name_lbl := _make_outlined_label(h.get("char_name", h["name"]), 22, Color(1.0, 0.88, 0.35))
+	d_vbox.add_child(name_lbl)
+
+	var title_lbl := _make_outlined_label("称号 / 职阶: %s" % h.get("title", ""), 13, Color(0.40, 0.92, 1.0))
+	d_vbox.add_child(title_lbl)
+
+	# 特征标签 Pill 栏
+	var traits_row := HBoxContainer.new()
+	traits_row.add_theme_constant_override("separation", 6)
+	d_vbox.add_child(traits_row)
+	for tag in h.get("trait_tags", []):
+		var pill := _make_box(Color(0.16, 0.20, 0.25), Color(0.35, 0.70, 0.85), 10, 4)
+		pill.add_child(_make_outlined_label(String(tag), 11, Color(0.85, 0.95, 1.0)))
+		traits_row.add_child(pill)
+
+	# 人物生平传记
+	var bio_header := _make_outlined_label("📜 人物背景传记", 13, Color(0.92, 0.82, 0.65))
+	d_vbox.add_child(bio_header)
+	var bio_box := _make_box(Color(0.09, 0.10, 0.13), Color(0.32, 0.34, 0.40), 6, 8)
+	bio_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	d_vbox.add_child(bio_box)
+	var bio_lbl := _make_outlined_label(h.get("bio", "暂无档案记录"), 13, Color(0.88, 0.90, 0.95))
+	bio_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	bio_box.add_child(bio_lbl)
+
+	# 战术技能与特技
+	var combat_header := _make_outlined_label("⚡ 战术技能与猎人特技", 13, Color(0.45, 0.95, 0.65))
+	d_vbox.add_child(combat_header)
+	var combat_box := _make_box(Color(0.09, 0.12, 0.11), Color(0.28, 0.58, 0.38), 6, 8)
+	combat_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	d_vbox.add_child(combat_box)
+	var combat_lbl := _make_outlined_label(h["desc"], 13, Color(0.60, 1.0, 0.75))
+	combat_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	combat_box.add_child(combat_lbl)
+
+	# 契合底盘推荐
+	var rec_box := _make_box(Color(0.14, 0.11, 0.08), Color(0.85, 0.50, 0.20), 6, 8)
+	rec_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	d_vbox.add_child(rec_box)
+	var rec_lbl := _make_outlined_label("🚜 适配战车推荐: %s" % h.get("recommended_chassis", "全底盘通用"), 12, Color(1.0, 0.85, 0.45))
+	rec_box.add_child(rec_lbl)
+
+	# 招募 / 就绪按钮状态
+	if not unlocked_sel:
+		var unlock_btn := _make_styled_button("💎 消耗 %d 晶片立即招募【%s】" % [int(h["unlock_cost"]), h.get("char_name", h["name"])], 15, Color(0.20, 0.45, 0.60), Color(0.40, 0.95, 1.0), Vector2(0, 42))
 		unlock_btn.pressed.connect(func():
 			if GameState.unlock_hunter(chosen_hunter):
 				SoundManager.play("upgrade", 0.04, 2.0)
-				lbl_hunter_toast.text = "🎉 成功招募新猎人：【%s】！" % h["name"]
+				lbl_hunter_toast.text = "🎉 成功招募新猎人：【%s】！" % h.get("char_name", h["name"])
 				_refresh_hunter_view()
 			else:
-				lbl_hunter_toast.text = "❌ 晶片不足！需要 %d 💎。" % int(h["unlock_cost"])
+				lbl_hunter_toast.text = "❌ 晶片不足！招募【%s】需要 %d 💎。" % [h.get("char_name", h["name"]), int(h["unlock_cost"])]
 				SoundManager.play("cannon_empty", 0.1, 0.0)
 		)
-		hunter_preview_box.add_child(unlock_btn)
+		d_vbox.add_child(unlock_btn)
 	else:
-		var ready_lbl := _make_outlined_label("✅ 猎人已在格纳库待命，可立即出发！", 14, Color(0.40, 1.0, 0.55))
+		var ready_panel := _make_box(Color(0.10, 0.20, 0.14), Color(0.35, 0.85, 0.50), 6, 8)
+		ready_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var ready_lbl := _make_outlined_label("✅ 【%s】已在格纳库待命，可立即驾驶战车出发！" % h.get("char_name", h["name"]), 13, Color(0.50, 1.0, 0.65))
 		ready_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		hunter_preview_box.add_child(ready_lbl)
+		ready_panel.add_child(ready_lbl)
+		d_vbox.add_child(ready_panel)
 
 	btn_hunter_next.disabled = not unlocked_sel
 

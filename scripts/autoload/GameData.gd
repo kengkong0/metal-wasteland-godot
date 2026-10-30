@@ -107,13 +107,18 @@ func _bind_joy_axis(action: String, axis: int, axis_val: float) -> void:
 	InputMap.action_add_event(action, ev)
 
 # ============================================================================
-# 1. 六大首发猎人角色 (HUNTERS)
+# 1. 六大首发猎人角色 (HUNTERS - 东方日系二次元动漫人设与废土传记)
 # ============================================================================
 const HUNTERS: Dictionary = {
 	"bounty_hunter": {
 		"id": "bounty_hunter",
-		"name": "王牌猎人 (Bounty Hunter)",
-		"title": "主炮均衡 & 寻宝专家",
+		"name": "雷恩 · 王牌猎人 (Rayne)",
+		"char_name": "雷恩 (Rayne)",
+		"title": "废土红鹰 · 主炮寻宝专家",
+		"quote": "“只要战车的引擎还在跳动，荒原上就没有我追不上的赏金首！”",
+		"bio": "在钢铁与风沙中长大的热血赤发少年。为了寻找失踪的父亲以及传说中击溃超级计算机诺亚的‘红狼’战车，他驾驶着由废铁手工打磨拼装的巴吉越野车踏上荒漠。凭借天生敏锐的直觉，他能在极限绝境中捕捉到赏金首的装甲弱点与地下埋藏的金属宝箱。",
+		"recommended_chassis": "荒野巴吉 (Buggy) / 艾布拉姆斯 (Abrams)",
+		"trait_tags": ["主炮高爆", "赏金宝箱", "热血少年"],
 		"unlock_cost": 0,
 		"color": Color(0.95, 0.65, 0.20),
 		"desc": "【正面】主炮伤害+20%，装填速度+15%，对赏金首伤害+25%；每波必刷1个埋藏金属箱。\n【代价】副炮与S-E改孔费用+25%。",
@@ -126,8 +131,13 @@ const HUNTERS: Dictionary = {
 	},
 	"lone_wolf": {
 		"id": "lone_wolf",
-		"name": "红狼传人 (Lone Wolf)",
-		"title": "极致单主炮暴击流",
+		"name": "克莱因 · 红狼传人 (Klein)",
+		"char_name": "克莱因 (Klein)",
+		"title": "绯红孤狼 · 极限单主炮狙击手",
+		"quote": "“闪开。红狼的炮火从不落空，这一击会把整座要塞撕成碎片。”",
+		"bio": "身裹染血深红防风斗篷的冷冽赏金猎人。黑发赤瞳，沉默少言，贯彻‘一发入魂’的绝对炮术美学。传闻他曾在雷鸣要塞一人一车击落三架诺亚近地巡航艇。当他如狼般的血色眼眸锁定目标时，死亡倒计时便已开始。",
+		"recommended_chassis": "红狼战车 (R-Wolf) / 暴龙双炮车 (Tyrannos)",
+		"trait_tags": ["单炮极致", "超高暴击", "冷酷孤狼"],
 		"unlock_cost": 120,
 		"color": Color(0.92, 0.22, 0.18),
 		"desc": "【正面】当战车仅安装 1 门主炮时，主炮伤害+60%、暴击率+25%，暴击击杀返还1发弹药。\n【代价】无法安装浮游无人机；商店武器价格+15%。",
@@ -139,8 +149,13 @@ const HUNTERS: Dictionary = {
 	},
 	"mechanic": {
 		"id": "mechanic",
-		"name": "天才机械师 (Master Mechanic)",
-		"title": "载重改装 & 光速修车",
+		"name": "爱丽丝 · 天才机械师 (Alice)",
+		"char_name": "爱丽丝 (Alice)",
+		"title": "扳手萌妹 · 动力改装与光速抢修",
+		"quote": "“嘿嘿，给我两把扳手和半桶柴油，哪怕废铁我也能改造成无敌战神！”",
+		"bio": "废铁镇公认的首席天才少女机械技师。留着充满元气的金褐色双马尾，鼻尖常常挂着一抹可爱的机油痕迹。对重工业机甲和大马力柴油引擎有着近乎痴迷的热爱，拥有无与伦比的心灵手巧——哪怕战车被打得只剩底盘装甲，她也能在十秒内让其满血复活！",
+		"recommended_chassis": "猛犸要塞 (Mammoth) / 野战救护车 (Ambulance)",
+		"trait_tags": ["超载极限", "极速抢修", "元气少女"],
 		"unlock_cost": 0,
 		"color": Color(0.28, 0.78, 0.95),
 		"desc": "【正面】引擎最大载重+25%，每秒自动恢复1.5%最大SP，刷新费用-40%，底盘改孔免费，修车仅需2秒。\n【代价】主炮基础伤害-15%，步兵肉搏伤害-30%。",
@@ -155,8 +170,13 @@ const HUNTERS: Dictionary = {
 	},
 	"iron_fist": {
 		"id": "iron_fist",
-		"name": "废土武道家 (Iron Fist)",
-		"title": "自爆卡车 & 肉搏狂人",
+		"name": "凛 · 废土武道家 (Rin)",
+		"char_name": "凛 (Rin)",
+		"title": "东洋修罗 · 机械外骨骼肉搏大师",
+		"quote": "“东方武道的终极奥义——这一拳，连百吨主战坦克也能彻底击穿！”",
+		"bio": "来自隐秘东方避难所的古武道传人。身着融合了高弹纳米纤维的无袖战术旗袍，双臂配备重工业碳纤维格斗外骨骼。性格英气豪爽，坚信人类血肉之躯在极限锤炼与东方内劲加持下，不仅能凌驾于冰冷的钢铁之上，甚至能将战车视作发射飞踢的弹药！",
+		"recommended_chassis": "荒野巴吉 (Buggy) / 导弹战车 (Missile Carrier)",
+		"trait_tags": ["肉搏飞踢", "自爆核击", "飒爽英气"],
 		"unlock_cost": 160,
 		"color": Color(0.95, 0.40, 0.65),
 		"desc": "【正面】步兵HP+200%，肉搏攻速与移速+40%；按[E]可主动引爆战车造成 8倍最大SP 全屏核爆伤害！\n【代价】战车引擎载重上限-25%。",
@@ -169,8 +189,13 @@ const HUNTERS: Dictionary = {
 	},
 	"pochi": {
 		"id": "pochi",
-		"name": "生化战犬·波奇 (Cyber Dog Pochi)",
-		"title": "高速游击 & 吞噬进化",
+		"name": "波奇 · 生化柴犬 (Pochi)",
+		"char_name": "波奇 (Pochi)",
+		"title": "荒原神犬 · 敏捷突袭与基因吞噬",
+		"quote": "“汪呜！(柴犬警惕地立起耳朵，背上的微型加特林发出清脆的上膛声)”",
+		"bio": "明奇博士最引以为傲的生化奇迹改造萌宠。一只眼神聪明机警、毛发蓬松金黄的秋田柴犬，脖子上戴着红色冒险围巾与风镜。背部搭载高科技轻量化旋转加特林机枪，拥有远超普通猎犬的极速飞奔能力与惊人的基因吞噬本能，是废土每位老猎人梦寐以求的灵魂战友。",
+		"recommended_chassis": "武装大巴 (Battle Bus) / 荒野巴吉 (Buggy)",
+		"trait_tags": ["极速游击", "基因成长", "萌系战犬"],
 		"unlock_cost": 220,
 		"color": Color(0.90, 0.82, 0.35),
 		"desc": "【正面】基础移速+35%，闪避率+20%；击杀敌人有概率掉落【基因肉块】永久增加SP与攻速。\n【代价】无法使用重型主炮，所有主炮孔自动转为副炮/SE。",
@@ -183,8 +208,13 @@ const HUNTERS: Dictionary = {
 	},
 	"mince_aide": {
 		"id": "mince_aide",
-		"name": "明奇学徒 (Dr. Mince's Aide)",
-		"title": "元素异常 & 电击僵尸机甲",
+		"name": "伊戈尔 · 赛博方士 (Igor)",
+		"char_name": "伊戈尔 (Igor)",
+		"title": "雷法秘术 · 元素异常与电击傀儡",
+		"quote": "“电极已就绪……呵呵，愿九天雷霆与高压电弧超度尔等机械残骸。”",
+		"bio": "随身悬挂神秘符文电极管的银发紫瞳少年，明奇博士唯一的亲传炼金术士兼东方雷法修习者。性格优雅慵懒却心怀玄机，擅长将古老东方五行雷火与现代赛博生化科技交织。谈笑间即可召唤布满特斯拉电弧的高压僵尸傀儡，将整座机械兽潮化为灰烬。",
+		"recommended_chassis": "导弹战车 (Missile Carrier) / 艾布拉姆斯 (Abrams)",
+		"trait_tags": ["雷火元素", "电击傀儡", "神秘方士"],
 		"unlock_cost": 280,
 		"color": Color(0.65, 0.42, 0.95),
 		"desc": "【正面】电击、火焰、酸液伤害+35%；元素击杀有20%概率召唤【带电僵尸炮塔】协助作战10秒。\n【代价】实弹物理伤害-20%，每吨SP转化率-15%。",
@@ -1138,6 +1168,12 @@ func get_chassis_tex(chassis_id: String) -> Texture2D:
 
 func get_hunter_tex(hunter_id: String) -> Texture2D:
 	return get_tex("hunter_" + hunter_id)
+
+func get_hunter_portrait_tex(hunter_id: String) -> Texture2D:
+	var p_tex: Texture2D = get_tex("portrait_hunter_" + hunter_id)
+	if p_tex != null:
+		return p_tex
+	return get_hunter_tex(hunter_id)
 
 func get_boss_tex(boss_id: String) -> Texture2D:
 	return get_tex(boss_id)
