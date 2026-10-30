@@ -6,7 +6,11 @@ const SAMPLE_RATE: int = 22050
 const POOL_SIZE: int = 16
 
 var muted: bool = false
-var master_volume_db: float = -6.0
+var master_volume: float = 1.0
+var bgm_volume: float = 0.75
+var sfx_volume: float = 0.85
+var vibration_enabled: bool = true
+
 var _players: Array = []
 var _pool_idx: int = 0
 var _streams: Dictionary = {}
@@ -14,14 +18,32 @@ var _bgm_player: AudioStreamPlayer
 var _bgm_streams: Dictionary = {}
 var _current_bgm: String = ""
 
+func set_master_volume(v: float) -> void:
+	master_volume = clampf(v, 0.0, 1.0)
+	_update_bgm_volume()
+
+func set_bgm_volume(v: float) -> void:
+	bgm_volume = clampf(v, 0.0, 1.0)
+	_update_bgm_volume()
+
+func set_sfx_volume(v: float) -> void:
+	sfx_volume = clampf(v, 0.0, 1.0)
+
+func _update_bgm_volume() -> void:
+	if is_instance_valid(_bgm_player):
+		if muted or (master_volume * bgm_volume) <= 0.001:
+			_bgm_player.volume_db = -80.0
+		else:
+			_bgm_player.volume_db = linear_to_db(master_volume * bgm_volume) - 6.5
+
 func _ready() -> void:
 	for i in range(POOL_SIZE):
 		var p := AudioStreamPlayer.new()
-		p.volume_db = master_volume_db
+		p.volume_db = linear_to_db(master_volume * sfx_volume)
 		add_child(p)
 		_players.append(p)
 	_bgm_player = AudioStreamPlayer.new()
-	_bgm_player.volume_db = master_volume_db - 6.5
+	_bgm_player.volume_db = linear_to_db(master_volume * bgm_volume) - 6.5
 	add_child(_bgm_player)
 	_generate_all_streams()
 	_load_bgm_tracks()
@@ -64,7 +86,10 @@ func play_bgm(track_name: String, volume_offset_db: float = -6.5) -> void:
 		return
 	_current_bgm = track_name
 	_bgm_player.stream = _bgm_streams[track_name]
-	_bgm_player.volume_db = master_volume_db + volume_offset_db
+	if (master_volume * bgm_volume) <= 0.001:
+		_bgm_player.volume_db = -80.0
+	else:
+		_bgm_player.volume_db = linear_to_db(master_volume * bgm_volume) + volume_offset_db
 	_bgm_player.play()
 
 func stop_bgm() -> void:
@@ -80,6 +105,7 @@ func toggle_mute() -> bool:
 	else:
 		if _current_bgm != "" and _bgm_streams.has(_current_bgm) and is_instance_valid(_bgm_player):
 			_bgm_player.stream = _bgm_streams[_current_bgm]
+			_update_bgm_volume()
 			_bgm_player.play()
 	return muted
 
@@ -100,13 +126,13 @@ func _generate_all_streams() -> void:
 	_streams["eject_alarm"] = _synth_chime(880.0, 440.0, 0.35)
 
 func play(sound_name: String, pitch_variance: float = 0.08, volume_offset_db: float = 0.0) -> void:
-	if muted or not _streams.has(sound_name):
+	if muted or not _streams.has(sound_name) or (master_volume * sfx_volume) <= 0.001:
 		return
 	var p: AudioStreamPlayer = _players[_pool_idx]
 	_pool_idx = (_pool_idx + 1) % POOL_SIZE
 	p.stream = _streams[sound_name]
 	p.pitch_scale = randf_range(1.0 - pitch_variance, 1.0 + pitch_variance)
-	p.volume_db = master_volume_db + volume_offset_db
+	p.volume_db = linear_to_db(master_volume * sfx_volume) + volume_offset_db
 	p.play()
 
 	# 手柄震动反馈联动 (根据音效类型自动触发双马达力反馈)
@@ -131,7 +157,7 @@ func play_cannon_by_caliber(weight: float) -> void:
 		play("cannon_light", 0.08, 0.0)
 
 func vibrate(weak_magnitude: float, strong_magnitude: float, duration: float = 0.12) -> void:
-	if muted:
+	if muted or not vibration_enabled:
 		return
 	for dev_id in Input.get_connected_joypads():
 		Input.start_joy_vibration(dev_id, clampf(weak_magnitude, 0.0, 1.0), clampf(strong_magnitude, 0.0, 1.0), duration)

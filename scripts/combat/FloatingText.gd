@@ -15,6 +15,8 @@ func spawn_mortar_strike(pos: Vector2, radius: float, dmg: float, delay: float =
 	})
 
 func spawn_text(pos: Vector2, text: String, col: Color = Color.WHITE, scale_factor: float = 1.0) -> void:
+	if text.begins_with("-") and not bool(GameState.get_setting("show_damage_numbers", true)):
+		return
 	effects.append({
 		"type": "text",
 		"pos": pos + Vector2(randf_range(-14.0, 14.0), -10.0),

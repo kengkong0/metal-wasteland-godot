@@ -1100,7 +1100,10 @@ func add_tread_mark(pos: Vector2, angle: float) -> void:
 		tread_marks.pop_front()
 
 func trigger_screen_shake(intensity: float, duration: float) -> void:
-	shake_intensity = maxf(shake_intensity, intensity)
+	var mult: float = float(GameState.get_setting("screen_shake_mult", 1.0))
+	if mult <= 0.01:
+		return
+	shake_intensity = maxf(shake_intensity, intensity * mult)
 	shake_timer = maxf(shake_timer, duration)
 
 func _update_hud() -> void:
@@ -1174,7 +1177,11 @@ func _update_hud() -> void:
 
 	# 7. 更新战术雷达小地图
 	if is_instance_valid(minimap_ctrl):
-		minimap_ctrl.queue_redraw()
+		var radar_p: Node = minimap_ctrl.get_parent()
+		if is_instance_valid(radar_p):
+			radar_p.visible = bool(GameState.get_setting("show_minimap", true))
+		if radar_p.visible:
+			minimap_ctrl.queue_redraw()
 
 func _draw_minimap() -> void:
 	if not is_instance_valid(minimap_ctrl):

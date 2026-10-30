@@ -7,6 +7,29 @@ signal level_up_triggered
 signal super_weapon_evolved(evo_info: Dictionary)
 
 const SAVE_PATH: String = "user://metal_wasteland_save.json"
+const SETTINGS_PATH: String = "user://metal_wasteland_settings.json"
+
+const DEFAULT_SETTINGS: Dictionary = {
+	# 声音与音频
+	"master_volume": 1.0,         # 0.0 ~ 1.0
+	"bgm_volume": 0.75,           # 0.0 ~ 1.0
+	"sfx_volume": 0.85,           # 0.0 ~ 1.0
+	"muted": false,
+	"gamepad_vibration": true,
+
+	# 画面与显示
+	"window_mode": "fullscreen",  # "fullscreen", "windowed"
+	"resolution": "1440x810",     # "1280x720", "1440x810", "1600x900", "1920x1080", "2560x1440"
+	"vsync": true,
+
+	# 游戏性与无障碍
+	"screen_shake_mult": 1.0,     # 0.0, 0.5, 1.0, 1.5
+	"show_damage_numbers": true,
+	"show_minimap": true,
+	"auto_main_cannon": true
+}
+
+var settings: Dictionary = {}
 
 # ============================================================================
 # 一、 局外永久养成与轮回存档数据 (Meta-Progression)
@@ -78,6 +101,70 @@ var synergy_counts: Dictionary = {}
 func _ready() -> void:
 	_init_default_meta()
 	load_meta_save()
+	load_settings()
+
+func get_setting(key: String, default_val: Variant = null) -> Variant:
+	if settings.has(key):
+		return settings[key]
+	if DEFAULT_SETTINGS.has(key):
+		return DEFAULT_SETTINGS[key]
+	return default_val
+
+func set_setting(key: String, val: Variant) -> void:
+	settings[key] = val
+
+func save_settings() -> void:
+	var f := FileAccess.open(SETTINGS_PATH, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify(settings, "\t"))
+		f.close()
+	apply_all_settings()
+
+func load_settings() -> void:
+	settings = DEFAULT_SETTINGS.duplicate()
+	if FileAccess.file_exists(SETTINGS_PATH):
+		var f := FileAccess.open(SETTINGS_PATH, FileAccess.READ)
+		if f:
+			var txt: String = f.get_as_text()
+			f.close()
+			var parsed: Variant = JSON.parse_string(txt)
+			if typeof(parsed) == TYPE_DICTIONARY:
+				for k in parsed.keys():
+					settings[k] = parsed[k]
+	apply_all_settings()
+
+func restore_default_settings() -> void:
+	settings = DEFAULT_SETTINGS.duplicate()
+	save_settings()
+
+func apply_all_settings() -> void:
+	# 1. 音频设置
+	if is_instance_valid(SoundManager):
+		SoundManager.set_master_volume(float(get_setting("master_volume", 1.0)))
+		SoundManager.set_bgm_volume(float(get_setting("bgm_volume", 0.75)))
+		SoundManager.set_sfx_volume(float(get_setting("sfx_volume", 0.85)))
+		SoundManager.muted = bool(get_setting("muted", false))
+		SoundManager.vibration_enabled = bool(get_setting("gamepad_vibration", true))
+
+	# 2. 显示设置
+	var w_mode: String = String(get_setting("window_mode", "fullscreen"))
+	if w_mode == "fullscreen":
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+	else:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		var res_str: String = String(get_setting("resolution", "1440x810"))
+		var parts: PackedStringArray = res_str.split("x")
+		if parts.size() == 2:
+			var target_sz := Vector2i(int(parts[0]), int(parts[1]))
+			DisplayServer.window_set_size(target_sz)
+			var scr_sz: Vector2i = DisplayServer.screen_get_size()
+			DisplayServer.window_set_position((scr_sz - target_sz) / 2)
+
+	var vsync_on: bool = bool(get_setting("vsync", true))
+	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync_on else DisplayServer.VSYNC_DISABLED)
+
+	# 3. 游戏性设置
+	auto_main_cannon = bool(get_setting("auto_main_cannon", true))
 
 func _init_default_meta() -> void:
 	for u in GameData.META_UPGRADES:

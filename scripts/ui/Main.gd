@@ -20,7 +20,8 @@ enum ScreenState {
 	SELECT_CHASSIS,  # 步骤 2：战车改装
 	SELECT_MAP,      # 步骤 3：战区与危险度
 	META_LAB,        # 局外科技所
-	BOUNTIES_CODEX   # 赏金首通缉令图鉴
+	BOUNTIES_CODEX,  # 赏金首通缉令图鉴
+	SETTINGS         # ⚙️ 系统设置 (画面/声音/键位)
 }
 
 var current_screen: ScreenState = ScreenState.TITLE
@@ -38,6 +39,13 @@ var view_select_chassis: Control
 var view_select_map: Control
 var view_meta_lab: Control
 var view_bounties: Control
+var view_settings: Control
+
+# --- 系统设置界面引用 ---
+var settings_tab_idx: int = 0
+var settings_content_vbox: VBoxContainer
+var lbl_settings_toast: Label
+var settings_tab_buttons: Array = []
 
 # --- 当前出击选型暂存 ---
 var chosen_hunter: String = "bounty_hunter"
@@ -129,6 +137,7 @@ func _build_all_screens() -> void:
 	_build_view_select_map()
 	_build_view_meta_lab()
 	_build_view_bounties()
+	_build_view_settings()
 
 # ----------------------------------------------------------------------------
 # 1. 主界面 / 首页 (Title Screen) - 参考土豆兄弟，纯粹开门见山的主菜单
@@ -249,6 +258,13 @@ func _build_view_title() -> void:
 		_switch_to_screen(ScreenState.BOUNTIES_CODEX)
 	)
 	menu_btn_vbox.add_child(btn_bounties)
+
+	var btn_settings := _make_styled_button("⚙️ 系统设置 (画面/声音/键位)", 16, Color(0.18, 0.18, 0.24), Color(0.85, 0.75, 0.40), Vector2(0, 46))
+	btn_settings.pressed.connect(func():
+		SoundManager.play("coin", 0.08, 0.0)
+		_switch_to_screen(ScreenState.SETTINGS)
+	)
+	menu_btn_vbox.add_child(btn_settings)
 
 	var btn_quit := _make_styled_button("🚪 退出游戏", 15, Color(0.16, 0.16, 0.18), Color(0.55, 0.55, 0.60), Vector2(0, 42))
 	btn_quit.pressed.connect(func(): get_tree().quit())
@@ -641,8 +657,503 @@ func _build_view_meta_lab() -> void:
 	bot_bar.add_child(btn_refund)
 
 # ----------------------------------------------------------------------------
-# 6. 赏金首绝密通缉档案 (Bounties Codex) - 专属全屏界面
+# 7. 系统设置界面 (System Settings) - 声音 / 分辨率 / 画面 / 键位
 # ----------------------------------------------------------------------------
+func _build_view_settings() -> void:
+	view_settings = Control.new()
+	view_settings.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	title_screen.add_child(view_settings)
+
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 32)
+	margin.add_theme_constant_override("margin_right", 32)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_bottom", 18)
+	view_settings.add_child(margin)
+
+	var root_vbox := VBoxContainer.new()
+	root_vbox.add_theme_constant_override("separation", 14)
+	margin.add_child(root_vbox)
+
+	# 顶部导航行
+	var top_nav := HBoxContainer.new()
+	top_nav.add_theme_constant_override("separation", 14)
+	root_vbox.add_child(top_nav)
+
+	var btn_back := _make_styled_button("⬅️ 返回主菜单 [ESC]", 14, Color(0.18, 0.18, 0.22), Color(0.60, 0.60, 0.68), Vector2(160, 38))
+	btn_back.pressed.connect(func():
+		SoundManager.play("coin", 0.08, -1.0)
+		_switch_to_screen(ScreenState.TITLE)
+	)
+	top_nav.add_child(btn_back)
+
+	var title_lbl := _make_outlined_label("⚙️ 系统设置 (System Settings)", 20, Color(1.0, 0.85, 0.35))
+	title_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_nav.add_child(title_lbl)
+
+	# 4 个分类标签栏
+	var tabs_hbox := HBoxContainer.new()
+	tabs_hbox.add_theme_constant_override("separation", 8)
+	top_nav.add_child(tabs_hbox)
+
+	var tab_names: Array = ["🔊 音频设置", "🖥️ 画面显示", "🎮 游戏性", "⌨️ 键位表"]
+	settings_tab_buttons.clear()
+	for i in range(tab_names.size()):
+		var t_idx: int = i
+		var t_btn := Button.new()
+		t_btn.custom_minimum_size = Vector2(120, 36)
+		t_btn.text = tab_names[i]
+		t_btn.add_theme_font_size_override("font_size", 13)
+		t_btn.pressed.connect(func():
+			settings_tab_idx = t_idx
+			SoundManager.play("coin", 0.08, 0.0)
+			_refresh_settings_view()
+		)
+		tabs_hbox.add_child(t_btn)
+		settings_tab_buttons.append(t_btn)
+
+	# 中部内容滑动面板
+	var content_panel := _make_box(Color(0.13, 0.13, 0.17), Color(0.35, 0.40, 0.48), 10, 16)
+	content_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root_vbox.add_child(content_panel)
+
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content_panel.add_child(scroll)
+
+	settings_content_vbox = VBoxContainer.new()
+	settings_content_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	settings_content_vbox.add_theme_constant_override("separation", 16)
+	scroll.add_child(settings_content_vbox)
+
+	# 底部操作栏
+	var bot_bar := HBoxContainer.new()
+	bot_bar.add_theme_constant_override("separation", 16)
+	root_vbox.add_child(bot_bar)
+
+	var btn_restore := _make_styled_button("🔄 恢复默认设置", 14, Color(0.22, 0.18, 0.18), Color(0.85, 0.45, 0.35), Vector2(160, 40))
+	btn_restore.pressed.connect(func():
+		GameState.restore_default_settings()
+		SoundManager.play("upgrade", 0.05, 1.0)
+		lbl_settings_toast.text = "🔄 已成功恢复所有系统默认设置！"
+		_refresh_settings_view()
+	)
+	bot_bar.add_child(btn_restore)
+
+	lbl_settings_toast = _make_outlined_label("💡 所有设置项修改即时生效，并自动保存到本地配置！", 13, Color(1.0, 0.88, 0.35))
+	lbl_settings_toast.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	bot_bar.add_child(lbl_settings_toast)
+
+	var btn_save := _make_styled_button("💾 保存并应用设置", 15, Color(0.20, 0.45, 0.25), Color(0.40, 0.95, 0.55), Vector2(170, 40))
+	btn_save.pressed.connect(func():
+		GameState.save_settings()
+		SoundManager.play("coin", 0.08, 1.0)
+		lbl_settings_toast.text = "✅ 设置已成功保存并即时生效！"
+	)
+	bot_bar.add_child(btn_save)
+
+func _refresh_settings_view() -> void:
+	for i in range(settings_tab_buttons.size()):
+		var tb: Button = settings_tab_buttons[i]
+		if i == settings_tab_idx:
+			var st := StyleBoxFlat.new()
+			st.bg_color = Color(0.24, 0.32, 0.42)
+			st.border_color = Color(0.40, 0.95, 1.0)
+			st.set_border_width_all(2)
+			st.set_corner_radius_all(6)
+			tb.add_theme_stylebox_override("normal", st)
+		else:
+			tb.remove_theme_stylebox_override("normal")
+
+	for c in settings_content_vbox.get_children():
+		c.queue_free()
+
+	match settings_tab_idx:
+		0:
+			_build_settings_audio_tab()
+		1:
+			_build_settings_display_tab()
+		2:
+			_build_settings_gameplay_tab()
+		3:
+			_build_settings_controls_tab()
+
+func _build_settings_audio_tab() -> void:
+	settings_content_vbox.add_child(_make_outlined_label("🔊 声音与音频设置 (Audio Settings)", 18, Color(0.40, 0.95, 1.0)))
+
+	# 1. 主音量
+	var m_val: float = float(GameState.get_setting("master_volume", 1.0))
+	var m_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(m_card)
+	var m_row := HBoxContainer.new()
+	m_row.add_theme_constant_override("separation", 16)
+	m_card.add_child(m_row)
+	m_row.add_child(_make_outlined_label("🔊 全局主音量 (Master Volume):", 14, Color.WHITE))
+	var m_slider := HSlider.new()
+	m_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	m_slider.min_value = 0.0
+	m_slider.max_value = 100.0
+	m_slider.step = 1.0
+	m_slider.value = m_val * 100.0
+	m_row.add_child(m_slider)
+	var m_lbl := _make_outlined_label("%d%%" % int(m_val * 100.0), 14, Color(1.0, 0.88, 0.35))
+	m_lbl.custom_minimum_size = Vector2(50, 0)
+	m_row.add_child(m_lbl)
+	m_slider.value_changed.connect(func(v: float):
+		m_lbl.text = "%d%%" % int(v)
+		GameState.set_setting("master_volume", v / 100.0)
+		GameState.apply_all_settings()
+	)
+
+	# 2. 音乐音量
+	var b_val: float = float(GameState.get_setting("bgm_volume", 0.75))
+	var b_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(b_card)
+	var b_row := HBoxContainer.new()
+	b_row.add_theme_constant_override("separation", 16)
+	b_card.add_child(b_row)
+	b_row.add_child(_make_outlined_label("🎵 背景音乐音量 (Music BGM):", 14, Color.WHITE))
+	var b_slider := HSlider.new()
+	b_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b_slider.min_value = 0.0
+	b_slider.max_value = 100.0
+	b_slider.step = 1.0
+	b_slider.value = b_val * 100.0
+	b_row.add_child(b_slider)
+	var b_lbl := _make_outlined_label("%d%%" % int(b_val * 100.0), 14, Color(1.0, 0.88, 0.35))
+	b_lbl.custom_minimum_size = Vector2(50, 0)
+	b_row.add_child(b_lbl)
+	b_slider.value_changed.connect(func(v: float):
+		b_lbl.text = "%d%%" % int(v)
+		GameState.set_setting("bgm_volume", v / 100.0)
+		GameState.apply_all_settings()
+	)
+
+	# 3. 战斗音效音量
+	var s_val: float = float(GameState.get_setting("sfx_volume", 0.85))
+	var s_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(s_card)
+	var s_row := HBoxContainer.new()
+	s_row.add_theme_constant_override("separation", 16)
+	s_card.add_child(s_row)
+	s_row.add_child(_make_outlined_label("💥 战斗打击音效 (Sound FX):", 14, Color.WHITE))
+	var s_slider := HSlider.new()
+	s_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	s_slider.min_value = 0.0
+	s_slider.max_value = 100.0
+	s_slider.step = 1.0
+	s_slider.value = s_val * 100.0
+	s_row.add_child(s_slider)
+	var s_lbl := _make_outlined_label("%d%%" % int(s_val * 100.0), 14, Color(1.0, 0.88, 0.35))
+	s_lbl.custom_minimum_size = Vector2(50, 0)
+	s_row.add_child(s_lbl)
+	s_slider.value_changed.connect(func(v: float):
+		s_lbl.text = "%d%%" % int(v)
+		GameState.set_setting("sfx_volume", v / 100.0)
+		GameState.apply_all_settings()
+	)
+	s_slider.drag_ended.connect(func(_changed: bool):
+		SoundManager.play("cannon_light", 0.05, 0.0)
+	)
+
+	# 4. 静音与震动开关行
+	var toggle_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(toggle_card)
+	var t_row := HBoxContainer.new()
+	t_row.add_theme_constant_override("separation", 16)
+	toggle_card.add_child(t_row)
+
+	var is_muted: bool = bool(GameState.get_setting("muted", false))
+	var btn_mute := Button.new()
+	btn_mute.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_mute.custom_minimum_size = Vector2(0, 42)
+	btn_mute.text = "🔇 已全局静音 (点击恢复音频)" if is_muted else "🔊 声音开启 (正常播放音频)"
+	btn_mute.pressed.connect(func():
+		var new_m: bool = not bool(GameState.get_setting("muted", false))
+		GameState.set_setting("muted", new_m)
+		GameState.apply_all_settings()
+		_refresh_settings_view()
+	)
+	t_row.add_child(btn_mute)
+
+	var vib_on: bool = bool(GameState.get_setting("gamepad_vibration", true))
+	var btn_vib := Button.new()
+	btn_vib.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_vib.custom_minimum_size = Vector2(0, 42)
+	btn_vib.text = "📳 手柄马达震动：开启" if vib_on else "📴 手柄马达震动：关闭"
+	btn_vib.pressed.connect(func():
+		var new_v: bool = not bool(GameState.get_setting("gamepad_vibration", true))
+		GameState.set_setting("gamepad_vibration", new_v)
+		GameState.apply_all_settings()
+		if new_v:
+			SoundManager.vibrate(0.4, 0.6, 0.15)
+		_refresh_settings_view()
+	)
+	t_row.add_child(btn_vib)
+
+func _build_settings_display_tab() -> void:
+	settings_content_vbox.add_child(_make_outlined_label("🖥️ 画面显示与窗口分辨率 (Display & Resolution)", 18, Color(0.40, 0.95, 1.0)))
+
+	# 1. 窗口模式
+	var cur_mode: String = String(GameState.get_setting("window_mode", "fullscreen"))
+	var mode_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(mode_card)
+	var mv := VBoxContainer.new()
+	mv.add_theme_constant_override("separation", 8)
+	mode_card.add_child(mv)
+	mv.add_child(_make_outlined_label("🖥️ 窗口显示模式 (Display Mode):", 14, Color.WHITE))
+	var m_row := HBoxContainer.new()
+	m_row.add_theme_constant_override("separation", 12)
+	mv.add_child(m_row)
+
+	var btn_fs := Button.new()
+	btn_fs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_fs.custom_minimum_size = Vector2(0, 42)
+	btn_fs.text = ("👉 " if cur_mode == "fullscreen" else "") + "🖥️ 全屏模式 (Fullscreen)"
+	btn_fs.pressed.connect(func():
+		GameState.set_setting("window_mode", "fullscreen")
+		GameState.apply_all_settings()
+		_refresh_settings_view()
+	)
+	m_row.add_child(btn_fs)
+
+	var btn_win := Button.new()
+	btn_win.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_win.custom_minimum_size = Vector2(0, 42)
+	btn_win.text = ("👉 " if cur_mode == "windowed" else "") + "🪟 窗口模式 (Windowed)"
+	btn_win.pressed.connect(func():
+		GameState.set_setting("window_mode", "windowed")
+		GameState.apply_all_settings()
+		_refresh_settings_view()
+	)
+	m_row.add_child(btn_win)
+
+	# 2. 分辨率预设
+	var res_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(res_card)
+	var rv := VBoxContainer.new()
+	rv.add_theme_constant_override("separation", 8)
+	res_card.add_child(rv)
+
+	var cur_res: String = String(GameState.get_setting("resolution", "1440x810"))
+	rv.add_child(_make_outlined_label("📐 窗口分辨率预设 (在窗口模式生效，全屏时自动匹配屏幕最佳):", 14, Color.WHITE))
+	var r_row := HBoxContainer.new()
+	r_row.add_theme_constant_override("separation", 8)
+	rv.add_child(r_row)
+
+	var res_presets: Array = [
+		{"label": "1280×720 (720p)", "val": "1280x720"},
+		{"label": "1440×810 (推荐)", "val": "1440x810"},
+		{"label": "1600×900 (900p)", "val": "1600x900"},
+		{"label": "1920×1080 (1080p)", "val": "1920x1080"},
+		{"label": "2560×1440 (2K)", "val": "2560x1440"}
+	]
+
+	for rp in res_presets:
+		var is_cur_res: bool = (cur_res == rp["val"])
+		var r_btn := Button.new()
+		r_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		r_btn.custom_minimum_size = Vector2(0, 38)
+		r_btn.add_theme_font_size_override("font_size", 12)
+		r_btn.text = ("👉 " if is_cur_res else "") + rp["label"]
+		if is_cur_res:
+			var ds := StyleBoxFlat.new()
+			ds.bg_color = Color(0.24, 0.32, 0.42)
+			ds.border_color = Color(0.40, 0.95, 1.0)
+			ds.set_border_width_all(2)
+			ds.set_corner_radius_all(6)
+			r_btn.add_theme_stylebox_override("normal", ds)
+		r_btn.pressed.connect(func():
+			GameState.set_setting("resolution", rp["val"])
+			GameState.apply_all_settings()
+			_refresh_settings_view()
+		)
+		r_row.add_child(r_btn)
+
+	# 3. 垂直同步
+	var vsync_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(vsync_card)
+	var vv := VBoxContainer.new()
+	vv.add_theme_constant_override("separation", 8)
+	vsync_card.add_child(vv)
+	vv.add_child(_make_outlined_label("⚡ 垂直同步 (V-Sync):", 14, Color.WHITE))
+	var cur_vsync: bool = bool(GameState.get_setting("vsync", true))
+	var v_row := HBoxContainer.new()
+	v_row.add_theme_constant_override("separation", 12)
+	vv.add_child(v_row)
+
+	var btn_v_on := Button.new()
+	btn_v_on.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_v_on.custom_minimum_size = Vector2(0, 40)
+	btn_v_on.text = ("👉 " if cur_vsync else "") + "开启垂直同步 (推荐，消除撕裂与显卡负荷)"
+	btn_v_on.pressed.connect(func():
+		GameState.set_setting("vsync", true)
+		GameState.apply_all_settings()
+		_refresh_settings_view()
+	)
+	v_row.add_child(btn_v_on)
+
+	var btn_v_off := Button.new()
+	btn_v_off.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_v_off.custom_minimum_size = Vector2(0, 40)
+	btn_v_off.text = ("👉 " if not cur_vsync else "") + "关闭垂直同步 (低输入延迟)"
+	btn_v_off.pressed.connect(func():
+		GameState.set_setting("vsync", false)
+		GameState.apply_all_settings()
+		_refresh_settings_view()
+	)
+	v_row.add_child(btn_v_off)
+
+func _build_settings_gameplay_tab() -> void:
+	settings_content_vbox.add_child(_make_outlined_label("🎮 游戏体验与无障碍选项 (Gameplay & Accessibility)", 18, Color(0.40, 0.95, 1.0)))
+
+	# 1. 屏幕震动强度
+	var cur_shake: float = float(GameState.get_setting("screen_shake_mult", 1.0))
+	var s_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(s_card)
+	var sv := VBoxContainer.new()
+	sv.add_theme_constant_override("separation", 8)
+	s_card.add_child(sv)
+	sv.add_child(_make_outlined_label("💥 屏幕打击震动强度 (Screen Shake):", 14, Color.WHITE))
+
+	var s_row := HBoxContainer.new()
+	s_row.add_theme_constant_override("separation", 10)
+	sv.add_child(s_row)
+
+	var shake_options: Array = [
+		{"label": "🚫 关闭 (0%)", "val": 0.0},
+		{"label": "🌱 轻度 (50%)", "val": 0.5},
+		{"label": "💥 标准 (100%)", "val": 1.0},
+		{"label": "🔥 狂暴 (150%)", "val": 1.5}
+	]
+	for opt in shake_options:
+		var is_sel: bool = is_equal_approx(cur_shake, opt["val"])
+		var btn := Button.new()
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		btn.custom_minimum_size = Vector2(0, 38)
+		btn.text = ("👉 " if is_sel else "") + opt["label"]
+		btn.pressed.connect(func():
+			GameState.set_setting("screen_shake_mult", opt["val"])
+			_refresh_settings_view()
+		)
+		s_row.add_child(btn)
+
+	# 2. 伤害飘字与小地图开关
+	var g2_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(g2_card)
+	var g2_row := HBoxContainer.new()
+	g2_row.add_theme_constant_override("separation", 14)
+	g2_card.add_child(g2_row)
+
+	var show_dmg: bool = bool(GameState.get_setting("show_damage_numbers", true))
+	var btn_dmg := Button.new()
+	btn_dmg.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_dmg.custom_minimum_size = Vector2(0, 42)
+	btn_dmg.text = "🎯 伤害数值跳字：开启" if show_dmg else "🎯 伤害数值跳字：关闭 (清爽模式)"
+	btn_dmg.pressed.connect(func():
+		GameState.set_setting("show_damage_numbers", not show_dmg)
+		_refresh_settings_view()
+	)
+	g2_row.add_child(btn_dmg)
+
+	var show_mini: bool = bool(GameState.get_setting("show_minimap", true))
+	var btn_mini := Button.new()
+	btn_mini.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_mini.custom_minimum_size = Vector2(0, 42)
+	btn_mini.text = "📡 右下角战术雷达：开启" if show_mini else "📡 战术雷达：关闭"
+	btn_mini.pressed.connect(func():
+		GameState.set_setting("show_minimap", not show_mini)
+		_refresh_settings_view()
+	)
+	g2_row.add_child(btn_mini)
+
+	# 3. 主炮开火模式
+	var auto_on: bool = bool(GameState.get_setting("auto_main_cannon", true))
+	var g3_card := _make_box(Color(0.16, 0.16, 0.20), Color(0.35, 0.50, 0.65))
+	settings_content_vbox.add_child(g3_card)
+	var g3_row := HBoxContainer.new()
+	g3_row.add_theme_constant_override("separation", 14)
+	g3_card.add_child(g3_row)
+
+	var btn_auto := Button.new()
+	btn_auto.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_auto.custom_minimum_size = Vector2(0, 42)
+	btn_auto.text = "🤖 主炮射击模式：全自动索敌开火 [R键切换]" if auto_on else "🎯 主炮射击模式：纯手动瞄准发射 [R键切换]"
+	btn_auto.pressed.connect(func():
+		GameState.set_setting("auto_main_cannon", not auto_on)
+		GameState.apply_all_settings()
+		_refresh_settings_view()
+	)
+	g3_row.add_child(btn_auto)
+
+func _build_settings_controls_tab() -> void:
+	settings_content_vbox.add_child(_make_outlined_label("⌨️ 操作指南与完整键位表 (Controls Guide)", 18, Color(0.40, 0.95, 1.0)))
+
+	var grid := HBoxContainer.new()
+	grid.add_theme_constant_override("separation", 16)
+	settings_content_vbox.add_child(grid)
+
+	# 键盘与鼠标
+	var km_box := _make_box(Color(0.15, 0.15, 0.18), Color(0.45, 0.75, 0.95))
+	km_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(km_box)
+
+	var km_v := VBoxContainer.new()
+	km_v.add_theme_constant_override("separation", 8)
+	km_box.add_child(km_v)
+	km_v.add_child(_make_outlined_label("💻 键盘与鼠标布局 (Keyboard & Mouse)", 16, Color(1.0, 0.88, 0.35)))
+
+	var km_keys: Array = [
+		{"act": "战车行驶 / 步兵移动", "key": "[W] [A] [S] [D] 或 方向键"},
+		{"act": "360° 炮塔旋转瞄准", "key": "移动鼠标光标 (按住右键微调)"},
+		{"act": "主炮手动发射", "key": "鼠标左键 [LMB]"},
+		{"act": "C装置全弹齐射", "key": "[Q] 键"},
+		{"act": "战术机动 (紧急闪避)", "key": "[空格 Space]"},
+		{"act": "战车下车 / 步兵肉搏", "key": "[E] 键"},
+		{"act": "切换主炮自动/手动", "key": "[R] 键"},
+		{"act": "快速音频静音", "key": "[M] 键"},
+		{"act": "全屏切换", "key": "[F11] 键"},
+		{"act": "战术暂停 / 菜单返回", "key": "[ESC] 键 或 [P] 键"}
+	]
+	for k in km_keys:
+		var r := HBoxContainer.new()
+		km_v.add_child(r)
+		var al := _make_outlined_label(k["act"], 13, Color(0.85, 0.88, 0.92))
+		al.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		r.add_child(al)
+		r.add_child(_make_outlined_label(k["key"], 13, Color(0.40, 0.95, 0.65)))
+
+	# 手柄操作
+	var pad_box := _make_box(Color(0.15, 0.15, 0.18), Color(0.95, 0.65, 0.35))
+	pad_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	grid.add_child(pad_box)
+
+	var pad_v := VBoxContainer.new()
+	pad_v.add_theme_constant_override("separation", 8)
+	pad_box.add_child(pad_v)
+	pad_v.add_child(_make_outlined_label("🎮 游戏手柄布局 (Controller / Steam Deck)", 16, Color(1.0, 0.88, 0.35)))
+
+	var pad_keys: Array = [
+		{"act": "战车驾驶 / 步兵走位", "key": "左摇杆 (Left Stick) / 十字键"},
+		{"act": "360° 炮塔瞄准", "key": "右摇杆 (Right Stick)"},
+		{"act": "主炮手动发射", "key": "右肩键 [RB] 或 右扳机 [RT]"},
+		{"act": "C装置全弹齐射", "key": "左肩键 [LB] 或 左扳机 [LT]"},
+		{"act": "战术机动 (闪避翻滚)", "key": "[A] 键 或 [B] 键"},
+		{"act": "主动战车下车", "key": "[X] 键"},
+		{"act": "切换主炮自动/手动", "key": "[Y] 键"},
+		{"act": "双马达力反馈震动", "key": "全自动联动打击强弱"},
+		{"act": "战术暂停", "key": "[Start] 键"},
+		{"act": "菜单确认 / 返回", "key": "[A] 键确认 / [B] 键返回"}
+	]
+	for k in pad_keys:
+		var r := HBoxContainer.new()
+		pad_v.add_child(r)
+		var al := _make_outlined_label(k["act"], 13, Color(0.85, 0.88, 0.92))
+		al.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		r.add_child(al)
+		r.add_child(_make_outlined_label(k["key"], 13, Color(1.0, 0.75, 0.35)))
 func _build_view_bounties() -> void:
 	view_bounties = Control.new()
 	view_bounties.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -703,6 +1214,7 @@ func _switch_to_screen(new_state: ScreenState) -> void:
 	view_select_map.visible = (new_state == ScreenState.SELECT_MAP)
 	view_meta_lab.visible = (new_state == ScreenState.META_LAB)
 	view_bounties.visible = (new_state == ScreenState.BOUNTIES_CODEX)
+	view_settings.visible = (new_state == ScreenState.SETTINGS)
 
 	match new_state:
 		ScreenState.TITLE:
@@ -725,6 +1237,8 @@ func _switch_to_screen(new_state: ScreenState) -> void:
 			_refresh_meta_view()
 		ScreenState.BOUNTIES_CODEX:
 			_refresh_bounties_view()
+		ScreenState.SETTINGS:
+			_refresh_settings_view()
 
 # ============================================================================
 # 各子界面数据填充与刷新
@@ -1476,7 +1990,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			ScreenState.SELECT_MAP:
 				SoundManager.play("coin", 0.08, -1.0)
 				_switch_to_screen(ScreenState.SELECT_CHASSIS)
-			ScreenState.META_LAB, ScreenState.BOUNTIES_CODEX:
+			ScreenState.META_LAB, ScreenState.BOUNTIES_CODEX, ScreenState.SETTINGS:
 				SoundManager.play("coin", 0.08, -1.0)
 				_switch_to_screen(ScreenState.TITLE)
 			ScreenState.TITLE:
