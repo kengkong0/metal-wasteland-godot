@@ -500,7 +500,7 @@ func on_enemy_collision(enemy: Node2D, _delta: float) -> void:
 		incoming *= 0.70
 	take_damage(incoming, enemy.global_position)
 
-func take_damage(amount: float, _source_pos: Vector2) -> void:
+func take_damage(amount: float, _source_pos: Vector2 = Vector2.ZERO) -> void:
 	if invuln_timer > 0.0:
 		return
 	var bf: Node = get_parent()
