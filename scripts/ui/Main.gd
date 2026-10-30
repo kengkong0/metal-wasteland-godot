@@ -170,7 +170,7 @@ func _build_all_screens() -> void:
 	_build_view_meta_lab()
 	_build_view_bounties()
 	_build_view_settings()
-		_build_view_achievements()
+	_build_view_achievements()
 	_build_view_paint_workshop()
 
 # ----------------------------------------------------------------------------
@@ -709,9 +709,7 @@ func _build_view_meta_lab() -> void:
 # ----------------------------------------------------------------------------
 # 7. 系统设置界面 (System Settings) - 声音 / 分辨率 / 画面 / 键位
 # ----------------------------------------------------------------------------
-func _build_view_settings()
-		_build_view_achievements()
-	_build_view_paint_workshop() -> void:
+func _build_view_settings() -> void:
 	view_settings = Control.new()
 	view_settings.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	title_screen.add_child(view_settings)
@@ -1480,15 +1478,11 @@ func _refresh_hunter_view() -> void:
 
 	# 招募 / 就绪按钮状态
 	if not unlocked_sel:
-		var unlock_btn := _make_styled_button("💎 消耗 %d 晶片立即招募【%s】" % [int(h["unlock_cost"]), h.get("char_name", h["name"])], 15, Color(0.20, 0.45, 0.60), Color(0.40, 0.95, 1.0), Vector2(0, 42))
+		var ach_desc: String = h.get("unlock_ach_desc", "达成特定成就解锁")
+		var unlock_btn := _make_styled_button("🔒 %s" % ach_desc, 14, Color(0.25, 0.20, 0.22), Color(0.95, 0.70, 0.35), Vector2(0, 42))
 		unlock_btn.pressed.connect(func():
-			if GameState.unlock_hunter(chosen_hunter):
-				SoundManager.play("upgrade", 0.04, 2.0)
-				lbl_hunter_toast.text = "🎉 成功招募新猎人：【%s】！" % h.get("char_name", h["name"])
-				_refresh_hunter_view()
-			else:
-				lbl_hunter_toast.text = "❌ 晶片不足！招募【%s】需要 %d 💎。" % [h.get("char_name", h["name"]), int(h["unlock_cost"])]
-				SoundManager.play("cannon_empty", 0.1, 0.0)
+			lbl_hunter_toast.text = "🔒 该猎人需通过成就解锁：%s" % ach_desc
+			SoundManager.play("cannon_empty", 0.1, 0.0)
 		)
 		d_vbox.add_child(unlock_btn)
 	else:
@@ -1540,16 +1534,14 @@ func _refresh_chassis_view() -> void:
 		elif unlocked:
 			btn.text = "选择此战车"
 		else:
-			btn.text = "🔒 修复(%d💎)" % int(c_def["unlock_cost"])
+			btn.text = "🔒 成就解锁"
 
 		btn.pressed.connect(func():
 			chosen_chassis = String(c_id)
 			if not unlocked:
-				if GameState.unlock_chassis(String(c_id)):
-					SoundManager.play("upgrade", 0.04, 2.0)
-					lbl_chassis_toast.text = "🎉 成功修复战车底盘：【%s】！" % c_def["name"]
-				else:
-					lbl_chassis_toast.text = "❌ 晶片不足！修复【%s】需要 %d 💎。" % [c_def["name"], int(c_def["unlock_cost"])]
+				var ach_desc: String = c_def.get("unlock_ach_desc", "达成特定成就解锁")
+				lbl_chassis_toast.text = "🔒 战车【%s】需达成成就解锁：%s" % [c_def["name"], ach_desc]
+				SoundManager.play("cannon_empty", 0.1, 0.0)
 			else:
 				SoundManager.play("coin", 0.08, 0.0)
 			_refresh_chassis_view()
@@ -1949,9 +1941,7 @@ func _refund_all_meta_tech() -> void:
 # ============================================================================
 # 特斯拉战地救护所与原核晶片结算弹窗
 # ============================================================================
-func _build_mince_modal()
-	GameState.achievement_unlocked.connect(_on_achievement_unlocked_toast)
-	_build_achievement_toast() -> void:
+func _build_mince_modal() -> void:
 	mince_modal = Control.new()
 	mince_modal.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mince_modal.visible = false
