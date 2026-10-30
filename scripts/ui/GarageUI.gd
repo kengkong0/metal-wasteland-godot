@@ -1,6 +1,10 @@
 extends Control
-## 《重装废土：赏金狂飙》 - 多拉姆战车整备车库 & 猎人办事处悬赏面板
-## 核心功能：载重=SP实时博弈仪表盘、军火商店刷店、同名武器二合一升星、底盘改孔、撕取赏金首通缉令、售货机/金属探测奇遇。
+## 《重装废土：赏金狂飙》 - 多拉姆整备车库 (1:1 参考《土豆兄弟 Brotato》商店布局)
+## 布局：
+## - 顶部栏：波次标题 + 大号金币/晶片图标 + 废土奇遇胶囊按钮 + 【刷新商店】大按钮
+## - 左上方：4~5 张并排【立式军火商品卡片】(品质色边框、图标属性、合成角标、购买/锁定)
+## - 左下方：土豆兄弟式【战车武器与底盘槽位网格 (Weapons & Slots)】+ 流派羁绊胶囊
+## - 右侧栏：可视化【SP装甲条 & 载重条】+ 土豆兄弟式【双列属性表】+【赏金首通缉卡】+ 右下角【🚀出击】主按钮
 
 signal start_next_wave
 
@@ -9,20 +13,33 @@ var reroll_count: int = 0
 var waxed_this_wave: bool = false
 var dig_used_this_wave: bool = false
 
-# --- UI 节点引用 ---
-var lbl_header: Label
-var lbl_weight_sp_formula: Label
-var lbl_synergy_bar: Label
+# --- 顶部栏引用 ---
+var lbl_shop_title: Label
+var lbl_gold_big: Label
+var lbl_chips_big: Label
 var lbl_event_toast: Label
+var btn_reroll: Button
 
+# --- 升级天赋浮层 (如有未领升级) ---
 var perk_panel: PanelContainer
 var perk_hbox: HBoxContainer
 
-var slots_vbox: VBoxContainer
-var equipped_vbox: VBoxContainer
-var shop_vbox: VBoxContainer
-var wanted_vbox: VBoxContainer
-var btn_reroll: Button
+# --- 左上：立式商店卡片行 ---
+var shop_cards_hbox: HBoxContainer
+
+# --- 左下：底盘槽位与已装武器网格 ---
+var lbl_slots_header: Label
+var synergy_pills_hbox: HBoxContainer
+var slots_cards_hbox: HBoxContainer
+
+# --- 右侧栏：可视化进度条 + 属性表 + 通缉令 + 出发按钮 ---
+var bar_garage_sp: ProgressBar
+var lbl_garage_sp: Label
+var bar_garage_weight: ProgressBar
+var style_weight_fill: StyleBoxFlat
+var lbl_garage_weight: Label
+var stats_list_vbox: VBoxContainer
+var wanted_box_vbox: VBoxContainer
 var btn_launch: Button
 
 func _ready() -> void:
@@ -38,206 +55,226 @@ func _build_ui() -> void:
 	add_child(bg_tex)
 
 	var bg := ColorRect.new()
-	bg.color = Color(0.08, 0.07, 0.06, 0.88)
+	bg.color = Color(0.08, 0.08, 0.10, 0.90)
 	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(bg)
 
-	var main_vbox := VBoxContainer.new()
-	main_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT, Control.PRESET_MODE_MINSIZE, 18)
-	main_vbox.add_theme_constant_override("separation", 10)
-	add_child(main_vbox)
+	var margin := MarginContainer.new()
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	margin.add_theme_constant_override("margin_left", 16)
+	margin.add_theme_constant_override("margin_right", 16)
+	margin.add_theme_constant_override("margin_top", 12)
+	margin.add_theme_constant_override("margin_bottom", 12)
+	add_child(margin)
 
-	# 1. 顶部仪表盘：波次、赏金、引擎载重与SP实时转化公式
-	var top_panel := _make_styled_panel(Color(0.16, 0.14, 0.12), Color(0.85, 0.55, 0.22))
-	main_vbox.add_child(top_panel)
+	var root_vbox := VBoxContainer.new()
+	root_vbox.add_theme_constant_override("separation", 10)
+	margin.add_child(root_vbox)
+
+	# =========================================================================
+	# 1. 顶部导航与货币刷新栏 (土豆兄弟商店顶部风格)
+	# =========================================================================
+	var top_panel := _make_styled_panel(Color(0.14, 0.14, 0.17), Color(0.85, 0.58, 0.22), 8)
+	root_vbox.add_child(top_panel)
 
 	var top_vbox := VBoxContainer.new()
+	top_vbox.add_theme_constant_override("separation", 4)
 	top_panel.add_child(top_vbox)
 
-	lbl_header = Label.new()
-	lbl_header.add_theme_font_size_override("font_size", 22)
-	lbl_header.add_theme_color_override("font_color", Color(1.0, 0.88, 0.30))
-	top_vbox.add_child(lbl_header)
+	var top_hbox := HBoxContainer.new()
+	top_hbox.add_theme_constant_override("separation", 12)
+	top_vbox.add_child(top_hbox)
 
-	lbl_weight_sp_formula = Label.new()
-	lbl_weight_sp_formula.add_theme_font_size_override("font_size", 15)
-	lbl_weight_sp_formula.add_theme_color_override("font_color", Color(0.40, 0.98, 0.60))
-	top_vbox.add_child(lbl_weight_sp_formula)
+	lbl_shop_title = _make_outlined_label("🛒 多拉姆整备商店 (第 1 波)", 22, Color(1.0, 0.90, 0.32))
+	top_hbox.add_child(lbl_shop_title)
 
-	lbl_synergy_bar = Label.new()
-	lbl_synergy_bar.add_theme_font_size_override("font_size", 13)
-	lbl_synergy_bar.add_theme_color_override("font_color", Color(0.85, 0.82, 0.75))
-	top_vbox.add_child(lbl_synergy_bar)
+	lbl_gold_big = _make_outlined_label("💰 0 G", 24, Color(1.0, 0.85, 0.20))
+	top_hbox.add_child(lbl_gold_big)
 
-	# 2. 猎人升级天赋选择栏 (有未分配等级时显示)
-	perk_panel = _make_styled_panel(Color(0.22, 0.16, 0.10), Color(1.0, 0.82, 0.20))
-	main_vbox.add_child(perk_panel)
-	var perk_outer := VBoxContainer.new()
-	perk_panel.add_child(perk_outer)
-	var perk_title := Label.new()
-	perk_title.text = "🎖️ 猎人等级提升！请选择一项驾驶/改装专精天赋："
-	perk_title.add_theme_color_override("font_color", Color(1.0, 0.92, 0.35))
-	perk_outer.add_child(perk_title)
-	perk_hbox = HBoxContainer.new()
-	perk_hbox.add_theme_constant_override("separation", 14)
-	perk_outer.add_child(perk_hbox)
+	lbl_chips_big = _make_outlined_label("💎 0", 18, Color(0.42, 0.95, 1.0))
+	top_hbox.add_child(lbl_chips_big)
 
-	# 3. 中部三栏核心区：左(战车改装&改孔) | 中(多拉姆军火商店&废土奇遇) | 右(猎人办事处悬赏通缉令)
-	var center_hbox := HBoxContainer.new()
-	center_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	center_hbox.add_theme_constant_override("separation", 14)
-	main_vbox.add_child(center_hbox)
+	var top_spacer := Control.new()
+	top_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top_hbox.add_child(top_spacer)
 
-	# --- 左栏：战车底盘孔位改造与已装备武器 ---
-	var left_panel := _make_styled_panel(Color(0.14, 0.13, 0.12), Color(0.45, 0.65, 0.85))
-	left_panel.custom_minimum_size = Vector2(430, 0)
-	left_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	center_hbox.add_child(left_panel)
-
-	var left_scroll := ScrollContainer.new()
-	left_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	left_panel.add_child(left_scroll)
-
-	var left_vbox := VBoxContainer.new()
-	left_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left_vbox.add_theme_constant_override("separation", 8)
-	left_scroll.add_child(left_vbox)
-
-	var lbl_left_t := Label.new()
-	lbl_left_t.text = "🔧 【当前战车配装 & 底盘改孔工坊】"
-	lbl_left_t.add_theme_font_size_override("font_size", 17)
-	lbl_left_t.add_theme_color_override("font_color", Color(0.55, 0.85, 1.0))
-	left_vbox.add_child(lbl_left_t)
-
-	slots_vbox = VBoxContainer.new()
-	slots_vbox.add_theme_constant_override("separation", 4)
-	left_vbox.add_child(slots_vbox)
-
-	var sep := HSeparator.new()
-	left_vbox.add_child(sep)
-
-	equipped_vbox = VBoxContainer.new()
-	equipped_vbox.add_theme_constant_override("separation", 6)
-	left_vbox.add_child(equipped_vbox)
-
-	# --- 中栏：多拉姆军火商店 & 废土奇遇设施 ---
-	var mid_panel := _make_styled_panel(Color(0.15, 0.14, 0.12), Color(0.85, 0.68, 0.25))
-	mid_panel.custom_minimum_size = Vector2(500, 0)
-	mid_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	center_hbox.add_child(mid_panel)
-
-	var mid_vbox := VBoxContainer.new()
-	mid_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mid_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	mid_vbox.add_theme_constant_override("separation", 8)
-	mid_panel.add_child(mid_vbox)
-
-	var shop_top_hbox := HBoxContainer.new()
-	mid_vbox.add_child(shop_top_hbox)
-
-	var lbl_mid_t := Label.new()
-	lbl_mid_t.text = "🛒 【多拉姆军火商店】(同名同星自动二合一升星!)"
-	lbl_mid_t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lbl_mid_t.add_theme_font_size_override("font_size", 17)
-	lbl_mid_t.add_theme_color_override("font_color", Color(1.0, 0.85, 0.30))
-	shop_top_hbox.add_child(lbl_mid_t)
-
-	btn_reroll = Button.new()
-	btn_reroll.custom_minimum_size = Vector2(140, 34)
-	btn_reroll.pressed.connect(_on_reroll_pressed)
-	shop_top_hbox.add_child(btn_reroll)
-
-	var mid_scroll := ScrollContainer.new()
-	mid_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	mid_vbox.add_child(mid_scroll)
-
-	shop_vbox = VBoxContainer.new()
-	shop_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	shop_vbox.add_theme_constant_override("separation", 8)
-	mid_scroll.add_child(shop_vbox)
-
-	# 废土特色奇遇按钮栏 (自动售货机 / 金属探测器 / 战车打蜡)
-	var event_hbox := HBoxContainer.new()
-	event_hbox.add_theme_constant_override("separation", 8)
-	mid_vbox.add_child(event_hbox)
-
+	# 奇遇快捷胶囊按钮
 	var btn_soda := Button.new()
-	btn_soda.text = "🥤 售货机抽奖 (15G)"
-	btn_soda.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_soda.text = "🥤冷饮(15G)"
+	btn_soda.custom_minimum_size = Vector2(96, 36)
 	btn_soda.pressed.connect(_on_vending_machine)
-	event_hbox.add_child(btn_soda)
+	top_hbox.add_child(btn_soda)
 
 	var btn_dig := Button.new()
-	btn_dig.text = "📡 金属探测挖掘 (35G)"
-	btn_dig.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_dig.text = "📡挖宝(35G)"
+	btn_dig.custom_minimum_size = Vector2(96, 36)
 	btn_dig.pressed.connect(_on_metal_detector)
-	event_hbox.add_child(btn_dig)
+	top_hbox.add_child(btn_dig)
 
 	var btn_wax := Button.new()
-	btn_wax.text = "✨ 给战车打蜡 (25G)"
-	btn_wax.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	btn_wax.text = "✨打蜡(25G)"
+	btn_wax.custom_minimum_size = Vector2(96, 36)
 	btn_wax.pressed.connect(_on_wax_tank)
-	event_hbox.add_child(btn_wax)
+	top_hbox.add_child(btn_wax)
 
-	var btn_evo_guide := Button.new()
-	btn_evo_guide.text = "🌟 隐藏超武配方表"
-	btn_evo_guide.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	btn_evo_guide.pressed.connect(_on_show_evo_recipes)
-	event_hbox.add_child(btn_evo_guide)
+	var btn_evo := Button.new()
+	btn_evo.text = "🌟超武配方"
+	btn_evo.custom_minimum_size = Vector2(96, 36)
+	btn_evo.pressed.connect(_on_show_evo_recipes)
+	top_hbox.add_child(btn_evo)
 
-	lbl_event_toast = Label.new()
-	lbl_event_toast.text = "💡 提示：剩余引擎载重会自动100%转化为战车装甲片(SP)！合成高星武器仅增重10%但伤害暴涨65%！"
-	lbl_event_toast.add_theme_font_size_override("font_size", 13)
-	lbl_event_toast.add_theme_color_override("font_color", Color(0.95, 0.85, 0.45))
-	mid_vbox.add_child(lbl_event_toast)
+	btn_reroll = Button.new()
+	btn_reroll.custom_minimum_size = Vector2(150, 38)
+	btn_reroll.add_theme_font_size_override("font_size", 15)
+	btn_reroll.pressed.connect(_on_reroll_pressed)
+	top_hbox.add_child(btn_reroll)
 
-	# --- 右栏：猎人办事处 (赏金首 WANTED 通缉令) ---
-	var right_panel := _make_styled_panel(Color(0.18, 0.12, 0.11), Color(0.95, 0.30, 0.22))
-	right_panel.custom_minimum_size = Vector2(410, 0)
-	right_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	center_hbox.add_child(right_panel)
+	lbl_event_toast = _make_outlined_label("💡 提示：同名同星武器购买后自动【二合一升星】！剩余引擎载重100%转化为战车SP装甲！", 13, Color(0.95, 0.88, 0.48))
+	lbl_event_toast.clip_text = true
+	top_vbox.add_child(lbl_event_toast)
 
-	var right_scroll := ScrollContainer.new()
-	right_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	right_panel.add_child(right_scroll)
+	# 猎人未领升级栏 (平时隐藏)
+	perk_panel = _make_styled_panel(Color(0.20, 0.16, 0.10), Color(1.0, 0.82, 0.20), 6)
+	perk_panel.visible = false
+	root_vbox.add_child(perk_panel)
+	perk_hbox = HBoxContainer.new()
+	perk_hbox.add_theme_constant_override("separation", 10)
+	perk_panel.add_child(perk_hbox)
 
+	# =========================================================================
+	# 2. 主体双栏 (左 70%：上方立式商品卡 + 下方武器槽位网格 | 右 30%：属性进度条 + 属性表 + 悬赏 + 出击)
+	# =========================================================================
+	var body_hbox := HBoxContainer.new()
+	body_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body_hbox.add_theme_constant_override("separation", 12)
+	root_vbox.add_child(body_hbox)
+
+	# --- 左侧主区 (商店卡片 + 武器与孔位网格) ---
+	var left_vbox := VBoxContainer.new()
+	left_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	left_vbox.size_flags_stretch_ratio = 2.45
+	left_vbox.add_theme_constant_override("separation", 10)
+	body_hbox.add_child(left_vbox)
+
+	# 左上：4~5 张立式商店商品卡 (像土豆兄弟一样横向排列)
+	shop_cards_hbox = HBoxContainer.new()
+	shop_cards_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_cards_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	shop_cards_hbox.size_flags_stretch_ratio = 1.35
+	shop_cards_hbox.add_theme_constant_override("separation", 10)
+	left_vbox.add_child(shop_cards_hbox)
+
+	# 左下：战车已装武器 & 底盘槽位网格面板 (像土豆兄弟左下角 Weapons 网格)
+	var inv_panel := _make_styled_panel(Color(0.13, 0.13, 0.16), Color(0.42, 0.65, 0.88), 8)
+	inv_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	inv_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	inv_panel.size_flags_stretch_ratio = 1.0
+	left_vbox.add_child(inv_panel)
+
+	var inv_vbox := VBoxContainer.new()
+	inv_vbox.add_theme_constant_override("separation", 6)
+	inv_panel.add_child(inv_vbox)
+
+	var inv_top_row := HBoxContainer.new()
+	inv_top_row.add_theme_constant_override("separation", 10)
+	inv_vbox.add_child(inv_top_row)
+
+	lbl_slots_header = _make_outlined_label("🔧 战车武器与底盘孔位 (0/4)", 16, Color(0.55, 0.88, 1.0))
+	inv_top_row.add_child(lbl_slots_header)
+
+	synergy_pills_hbox = HBoxContainer.new()
+	synergy_pills_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	synergy_pills_hbox.alignment = BoxContainer.ALIGNMENT_END
+	synergy_pills_hbox.add_theme_constant_override("separation", 6)
+	inv_top_row.add_child(synergy_pills_hbox)
+
+	var slots_scroll := ScrollContainer.new()
+	slots_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slots_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	slots_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	inv_vbox.add_child(slots_scroll)
+
+	slots_cards_hbox = HBoxContainer.new()
+	slots_cards_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slots_cards_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	slots_cards_hbox.add_theme_constant_override("separation", 8)
+	slots_scroll.add_child(slots_cards_hbox)
+
+	# --- 右侧边栏 (属性进度条 + 土豆兄弟式双列属性表 + 通缉令海报 + 出击按钮) ---
 	var right_vbox := VBoxContainer.new()
 	right_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	right_vbox.size_flags_stretch_ratio = 1.0
 	right_vbox.add_theme_constant_override("separation", 8)
-	right_scroll.add_child(right_vbox)
+	body_hbox.add_child(right_vbox)
 
-	var lbl_right_t := Label.new()
-	lbl_right_t.text = "🎯 【猎人办事处：赏金首通缉令 (WANTED)】"
-	lbl_right_t.add_theme_font_size_override("font_size", 17)
-	lbl_right_t.add_theme_color_override("font_color", Color(1.0, 0.42, 0.32))
-	right_vbox.add_child(lbl_right_t)
+	# 右上：属性面板 (Stats Panel)
+	var stats_panel := _make_styled_panel(Color(0.14, 0.14, 0.17), Color(0.55, 0.75, 0.55), 8)
+	stats_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	stats_panel.size_flags_stretch_ratio = 1.25
+	right_vbox.add_child(stats_panel)
 
-	var lbl_right_sub := Label.new()
-	lbl_right_sub.text = "主动撕下通缉令后，下一波开战 6 秒该赏金首将强行乱入！击杀必得巨额赏金与专属传奇红武！"
-	lbl_right_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lbl_right_sub.add_theme_font_size_override("font_size", 12)
-	lbl_right_sub.add_theme_color_override("font_color", Color(0.90, 0.78, 0.70))
-	right_vbox.add_child(lbl_right_sub)
+	var st_outer := VBoxContainer.new()
+	st_outer.add_theme_constant_override("separation", 6)
+	stats_panel.add_child(st_outer)
 
-	wanted_vbox = VBoxContainer.new()
-	wanted_vbox.add_theme_constant_override("separation", 10)
-	right_vbox.add_child(wanted_vbox)
+	var st_header := _make_outlined_label("📊 战车装甲与属性 (载重=SP)", 16, Color(0.45, 0.95, 0.62))
+	st_outer.add_child(st_header)
 
-	# 4. 底部出击按钮
+	# 战车 SP 装甲可视化进度条
+	var sp_res: Dictionary = _create_bar(Vector2(0, 22), Color(0.20, 0.80, 0.38), 13)
+	bar_garage_sp = sp_res["bar"]
+	lbl_garage_sp = sp_res["label"]
+	st_outer.add_child(sp_res["container"])
+
+	# 引擎载重可视化进度条
+	var wt_res: Dictionary = _create_bar(Vector2(0, 20), Color(0.88, 0.58, 0.18), 12)
+	bar_garage_weight = wt_res["bar"]
+	style_weight_fill = wt_res["fill_style"]
+	lbl_garage_weight = wt_res["label"]
+	st_outer.add_child(wt_res["container"])
+
+	var st_scroll := ScrollContainer.new()
+	st_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	st_outer.add_child(st_scroll)
+
+	stats_list_vbox = VBoxContainer.new()
+	stats_list_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	stats_list_vbox.add_theme_constant_override("separation", 4)
+	st_scroll.add_child(stats_list_vbox)
+
+	# 右中：猎人办事处悬赏通缉令紧凑卡
+	var wanted_panel := _make_styled_panel(Color(0.19, 0.12, 0.12), Color(0.95, 0.32, 0.24), 8)
+	right_vbox.add_child(wanted_panel)
+
+	wanted_box_vbox = VBoxContainer.new()
+	wanted_box_vbox.add_theme_constant_override("separation", 6)
+	wanted_panel.add_child(wanted_box_vbox)
+
+	# 右下：土豆兄弟式巨型【出发！】主按钮
 	btn_launch = Button.new()
 	btn_launch.custom_minimum_size = Vector2(0, 52)
-	btn_launch.add_theme_font_size_override("font_size", 22)
+	btn_launch.add_theme_font_size_override("font_size", 20)
+	var launch_style := StyleBoxFlat.new()
+	launch_style.bg_color = Color(0.18, 0.62, 0.28)
+	launch_style.border_color = Color(0.45, 0.98, 0.55)
+	launch_style.set_border_width_all(2)
+	launch_style.set_corner_radius_all(8)
+	btn_launch.add_theme_stylebox_override("normal", launch_style)
+	var launch_hover := launch_style.duplicate()
+	launch_hover.bg_color = Color(0.24, 0.74, 0.35)
+	btn_launch.add_theme_stylebox_override("hover", launch_hover)
+	btn_launch.add_theme_stylebox_override("focus", launch_hover)
 	btn_launch.pressed.connect(_on_launch_pressed)
-	main_vbox.add_child(btn_launch)
+	right_vbox.add_child(btn_launch)
 
 func open_garage() -> void:
 	visible = true
 	reroll_count = 0
 	waxed_this_wave = false
 	dig_used_this_wave = false
-	lbl_event_toast.text = "💡 欢迎回到多拉姆整备车库！(支持手柄十字键/左摇杆选商品，[A]购买，[Y]刷新商店，[Start]出击下一波)"
+	lbl_event_toast.text = "💡 欢迎来到多拉姆商店！(支持键鼠点击或手柄摇杆选商品，[A]购买，[Y]刷新商店，[Start]出击下一波)"
 	_roll_shop_items()
 	refresh_all()
 	if is_instance_valid(btn_launch):
@@ -245,6 +282,14 @@ func open_garage() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
+		return
+	if event.is_action_pressed("toggle_fullscreen"):
+		get_viewport().set_input_as_handled()
+		var mode: int = DisplayServer.window_get_mode()
+		if mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		else:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		return
 	if event.is_action_pressed("gamepad_start"):
 		get_viewport().set_input_as_handled()
@@ -258,44 +303,18 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func refresh_all() -> void:
 	GameState.recalculate_stats()
-	var ch: Dictionary = GameData.CHASSIS[GameState.selected_chassis_id]
-	var hunter: Dictionary = GameData.HUNTERS[GameState.selected_hunter_id]
-
-	lbl_header.text = "⚙️ 多拉姆战车车库 (已完成第 %d/%d 波)  |  猎人: %s  |  座驾: %s  |  💰 赏金: %d G" % [
-		GameState.current_wave, GameState.max_waves, hunter["name"], ch["name"], GameState.gold
-	]
-
-	var over_str: String = ""
-	if GameState.overweight_tons > 0.0:
-		over_str = "   ⚠️【超载 %.1f 吨：战车移速降低! 请升级引擎或卸下重武器】" % GameState.overweight_tons
-	lbl_weight_sp_formula.text = "🛡️ 【载重=SP 核心公式】 引擎上限 %.1ft - 武器自重 %.1ft = 剩余载重 %.1ft  ➔  转化为战车最大装甲片: %d SP (每秒恢复 +%.0f SP)%s" % [
-		GameState.max_weight, GameState.used_weight, GameState.free_weight, int(GameState.max_sp), GameState.sp_regen_per_sec, over_str
-	]
-
-	# 流派羁绊统计栏 (仅简单与困难难度显示，地狱模式隐藏提示!)
-	if GameState.should_show_build_hints():
-		var syn_parts: Array = []
-		for tag in GameData.SYNERGIES.keys():
-			var cnt: int = GameState.synergy_counts.get(tag, 0)
-			if cnt > 0:
-				syn_parts.append("【%s: %d/6】" % [GameData.SYNERGIES[tag]["name"], cnt])
-		lbl_synergy_bar.text = "🔥 激活流派羁绊: " + ("  ".join(syn_parts) if syn_parts.size() > 0 else "暂无 (购买武器叠加标签可激活 2/4/6 件套强力羁绊)")
-	else:
-		lbl_synergy_bar.text = "🔴 【地狱难度法则】流派羁绊与超武配件提示已隐藏（效果仍在后台正常生效，全凭老猎人记忆盲配！）"
+	lbl_shop_title.text = "🛒 多拉姆整备商店 (第 %d / %d 波)" % [GameState.current_wave, GameState.max_waves]
+	lbl_gold_big.text = "💰 %d G" % GameState.gold
+	lbl_chips_big.text = "💎 %d" % GameState.noah_chips
 
 	_refresh_perk_bar()
-	_refresh_left_column()
-	_refresh_shop_column()
-	_refresh_wanted_column()
+	_refresh_shop_cards()
+	_refresh_slots_and_weapons_grid()
+	_refresh_right_stats_and_wanted()
 
 	var next_w: int = GameState.current_wave + 1
-	var wanted_str: String = ""
-	if GameState.active_wanted_boss_id != "":
-		for b in GameData.WANTED_BOSSES:
-			if b["id"] == GameState.active_wanted_boss_id:
-				wanted_str = "  (⚠️ 已接单赏金首：【%s】将在下波乱入!)" % b["name"]
-				break
-	btn_launch.text = "🚀 [Start] 启动引擎：出击第 %d 波废土战场！%s" % [next_w, wanted_str]
+	var boss_tag: String = " ⚠️[迎战赏金首]" if GameState.active_wanted_boss_id != "" else ""
+	btn_launch.text = "🚀 出击第 %d 波 [Start]%s" % [next_w, boss_tag]
 	if visible and get_viewport() and get_viewport().gui_get_focus_owner() == null and is_instance_valid(btn_launch):
 		btn_launch.call_deferred("grab_focus")
 
@@ -307,14 +326,17 @@ func _refresh_perk_bar() -> void:
 		return
 	perk_panel.visible = true
 
+	var title := _make_outlined_label("🎖️ 升级点(%d):" % GameState.pending_level_ups, 14, Color(1.0, 0.90, 0.30))
+	perk_hbox.add_child(title)
+
 	var shuffled: Array = GameData.LEVEL_PERKS.duplicate()
 	shuffled.shuffle()
 	for i in range(min(4, shuffled.size())):
 		var p: Dictionary = shuffled[i]
 		var btn := Button.new()
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.custom_minimum_size = Vector2(0, 44)
-		btn.text = "★ %s\n%s" % [p["name"], p["desc"]]
+		btn.custom_minimum_size = Vector2(0, 34)
+		btn.text = "★ %s (%s)" % [p["name"], p["desc"]]
 		btn.pressed.connect(func():
 			var st: String = p["stat"]
 			GameState.bonus_stats[st] = GameState.bonus_stats.get(st, 0.0) + float(p["val"])
@@ -324,99 +346,7 @@ func _refresh_perk_bar() -> void:
 		)
 		perk_hbox.add_child(btn)
 
-func _refresh_left_column() -> void:
-	for c in slots_vbox.get_children():
-		c.queue_free()
-	for c in equipped_vbox.get_children():
-		c.queue_free()
-
-	# 1. 当前猎人立绘 + 战车俯视图 + 引擎与C装置
-	var eng: Dictionary = GameData.ENGINES[GameState.equipped_engine_id]
-	var cu: Dictionary = GameData.C_UNITS[GameState.equipped_c_unit_id]
-
-	var top_showcase := HBoxContainer.new()
-	top_showcase.add_theme_constant_override("separation", 10)
-	slots_vbox.add_child(top_showcase)
-
-	var h_rect := _make_tex_rect(GameData.get_hunter_tex(GameState.selected_hunter_id), Vector2(58, 58))
-	top_showcase.add_child(h_rect)
-
-	var c_rect := _make_tex_rect(GameData.get_chassis_tex(GameState.selected_chassis_id), Vector2(86, 58))
-	top_showcase.add_child(c_rect)
-
-	var lbl_ec := Label.new()
-	lbl_ec.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lbl_ec.text = "• 引擎: %s (载重 %.0ft)\n• C装置: %s\n  %s" % [eng["name"], eng["max_weight"], cu["name"], cu["desc"]]
-	lbl_ec.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	lbl_ec.add_theme_font_size_override("font_size", 12)
-	lbl_ec.add_theme_color_override("font_color", Color(0.95, 0.88, 0.65))
-	top_showcase.add_child(lbl_ec)
-
-	# 2. 底盘孔位列表与改孔按钮
-	var mod_cost: int = 0 if GameState.bonus_stats.get("free_slot_mod", false) else 25
-	var slot_title := Label.new()
-	slot_title.text = "🔩 底盘武器开孔 (%d孔) — 点击可改孔 (%s):" % [GameState.chassis_slots.size(), "机械师免费!" if mod_cost == 0 else "%dG/次" % mod_cost]
-	slot_title.add_theme_font_size_override("font_size", 13)
-	slots_vbox.add_child(slot_title)
-
-	var slot_grid := HFlowContainer.new()
-	slots_vbox.add_child(slot_grid)
-
-	for i in range(GameState.chassis_slots.size()):
-		var s_type: String = GameState.chassis_slots[i]
-		var s_btn := Button.new()
-		var type_cn: String = "主炮孔(MAIN)" if s_type == "MAIN" else ("副炮孔(SUB)" if s_type == "SUB" else "特殊孔(S-E)")
-		s_btn.text = "#%d %s [改]" % [i + 1, type_cn]
-		s_btn.pressed.connect(func():
-			if GameState.gold < mod_cost:
-				lbl_event_toast.text = "❌ 赏金不足，无法改造底盘孔位！"
-				return
-			GameState.gold -= mod_cost
-			GameState.cycle_chassis_slot_type(i)
-			SoundManager.play("coin", 0.08, 0.0)
-			refresh_all()
-		)
-		slot_grid.add_child(s_btn)
-
-	# 3. 已安装武器列表
-	var eq_title := Label.new()
-	eq_title.text = "🔫 已安装战车武器 (%d / %d):" % [GameState.equipped_weapons.size(), GameState.chassis_slots.size()]
-	eq_title.add_theme_font_size_override("font_size", 14)
-	eq_title.add_theme_color_override("font_color", Color(0.65, 0.95, 0.75))
-	equipped_vbox.add_child(eq_title)
-
-	for i in range(GameState.equipped_weapons.size()):
-		var w_entry: Dictionary = GameState.equipped_weapons[i]
-		var w_id: String = w_entry["id"]
-		var rar: int = w_entry.get("rarity", 0)
-		var w_def: Dictionary = GameData.WEAPONS[w_id]
-
-		var row := HBoxContainer.new()
-		equipped_vbox.add_child(row)
-
-		var w_lbl := Label.new()
-		w_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var eff_dmg: float = GameState.get_weapon_effective_damage(w_id, rar)
-		var eff_w: float = GameState.get_weapon_effective_weight(w_id, rar)
-		w_lbl.text = "[%s] %s %s\n伤害: %.0f | 重量: %.1ft | CD: %.1fs" % [
-			w_def["slot"], w_def["name"], GameData.RARITY_NAMES[rar], eff_dmg, eff_w, float(w_def["cooldown"])
-		]
-		w_lbl.add_theme_font_size_override("font_size", 13)
-		w_lbl.add_theme_color_override("font_color", GameData.RARITY_COLORS[rar])
-		row.add_child(w_lbl)
-
-		var sell_btn := Button.new()
-		var refund: int = int(w_def.get("cost", 50) * pow(1.6, rar) * 0.6)
-		sell_btn.text = "拆卸(+%dG)" % refund
-		sell_btn.pressed.connect(func():
-			GameState.sell_weapon_at(i)
-			SoundManager.play("coin", 0.1, -2.0)
-			refresh_all()
-		)
-		row.add_child(sell_btn)
-
 func _roll_shop_items() -> void:
-	# 保留已锁定的商品
 	var locked_items: Array = []
 	for it in shop_items:
 		if it.get("locked", false) and not it.get("bought", false):
@@ -457,47 +387,45 @@ func _roll_shop_items() -> void:
 				var price: int = int(GameData.C_UNITS[c_id]["cost"] * (1.0 + GameState.current_wave * 0.05))
 				shop_items.append({"kind": "c_unit", "id": c_id, "price": price, "bought": false, "locked": false})
 
-func _refresh_shop_column() -> void:
-	for c in shop_vbox.get_children():
+# --- 左上：土豆兄弟风格 4~5 张立式商店商品卡 ---
+func _refresh_shop_cards() -> void:
+	for c in shop_cards_hbox.get_children():
 		c.queue_free()
 
 	var base_reroll: int = int((12 + GameState.current_wave * 3 + reroll_count * 6) * (1.0 - GameState.bonus_stats.get("reroll_discount", 0.0)))
-	btn_reroll.text = "🔄 [Y]刷新军火 (%dG)" % max(2, base_reroll)
+	btn_reroll.text = "🔄 刷新 (%dG) [Y]" % max(2, base_reroll)
 
 	for idx in range(shop_items.size()):
 		var item: Dictionary = shop_items[idx]
 		if item["bought"]:
+			var sold_card := _make_styled_panel(Color(0.11, 0.11, 0.13, 0.6), Color(0.28, 0.28, 0.32), 8)
+			sold_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			sold_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			var sold_lbl := _make_outlined_label("✅ 已购买", 16, Color(0.55, 0.60, 0.55))
+			sold_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			sold_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			sold_card.add_child(sold_lbl)
+			shop_cards_hbox.add_child(sold_card)
 			continue
 
-		var card := _make_styled_panel(Color(0.20, 0.18, 0.15), Color(0.55, 0.50, 0.42))
-		shop_vbox.add_child(card)
-		var hbox := HBoxContainer.new()
-		card.add_child(hbox)
+		var rar: int = int(item.get("rarity", 2))
+		var border_col: Color = GameData.RARITY_COLORS[clampi(rar, 0, 5)]
+		if item["kind"] == "engine":
+			border_col = Color(0.35, 0.90, 1.0)
+		elif item["kind"] == "c_unit":
+			border_col = Color(0.90, 0.50, 1.0)
 
-		var desc_lbl := Label.new()
-		desc_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc_lbl.add_theme_font_size_override("font_size", 13)
-		hbox.add_child(desc_lbl)
+		var card := _make_styled_panel(Color(0.17, 0.16, 0.19), border_col, 8)
+		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		shop_cards_hbox.add_child(card)
 
-		var buy_btn := Button.new()
-		buy_btn.custom_minimum_size = Vector2(105, 48)
-		hbox.add_child(buy_btn)
-
-		if GameState.is_feature_unlocked("shop_lock"):
-			var lock_btn := Button.new()
-			lock_btn.custom_minimum_size = Vector2(64, 48)
-			lock_btn.text = "🔓已锁" if item.get("locked", false) else "🔒锁定"
-			lock_btn.pressed.connect(func():
-				item["locked"] = not item.get("locked", false)
-				SoundManager.play("coin", 0.15, -4.0)
-				_refresh_shop_column()
-			)
-			hbox.add_child(lock_btn)
+		var cv := VBoxContainer.new()
+		cv.add_theme_constant_override("separation", 6)
+		card.add_child(cv)
 
 		if item["kind"] == "weapon":
 			var w_id: String = item["id"]
-			var rar: int = item["rarity"]
 			var w_def: Dictionary = GameData.WEAPONS[w_id]
 			var show_hints: bool = GameState.should_show_build_hints()
 			var can_merge: bool = false
@@ -505,29 +433,60 @@ func _refresh_shop_column() -> void:
 				if ew["id"] == w_id and ew.get("rarity", 0) == rar and rar < 4:
 					can_merge = true
 					break
-			var merge_tag: String = " 🔥【可二合一升星!】" if (can_merge and show_hints) else ""
+
+			var slot_icon: String = "🔴主炮" if w_def["slot"] == "MAIN" else ("🟡副炮" if w_def["slot"] == "SUB" else "🔵S-E")
+			var top_tag := _make_outlined_label("%s  ·  %s" % [slot_icon, GameData.RARITY_NAMES[rar]], 12, border_col)
+			top_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cv.add_child(top_tag)
+
+			var name_lbl := _make_outlined_label(w_def["name"], 16, border_col)
+			name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			cv.add_child(name_lbl)
+
+			# 提示角标 (可合成 / 超武配件 / 流派)
 			if show_hints:
+				var evo_partner: String = GameState.check_super_evolution_partner(w_id)
+				if evo_partner != "":
+					var evo_lbl := _make_outlined_label("🌟 超武配件 ➔ %s" % evo_partner.substr(0, 8), 12, Color(1.0, 0.88, 0.22))
+					evo_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+					cv.add_child(evo_lbl)
+				elif can_merge:
+					var m_lbl := _make_outlined_label("🔥 同名同星：购买直接二合一！", 12, Color(0.40, 1.0, 0.55))
+					m_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+					cv.add_child(m_lbl)
+
 				var syn_names: Array = []
 				for t in w_def.get("tags", []):
 					if GameData.SYNERGIES.has(t):
 						syn_names.append(GameData.SYNERGIES[t]["name"])
 				if not syn_names.is_empty():
-					merge_tag += " [流派:%s]" % "/".join(syn_names)
-				var evo_partner: String = GameState.check_super_evolution_partner(w_id)
-				if evo_partner != "":
-					merge_tag += " 🌟【超武配方➔%s】" % evo_partner
-			desc_lbl.text = "[%s孔] %s %s%s\n重量: %.1ft | 基础伤: %.0f | %s" % [
-				w_def["slot"], w_def["name"], GameData.RARITY_NAMES[rar], merge_tag,
-				float(w_def["weight"]), float(w_def["base_dmg"]) * pow(1.65, rar), w_def["desc"]
-			]
-			desc_lbl.add_theme_color_override("font_color", GameData.RARITY_COLORS[rar])
-			buy_btn.text = "购买\n%d G" % item["price"]
-			buy_btn.pressed.connect(func():
+					var s_lbl := _make_outlined_label("🏷️ " + " / ".join(syn_names), 12, Color(0.75, 0.88, 1.0))
+					s_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+					cv.add_child(s_lbl)
+
+			# 核心三项图形化数值框
+			var stat_box := _make_styled_panel(Color(0.11, 0.11, 0.13), Color(0.30, 0.30, 0.35), 4)
+			cv.add_child(stat_box)
+			var sv := VBoxContainer.new()
+			sv.add_theme_constant_override("separation", 2)
+			stat_box.add_child(sv)
+			var dmg_val: float = float(w_def["base_dmg"]) * pow(1.65, rar)
+			_add_mini_stat_row(sv, "💥 伤害", "%.0f" % dmg_val, Color(1.0, 0.55, 0.32))
+			_add_mini_stat_row(sv, "⚖️ 重量", "%.1f t" % float(w_def["weight"]), Color(0.95, 0.85, 0.40))
+			_add_mini_stat_row(sv, "⏱️ 冷却", "%.1f s" % float(w_def["cooldown"]), Color(0.55, 0.90, 1.0))
+
+			var desc_lbl := _make_outlined_label(w_def["desc"], 12, Color(0.82, 0.82, 0.85))
+			desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			cv.add_child(desc_lbl)
+
+			_add_shop_card_buttons(cv, item, func():
 				if GameState.gold < item["price"]:
 					lbl_event_toast.text = "❌ 赏金 G 不足！"
 					return
 				if not GameState.can_equip_or_merge(w_id, rar):
-					lbl_event_toast.text = "⚠️ 缺少对应的【%s】底盘空闲孔位！请先在左侧拆卸武器或点击【改孔】。" % w_def["slot"]
+					lbl_event_toast.text = "⚠️ 缺少【%s】空闲孔位！请先在下方点击槽位【改孔】或【拆卸】旧武器。" % w_def["slot"]
 					return
 				GameState.gold -= item["price"]
 				item["bought"] = true
@@ -535,23 +494,39 @@ func _refresh_shop_column() -> void:
 				var evos: Array = res.get("evos", [])
 				if not evos.is_empty():
 					SoundManager.play("mince_revive", 0.02, 3.0)
-					lbl_event_toast.text = "🌟【隐藏超武合成成功！】[%s] + [%s] ➔ 进化为【%s】！！" % [
-						evos[0]["comp_a_name"], evos[0]["comp_b_name"], evos[0]["evo_name"]
-					]
+					lbl_event_toast.text = "🌟【隐藏超武合成！】[%s] + [%s] ➔ 进化为【%s】！" % [evos[0]["comp_a_name"], evos[0]["comp_b_name"], evos[0]["evo_name"]]
 				elif res.get("merged", false):
 					SoundManager.play("upgrade", 0.04, 2.0)
-					lbl_event_toast.text = "✨ 二合一升星成功！【%s】晋升为 %s！" % [w_def["name"], GameData.RARITY_NAMES[res["new_rarity"]]]
+					lbl_event_toast.text = "✨ 二合一升星！【%s】晋升为 %s！" % [w_def["name"], GameData.RARITY_NAMES[res["new_rarity"]]]
 				else:
 					SoundManager.play("coin", 0.08, 0.0)
-					lbl_event_toast.text = "🔧 已将【%s】安装至底盘！" % w_def["name"]
+					lbl_event_toast.text = "🔧 已安装【%s】！" % w_def["name"]
 				refresh_all()
 			)
+
 		elif item["kind"] == "engine":
 			var e_def: Dictionary = GameData.ENGINES[item["id"]]
-			desc_lbl.text = "⚙️ 【引擎升级】%s\n%s" % [e_def["name"], e_def["desc"]]
-			desc_lbl.add_theme_color_override("font_color", Color(0.45, 0.95, 1.0))
-			buy_btn.text = "换装引擎\n%d G" % item["price"]
-			buy_btn.pressed.connect(func():
+			var top_tag := _make_outlined_label("⚙️ 战车引擎核心", 12, border_col)
+			top_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cv.add_child(top_tag)
+
+			var name_lbl := _make_outlined_label(e_def["name"], 16, border_col)
+			name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			cv.add_child(name_lbl)
+
+			var stat_box := _make_styled_panel(Color(0.11, 0.11, 0.13), Color(0.30, 0.30, 0.35), 4)
+			cv.add_child(stat_box)
+			var sv := VBoxContainer.new()
+			stat_box.add_child(sv)
+			_add_mini_stat_row(sv, "⚖️ 最大载重", "%.1f t" % float(e_def["max_weight"]), Color(0.40, 1.0, 0.55))
+
+			var desc_lbl := _make_outlined_label(e_def["desc"], 12, Color(0.85, 0.90, 0.95))
+			desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			cv.add_child(desc_lbl)
+
+			_add_shop_card_buttons(cv, item, func():
 				if GameState.gold < item["price"]:
 					lbl_event_toast.text = "❌ 赏金 G 不足！"
 					return
@@ -559,15 +534,34 @@ func _refresh_shop_column() -> void:
 				GameState.equipped_engine_id = item["id"]
 				item["bought"] = true
 				SoundManager.play("upgrade", 0.05, 1.0)
-				lbl_event_toast.text = "⚙️ 引擎换装完成！最大载重与SP装甲大幅提升！"
+				lbl_event_toast.text = "⚙️ 换装【%s】！最大载重与装甲大幅提升！" % e_def["name"]
 				refresh_all()
 			)
+
 		elif item["kind"] == "c_unit":
 			var c_def: Dictionary = GameData.C_UNITS[item["id"]]
-			desc_lbl.text = "💻 【C装置核心】%s\n%s" % [c_def["name"], c_def["desc"]]
-			desc_lbl.add_theme_color_override("font_color", Color(0.95, 0.55, 1.0))
-			buy_btn.text = "安装核心\n%d G" % item["price"]
-			buy_btn.pressed.connect(func():
+			var top_tag := _make_outlined_label("💻 C装置火控电脑", 12, border_col)
+			top_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cv.add_child(top_tag)
+
+			var name_lbl := _make_outlined_label(c_def["name"], 16, border_col)
+			name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			cv.add_child(name_lbl)
+
+			var stat_box := _make_styled_panel(Color(0.11, 0.11, 0.13), Color(0.30, 0.30, 0.35), 4)
+			cv.add_child(stat_box)
+			var sv := VBoxContainer.new()
+			stat_box.add_child(sv)
+			_add_mini_stat_row(sv, "🚀 全弹CD", "%.1f s" % float(c_def["all_out_cd"]), Color(0.95, 0.65, 1.0))
+			_add_mini_stat_row(sv, "⚖️ 自重", "%.1f t" % float(c_def["weight"]), Color(0.95, 0.85, 0.40))
+
+			var desc_lbl := _make_outlined_label(c_def["desc"], 12, Color(0.92, 0.85, 0.96))
+			desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			cv.add_child(desc_lbl)
+
+			_add_shop_card_buttons(cv, item, func():
 				if GameState.gold < item["price"]:
 					lbl_event_toast.text = "❌ 赏金 G 不足！"
 					return
@@ -575,80 +569,259 @@ func _refresh_shop_column() -> void:
 				GameState.equipped_c_unit_id = item["id"]
 				item["bought"] = true
 				SoundManager.play("upgrade", 0.05, 1.0)
-				lbl_event_toast.text = "💻 C装置【%s】已激活！" % c_def["name"]
+				lbl_event_toast.text = "💻 已安装火控电脑【%s】！" % c_def["name"]
 				refresh_all()
 			)
 
-func _refresh_wanted_column() -> void:
-	for c in wanted_vbox.get_children():
+func _add_shop_card_buttons(parent: VBoxContainer, item: Dictionary, on_buy: Callable) -> void:
+	var btn_row := HBoxContainer.new()
+	btn_row.add_theme_constant_override("separation", 6)
+	parent.add_child(btn_row)
+
+	var buy_btn := Button.new()
+	buy_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	buy_btn.custom_minimum_size = Vector2(0, 38)
+	buy_btn.text = "💰 %dG 购买" % int(item["price"])
+	buy_btn.pressed.connect(on_buy)
+	btn_row.add_child(buy_btn)
+
+	if GameState.is_feature_unlocked("shop_lock"):
+		var lock_btn := Button.new()
+		lock_btn.custom_minimum_size = Vector2(56, 38)
+		lock_btn.text = "🔓已锁" if item.get("locked", false) else "🔒锁"
+		lock_btn.pressed.connect(func():
+			item["locked"] = not item.get("locked", false)
+			SoundManager.play("coin", 0.15, -4.0)
+			_refresh_shop_cards()
+		)
+		btn_row.add_child(lock_btn)
+
+# --- 左下：土豆兄弟风格武器与槽位卡片网格 ---
+func _refresh_slots_and_weapons_grid() -> void:
+	for c in synergy_pills_hbox.get_children():
 		c.queue_free()
+	for c in slots_cards_hbox.get_children():
+		c.queue_free()
+
+	var mod_cost: int = 0 if GameState.bonus_stats.get("free_slot_mod", false) else 25
+	var mod_str: String = "免费改孔" if mod_cost == 0 else "改孔 %dG" % mod_cost
+	lbl_slots_header.text = "🔧 战车槽位与武装 (%d / %d)  [%s]" % [
+		GameState.equipped_weapons.size(), GameState.chassis_slots.size(), mod_str
+	]
+
+	# 流派羁绊彩色胶囊徽章
+	if GameState.should_show_build_hints():
+		for tag in GameData.SYNERGIES.keys():
+			var cnt: int = GameState.synergy_counts.get(tag, 0)
+			if cnt > 0:
+				var s_def: Dictionary = GameData.SYNERGIES[tag]
+				var pill := _make_styled_panel(Color(0.18, 0.18, 0.22), s_def["color"] if cnt >= 2 else Color(0.45, 0.45, 0.50), 4)
+				var pl := _make_outlined_label("%s %d/6" % [s_def["name"], cnt], 12, s_def["color"] if cnt >= 2 else Color(0.8, 0.8, 0.8))
+				pill.add_child(pl)
+				synergy_pills_hbox.add_child(pill)
+	else:
+		var blind_lbl := _make_outlined_label("🔴 地狱盲配模式 (提示已隐藏)", 12, Color(1.0, 0.38, 0.35))
+		synergy_pills_hbox.add_child(blind_lbl)
+
+	# 将已安装武器与底盘槽位一一对应展示成直观的方形卡片！
+	var total_cards: int = max(GameState.chassis_slots.size(), GameState.equipped_weapons.size())
+	for i in range(total_cards):
+		var s_type: String = GameState.chassis_slots[i] if i < GameState.chassis_slots.size() else "SE"
+		var has_weapon: bool = (i < GameState.equipped_weapons.size())
+		var type_badge: String = "🔴主炮孔" if s_type == "MAIN" else ("🟡副炮孔" if s_type == "SUB" else "🔵S-E孔")
+
+		if has_weapon:
+			var w_entry: Dictionary = GameState.equipped_weapons[i]
+			var w_id: String = w_entry["id"]
+			var rar: int = int(w_entry.get("rarity", 0))
+			var w_def: Dictionary = GameData.WEAPONS[w_id]
+			var r_col: Color = GameData.RARITY_COLORS[clampi(rar, 0, 5)]
+
+			var w_card := _make_styled_panel(Color(0.18, 0.18, 0.22), r_col, 6)
+			w_card.custom_minimum_size = Vector2(142, 0)
+			w_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			w_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			slots_cards_hbox.add_child(w_card)
+
+			var wv := VBoxContainer.new()
+			wv.add_theme_constant_override("separation", 4)
+			w_card.add_child(wv)
+
+			var top_r := HBoxContainer.new()
+			wv.add_child(top_r)
+			var sl_lbl := _make_outlined_label("#%d [%s]" % [i + 1, w_def["slot"]], 11, Color(0.8, 0.85, 0.9))
+			sl_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			top_r.add_child(sl_lbl)
+			var star_lbl := _make_outlined_label("★%d" % (rar + 1), 12, r_col)
+			top_r.add_child(star_lbl)
+
+			var wn_lbl := _make_outlined_label(w_def["name"], 13, r_col)
+			wn_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			wn_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			wv.add_child(wn_lbl)
+
+			var eff_dmg: float = GameState.get_weapon_effective_damage(w_id, rar)
+			var eff_w: float = GameState.get_weapon_effective_weight(w_id, rar)
+			var st_lbl := _make_outlined_label("💥%.0f  |  ⚖️%.1ft" % [eff_dmg, eff_w], 11, Color(0.92, 0.90, 0.82))
+			wv.add_child(st_lbl)
+
+			var b_row := HBoxContainer.new()
+			b_row.add_theme_constant_override("separation", 4)
+			wv.add_child(b_row)
+
+			if i < GameState.chassis_slots.size():
+				var mod_btn := Button.new()
+				mod_btn.text = "改孔"
+				mod_btn.custom_minimum_size = Vector2(44, 26)
+				mod_btn.add_theme_font_size_override("font_size", 11)
+				mod_btn.pressed.connect(func(): _try_mod_slot(i, mod_cost))
+				b_row.add_child(mod_btn)
+
+			var sell_btn := Button.new()
+			sell_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			sell_btn.custom_minimum_size = Vector2(0, 26)
+			sell_btn.add_theme_font_size_override("font_size", 11)
+			var refund: int = int(w_def.get("cost", 50) * pow(1.6, rar) * 0.6)
+			sell_btn.text = "卖+%dG" % refund
+			sell_btn.pressed.connect(func():
+				GameState.sell_weapon_at(i)
+				SoundManager.play("coin", 0.1, -2.0)
+				refresh_all()
+			)
+			b_row.add_child(sell_btn)
+		else:
+			var empty_card := _make_styled_panel(Color(0.11, 0.11, 0.14), Color(0.32, 0.35, 0.42), 6)
+			empty_card.custom_minimum_size = Vector2(132, 0)
+			empty_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			empty_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			slots_cards_hbox.add_child(empty_card)
+
+			var ev := VBoxContainer.new()
+			ev.alignment = BoxContainer.ALIGNMENT_CENTER
+			ev.add_theme_constant_override("separation", 6)
+			empty_card.add_child(ev)
+
+			var e_title := _make_outlined_label("空槽 #%d\n%s" % [i + 1, type_badge], 13, Color(0.65, 0.72, 0.80))
+			e_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			ev.add_child(e_title)
+
+			var mod_btn := Button.new()
+			mod_btn.custom_minimum_size = Vector2(0, 30)
+			mod_btn.add_theme_font_size_override("font_size", 12)
+			mod_btn.text = "🔩 切换孔位"
+			mod_btn.pressed.connect(func(): _try_mod_slot(i, mod_cost))
+			ev.add_child(mod_btn)
+
+func _try_mod_slot(slot_idx: int, mod_cost: int) -> void:
+	if GameState.gold < mod_cost:
+		lbl_event_toast.text = "❌ 赏金不足，改孔需要 %d G！" % mod_cost
+		return
+	GameState.gold -= mod_cost
+	GameState.cycle_chassis_slot_type(slot_idx)
+	SoundManager.play("coin", 0.08, 0.0)
+	refresh_all()
+
+# --- 右侧边栏：SP条 + 载重条 + 土豆兄弟双列属性表 + 悬赏海报 ---
+func _refresh_right_stats_and_wanted() -> void:
+	# 1. 更新 SP 装甲进度条 & 引擎载重进度条
+	bar_garage_sp.max_value = maxf(1.0, GameState.max_sp)
+	bar_garage_sp.value = bar_garage_sp.max_value
+	lbl_garage_sp.text = "🛡️ 战车装甲: %d SP  (+%.0f/秒)" % [int(GameState.max_sp), GameState.sp_regen_per_sec]
+
+	bar_garage_weight.max_value = maxf(1.0, GameState.max_weight)
+	bar_garage_weight.value = clampf(GameState.used_weight, 0.0, bar_garage_weight.max_value)
+	if GameState.overweight_tons > 0.0:
+		style_weight_fill.bg_color = Color(0.95, 0.25, 0.22)
+		lbl_garage_weight.text = "⚠️ 超载 %.1ft! (%.1f / %.1ft)" % [GameState.overweight_tons, GameState.used_weight, GameState.max_weight]
+	else:
+		style_weight_fill.bg_color = Color(0.88, 0.58, 0.18)
+		lbl_garage_weight.text = "⚖️ 载重: %.1f / %.1ft (余 %.1ft ➔ SP)" % [GameState.used_weight, GameState.max_weight, GameState.free_weight]
+
+	# 2. 更新土豆兄弟式双列属性表
+	for c in stats_list_vbox.get_children():
+		c.queue_free()
+
+	var ch: Dictionary = GameData.CHASSIS[GameState.selected_chassis_id]
+	var hunter: Dictionary = GameData.HUNTERS[GameState.selected_hunter_id]
+	var eng: Dictionary = GameData.ENGINES[GameState.equipped_engine_id]
+	var cu: Dictionary = GameData.C_UNITS[GameState.equipped_c_unit_id]
+
+	# 顶部猎人+战车小图标展示行
+	var icon_row := HBoxContainer.new()
+	icon_row.add_theme_constant_override("separation", 8)
+	stats_list_vbox.add_child(icon_row)
+	icon_row.add_child(_make_tex_rect(GameData.get_hunter_tex(GameState.selected_hunter_id), Vector2(38, 38)))
+	icon_row.add_child(_make_tex_rect(GameData.get_chassis_tex(GameState.selected_chassis_id), Vector2(56, 38)))
+	var hc_lbl := _make_outlined_label("%s (Lv.%d)\n%s" % [hunter["name"].split(" ")[0], GameState.level, ch["name"].split(" ")[0]], 12, Color(0.95, 0.90, 0.78))
+	icon_row.add_child(hc_lbl)
+
+	_add_mini_stat_row(stats_list_vbox, "⚙️ 当前引擎", eng["name"].substr(0, 9), Color(0.45, 0.92, 1.0))
+	_add_mini_stat_row(stats_list_vbox, "💻 火控C装置", cu["name"].substr(0, 9), Color(0.92, 0.60, 1.0))
+	_add_mini_stat_row(stats_list_vbox, "💥 暴击几率", "%d%%" % int(GameState.crit_chance * 100.0), Color(0.40, 1.0, 0.55))
+	_add_mini_stat_row(stats_list_vbox, "💨 闪避几率", "%d%%" % int(GameState.dodge_chance * 100.0), Color(0.45, 0.92, 1.0))
+	_add_mini_stat_row(stats_list_vbox, "⚡ 装填加速", "+%d%%" % int(GameState.bonus_stats.get("reload_speed_pct", 0.0) * 100.0), Color(1.0, 0.85, 0.32))
+	_add_mini_stat_row(stats_list_vbox, "🚜 战车移速", "%.0f" % GameState.move_speed, Color.WHITE)
+
+	# 3. 刷新猎人办事处悬赏通缉令紧凑卡
+	for c in wanted_box_vbox.get_children():
+		c.queue_free()
+
+	var w_header_row := HBoxContainer.new()
+	wanted_box_vbox.add_child(w_header_row)
+	var w_title := _make_outlined_label("🎯 赏金首通缉令 (WANTED)", 14, Color(1.0, 0.45, 0.35))
+	w_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	w_header_row.add_child(w_title)
 
 	if GameState.is_feature_unlocked("black_market_wanted"):
 		var btn_bm := Button.new()
-		btn_bm.text = "🔄 黑市悬赏网：切换其他通缉犯名单 (免费)"
+		btn_bm.text = "🔄换单"
+		btn_bm.custom_minimum_size = Vector2(58, 24)
+		btn_bm.add_theme_font_size_override("font_size", 11)
 		btn_bm.pressed.connect(func():
 			GameState.wanted_poster_offset += 1
 			SoundManager.play("coin", 0.1, -3.0)
-			_refresh_wanted_column()
+			_refresh_right_stats_and_wanted()
 		)
-		wanted_vbox.add_child(btn_bm)
+		w_header_row.add_child(btn_bm)
 
 	var posters: Array = GameState.get_available_wanted_posters()
 	if posters.is_empty():
-		var empty_lbl := Label.new()
-		empty_lbl.text = "当前区域所有通缉犯已被肃清！继续推进波次迎战终局主脑【诺亚】！"
-		wanted_vbox.add_child(empty_lbl)
+		wanted_box_vbox.add_child(_make_outlined_label("✅ 本区悬赏已肃清，准备决战关底统帅！", 12, Color(0.45, 1.0, 0.55)))
 		return
 
+	var boss: Dictionary = posters[0]
+	var is_selected: bool = (GameState.active_wanted_boss_id == boss["id"])
 	var bounty_mult: float = 1.25 if GameState.is_feature_unlocked("black_market_wanted") else 1.0
-	for boss in posters:
-		var is_selected: bool = (GameState.active_wanted_boss_id == boss["id"])
-		var border_col: Color = Color(1.0, 0.88, 0.20) if is_selected else Color(0.85, 0.28, 0.22)
-		var card := _make_styled_panel(Color(0.24, 0.14, 0.12), border_col)
-		wanted_vbox.add_child(card)
+	var disp_bounty: int = int(float(boss["bounty"]) * bounty_mult)
+	var rw_name: String = GameData.WEAPONS.get(boss["reward_weapon"], {}).get("name", "传奇红武")
 
-		var vbox := VBoxContainer.new()
-		card.add_child(vbox)
+	var p_row := HBoxContainer.new()
+	p_row.add_theme_constant_override("separation", 8)
+	wanted_box_vbox.add_child(p_row)
 
-		var poster_hbox := HBoxContainer.new()
-		poster_hbox.add_theme_constant_override("separation", 10)
-		vbox.add_child(poster_hbox)
+	p_row.add_child(_make_tex_rect(GameData.get_boss_tex(String(boss["id"])), Vector2(68, 50)))
 
-		var boss_portrait := _make_tex_rect(GameData.get_boss_tex(String(boss["id"])), Vector2(96, 68))
-		poster_hbox.add_child(boss_portrait)
+	var p_info := VBoxContainer.new()
+	p_info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	p_row.add_child(p_info)
+	p_info.add_child(_make_outlined_label(boss["name"].split(" ")[0], 14, Color(1.0, 0.88, 0.28)))
+	p_info.add_child(_make_outlined_label("💰 %dG  |  🎁 %s" % [disp_bounty, rw_name.substr(0, 8)], 11, Color(0.95, 0.82, 0.78)))
 
-		var info_vbox := VBoxContainer.new()
-		info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		poster_hbox.add_child(info_vbox)
-
-		var disp_bounty: int = int(float(boss["bounty"]) * bounty_mult)
-		var title := Label.new()
-		title.text = "🚨 WANTED: %s\n💰 悬赏金: %d G  (+25💎 诺亚晶片)" % [boss["name"], disp_bounty]
-		title.add_theme_font_size_override("font_size", 14)
-		title.add_theme_color_override("font_color", Color(1.0, 0.88, 0.30))
-		info_vbox.add_child(title)
-
-		var rw_name: String = GameData.WEAPONS.get(boss["reward_weapon"], {}).get("name", "传奇红武")
-		var desc := Label.new()
-		desc.text = "%s\n🎁 专属掉落: 【%s (★5红武)】" % [boss["desc"], rw_name]
-		desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		desc.add_theme_font_size_override("font_size", 12)
-		desc.add_theme_color_override("font_color", Color(0.95, 0.85, 0.80))
-		info_vbox.add_child(desc)
-
-		var btn := Button.new()
-		btn.text = "✅ 已撕下通缉令 (点击可暂缓)" if is_selected else "📌 撕下通缉令：下一波迎战！"
-		btn.pressed.connect(func():
-			if is_selected:
-				GameState.active_wanted_boss_id = ""
-				lbl_event_toast.text = "已暂缓通缉令挑战。"
-			else:
-				GameState.active_wanted_boss_id = boss["id"]
-				SoundManager.play("wanted_siren", 0.05, -2.0)
-				lbl_event_toast.text = "⚠️ 你撕下了【%s】的通缉令！下一波开战 6 秒后它将强行乱入！" % boss["name"]
-			refresh_all()
-		)
-		vbox.add_child(btn)
+	var btn_w := Button.new()
+	btn_w.custom_minimum_size = Vector2(0, 32)
+	btn_w.add_theme_font_size_override("font_size", 13)
+	btn_w.text = "✅ 已接单：下波乱入 (点击取消)" if is_selected else "📌 撕下通缉令：下波迎战！"
+	btn_w.pressed.connect(func():
+		if is_selected:
+			GameState.active_wanted_boss_id = ""
+			lbl_event_toast.text = "已暂缓通缉令挑战。"
+		else:
+			GameState.active_wanted_boss_id = boss["id"]
+			SoundManager.play("wanted_siren", 0.05, -2.0)
+			lbl_event_toast.text = "⚠️ 已撕下【%s】通缉令！下一波开战 6 秒后乱入！" % boss["name"]
+		refresh_all()
+	)
+	wanted_box_vbox.add_child(btn_w)
 
 func _on_reroll_pressed() -> void:
 	var cost: int = int((12 + GameState.current_wave * 3 + reroll_count * 6) * (1.0 - GameState.bonus_stats.get("reroll_discount", 0.0)))
@@ -664,10 +837,10 @@ func _on_reroll_pressed() -> void:
 
 func _on_vending_machine() -> void:
 	if not GameState.is_feature_unlocked("vending_unlock"):
-		lbl_event_toast.text = "🔒 【废土自动售货机】尚未通电！请在局外【废铁镇基建】中用 80💎 解锁售货机特权卡。"
+		lbl_event_toast.text = "🔒 【自动售货机】未解锁！可在大本营【局外养成】中用 80💎 解锁。"
 		return
 	if GameState.gold < 15:
-		lbl_event_toast.text = "❌ 需要 15 G 才能投币买废土冷饮！"
+		lbl_event_toast.text = "❌ 需要 15 G 投币买冷饮！"
 		return
 	GameState.gold -= 15
 	GameState.bonus_stats["flat_sp_bonus"] = GameState.bonus_stats.get("flat_sp_bonus", 0.0) + 25.0
@@ -675,21 +848,21 @@ func _on_vending_machine() -> void:
 		GameState.bonus_stats["crit_chance"] = GameState.bonus_stats.get("crit_chance", 0.08) + 0.05
 		GameState.gold += 30
 		SoundManager.play("upgrade", 0.04, 2.0)
-		lbl_event_toast.text = "🎉 叮叮叮！【中奖啦！再来一瓶！】额外获得 +30G、+5%暴击率与 +25最大SP！"
+		lbl_event_toast.text = "🎉 【再来一瓶大奖！】额外 +30G、+5%暴击率、+25最大SP！"
 	else:
 		SoundManager.play("coin", 0.1, 0.0)
-		lbl_event_toast.text = "🥤 畅饮冰镇废土可乐！最大装甲片永久 +25 SP！"
+		lbl_event_toast.text = "🥤 畅饮冰镇可乐！最大装甲永久 +25 SP！"
 	refresh_all()
 
 func _on_metal_detector() -> void:
 	if not GameState.is_feature_unlocked("detector_unlock"):
-		lbl_event_toast.text = "🔒 【高敏金属探测器】尚未解锁！请在局外【废铁镇基建】中用 120💎 解锁探测器执照。"
+		lbl_event_toast.text = "🔒 【金属探测器】未解锁！可在大本营【局外养成】中用 120💎 解锁。"
 		return
 	if dig_used_this_wave:
-		lbl_event_toast.text = "📡 本波次附近沙地已经探测过了，等下一波再来吧！"
+		lbl_event_toast.text = "📡 本波次已探测过，等下一波再来吧！"
 		return
 	if GameState.gold < 35:
-		lbl_event_toast.text = "❌ 需要 35 G 启动高敏金属探测器！"
+		lbl_event_toast.text = "❌ 需要 35 G 启动金属探测器！"
 		return
 	GameState.gold -= 35
 	dig_used_this_wave = true
@@ -697,7 +870,7 @@ func _on_metal_detector() -> void:
 		var bonus: int = randi_range(55, 110)
 		GameState.gold += bonus
 		SoundManager.play("upgrade", 0.05, 1.0)
-		lbl_event_toast.text = "📡 哔哔哔！在沙层下挖出一箱旧时代金条，卖得 +%d G！" % bonus
+		lbl_event_toast.text = "📡 挖出旧时代金条，获得 +%d G！" % bonus
 	else:
 		GameState.bonus_stats["max_weight_pct"] = GameState.bonus_stats.get("max_weight_pct", 0.0) + 0.10
 		SoundManager.play("upgrade", 0.05, 1.0)
@@ -706,7 +879,7 @@ func _on_metal_detector() -> void:
 
 func _on_wax_tank() -> void:
 	if waxed_this_wave:
-		lbl_event_toast.text = "✨ 战车已经打过蜡，装甲锃亮！"
+		lbl_event_toast.text = "✨ 本波战车已打过蜡！"
 		return
 	if GameState.gold < 25:
 		lbl_event_toast.text = "❌ 需要 25 G 给战车打蜡！"
@@ -716,29 +889,81 @@ func _on_wax_tank() -> void:
 	GameState.bonus_stats["dodge"] = GameState.bonus_stats.get("dodge", 0.0) + 0.06
 	GameState.bonus_stats["flat_sp_bonus"] = GameState.bonus_stats.get("flat_sp_bonus", 0.0) + 60.0
 	SoundManager.play("upgrade", 0.08, 0.0)
-	lbl_event_toast.text = "✨ 给战车打上特级防弹蜡！闪避率永久 +6%，最大装甲 +60 SP！"
+	lbl_event_toast.text = "✨ 防弹打蜡完成！闪避率 +6%，最大装甲 +60 SP！"
 	refresh_all()
 
 func _on_show_evo_recipes() -> void:
 	if not GameState.should_show_build_hints():
-		lbl_event_toast.text = "🔴 【地狱难度限制】地狱模式下禁止查阅超武合成配方与流派提示，请凭在简单/困难模式积累的经验盲配！"
+		lbl_event_toast.text = "🔴 【地狱模式限制】地狱难度下隐藏超武合成配方提示！"
 		return
 	var lines: Array = []
 	for r in GameData.SUPER_EVOLUTIONS:
-		lines.append("%s = %s" % [r["name"], r["formula_text"]])
-	lbl_event_toast.text = "🌟【6大超武配方(任一组件达★2或拾取战场宝箱自动融合)】：\n" + "   |   ".join(lines.slice(0, 3)) + "\n" + "   |   ".join(lines.slice(3, 6))
+		lines.append("%s=%s" % [r["name"].replace("★【超武】", ""), r["formula_text"]])
+	lbl_event_toast.text = "🌟 超武配方(组件达★2或捡宝箱自动合成): " + " | ".join(lines.slice(0, 3))
 
 func _on_launch_pressed() -> void:
 	visible = false
 	emit_signal("start_next_wave")
 
-func _make_styled_panel(bg_col: Color, border_col: Color) -> PanelContainer:
+# --- UI 辅助构造函数 ---
+func _create_bar(min_sz: Vector2, fill_col: Color, font_sz: int) -> Dictionary:
+	var container := Control.new()
+	container.custom_minimum_size = min_sz
+
+	var bar := ProgressBar.new()
+	bar.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bar.show_percentage = false
+
+	var bg_style := StyleBoxFlat.new()
+	bg_style.bg_color = Color(0.08, 0.08, 0.10, 0.95)
+	bg_style.border_color = Color(0.02, 0.02, 0.03, 1.0)
+	bg_style.set_border_width_all(2)
+	bg_style.set_corner_radius_all(4)
+
+	var fill_style := StyleBoxFlat.new()
+	fill_style.bg_color = fill_col
+	fill_style.border_color = Color(0.02, 0.02, 0.03, 1.0)
+	fill_style.set_border_width_all(2)
+	fill_style.set_corner_radius_all(4)
+
+	bar.add_theme_stylebox_override("background", bg_style)
+	bar.add_theme_stylebox_override("fill", fill_style)
+	container.add_child(bar)
+
+	var lbl := _make_outlined_label("", font_sz, Color.WHITE)
+	lbl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	container.add_child(lbl)
+
+	return {"container": container, "bar": bar, "fill_style": fill_style, "label": lbl}
+
+func _add_mini_stat_row(parent: VBoxContainer, k_txt: String, v_txt: String, v_col: Color) -> void:
+	var row := HBoxContainer.new()
+	parent.add_child(row)
+	var kl := _make_outlined_label(k_txt, 12, Color(0.78, 0.80, 0.84))
+	kl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_child(kl)
+	var vl := _make_outlined_label(v_txt, 12, v_col)
+	vl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	row.add_child(vl)
+
+func _make_outlined_label(txt: String, f_size: int, col: Color) -> Label:
+	var l := Label.new()
+	l.text = txt
+	l.add_theme_font_size_override("font_size", f_size)
+	l.add_theme_color_override("font_color", col)
+	l.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.95))
+	l.add_theme_constant_override("outline_size", 3)
+	return l
+
+func _make_styled_panel(bg_col: Color, border_col: Color, radius: int = 6) -> PanelContainer:
 	var p := PanelContainer.new()
 	var s := StyleBoxFlat.new()
 	s.bg_color = bg_col
 	s.border_color = border_col
 	s.set_border_width_all(2)
-	s.set_corner_radius_all(6)
+	s.set_corner_radius_all(radius)
 	s.content_margin_left = 10
 	s.content_margin_right = 10
 	s.content_margin_top = 8

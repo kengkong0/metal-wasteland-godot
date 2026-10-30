@@ -567,13 +567,17 @@ func _draw() -> void:
 		draw_circle(Vector2.ZERO, 155.0, Color(0.4, 0.95, 0.3, 0.12))
 		draw_arc(Vector2.ZERO, 155.0, 0.0, TAU, 36, Color(0.4, 0.95, 0.3, 0.4), 2.0)
 
-	# 2. 绘制战车大破抢修圈
+	# 2. 绘制战车大破抢修圈与条形抢修进度条
 	if is_human_mode and not is_voluntary_unboard:
 		draw_arc(Vector2.ZERO, 80.0, 0.0, TAU, 32, Color(0.25, 1.0, 0.45, 0.75), 2.5)
 		var rep_ratio: float = clampf(repair_progress / repair_time_needed, 0.0, 1.0)
-		draw_arc(Vector2.ZERO, 80.0, -PI * 0.5, -PI * 0.5 + TAU * rep_ratio, 32, Color(1.0, 0.92, 0.25), 5.5)
-		draw_string_outline(ThemeDB.fallback_font, Vector2(-58, -42), "靠近抢修战车 (%d%%)" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 3, Color.BLACK)
-		draw_string(ThemeDB.fallback_font, Vector2(-58, -42), "靠近抢修战车 (%d%%)" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.35, 1.0, 0.5))
+		draw_arc(Vector2.ZERO, 80.0, -PI * 0.5, -PI * 0.5 + TAU * rep_ratio, 32, Color(1.0, 0.92, 0.25), 6.0)
+		var rbw: float = 64.0
+		draw_rect(Rect2(-rbw * 0.5, -48.0, rbw, 8.0), Color(0.08, 0.08, 0.08, 0.90))
+		draw_rect(Rect2(-rbw * 0.5, -48.0, rbw * rep_ratio, 8.0), Color(0.25, 1.0, 0.45))
+		draw_rect(Rect2(-rbw * 0.5, -48.0, rbw, 8.0), Color(1.0, 0.92, 0.25), false, 1.5)
+		draw_string_outline(ThemeDB.fallback_font, Vector2(-36, -53), "🔧 抢修 %d%%" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 3, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, Vector2(-36, -53), "🔧 抢修 %d%%" % int(rep_ratio * 100.0), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(1.0, 0.95, 0.35))
 
 	# 3. 绘制战车底盘与履带 (优先使用高精度 2D 废土战车俯视贴图)
 	draw_set_transform(Vector2.ZERO, chassis_angle, Vector2.ONE)
@@ -625,9 +629,22 @@ func _draw() -> void:
 		elif eff == "repair_drone":
 			var d_rel: Vector2 = Vector2.from_angle(orbit_angle * 1.4) * 52.0
 			draw_circle(d_rel, 8.0, Color(0.3, 0.95, 0.85))
-			draw_circle(d_rel, 4.0, Color.WHITE)
+			draw_circle(d_rel, 4.0, Color(0.3, 0.95, 0.85))
 
-	# 6. 如果处于步兵模式，绘制猎人步兵俯视贴图
+	# 6. 土豆兄弟风格：战车头顶实时 SP 血条 + 全弹发射充能进度条
+	if not is_human_mode:
+		var sp_w: float = 58.0
+		var sp_h: float = 7.0
+		var sp_y: float = -42.0
+		var sp_ratio: float = clampf(current_sp / maxf(1.0, GameState.max_sp), 0.0, 1.0)
+		draw_rect(Rect2(-sp_w * 0.5 - 1.0, sp_y - 1.0, sp_w + 2.0, sp_h + 2.0), Color(0.05, 0.05, 0.05, 0.92))
+		var sp_col: Color = Color(0.22, 0.92, 0.42) if sp_ratio > 0.35 else Color(1.0, 0.32, 0.22)
+		draw_rect(Rect2(-sp_w * 0.5, sp_y, sp_w * sp_ratio, sp_h), sp_col)
+		var cd_ratio: float = clampf(1.0 - (all_out_timer / maxf(0.1, all_out_max_cd)), 0.0, 1.0)
+		draw_rect(Rect2(-sp_w * 0.5, sp_y + sp_h + 2.0, sp_w, 3.0), Color(0.1, 0.1, 0.1, 0.85))
+		draw_rect(Rect2(-sp_w * 0.5, sp_y + sp_h + 2.0, sp_w * cd_ratio, 3.0), Color(1.0, 0.85, 0.20) if cd_ratio >= 1.0 else Color(0.35, 0.75, 1.0))
+
+	# 7. 如果处于步兵模式，绘制猎人步兵俯视贴图与头顶鲜红生命条
 	if is_human_mode:
 		var rel_h: Vector2 = human_pos - global_position
 		var h_commando_tex: Texture2D = GameData.get_tex("human_commando")
@@ -639,5 +656,9 @@ func _draw() -> void:
 		else:
 			draw_circle(rel_h, 12.0, Color(0.95, 0.75, 0.25))
 			draw_circle(rel_h, 8.0, Color(0.92, 0.28, 0.22))
-		draw_string_outline(ThemeDB.fallback_font, rel_h + Vector2(-28, -20), "猎人 HP:%d" % int(human_hp), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 3, Color.BLACK)
-		draw_string(ThemeDB.fallback_font, rel_h + Vector2(-28, -20), "猎人 HP:%d" % int(human_hp), HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.4, 1.0, 0.5))
+		var h_bw: float = 46.0
+		var h_bh: float = 6.0
+		var h_by: float = rel_h.y - 26.0
+		var h_ratio: float = clampf(human_hp / maxf(1.0, GameState.max_human_hp), 0.0, 1.0)
+		draw_rect(Rect2(rel_h.x - h_bw * 0.5 - 1.0, h_by - 1.0, h_bw + 2.0, h_bh + 2.0), Color(0.05, 0.05, 0.05, 0.92))
+		draw_rect(Rect2(rel_h.x - h_bw * 0.5, h_by, h_bw * h_ratio, h_bh), Color(1.0, 0.28, 0.25))

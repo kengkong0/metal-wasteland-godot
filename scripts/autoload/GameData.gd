@@ -62,6 +62,7 @@ func _setup_input_map() -> void:
 	_bind_key("pause_game", [KEY_ESCAPE, KEY_P])
 	_bind_joy_button("pause_game", [JOY_BUTTON_START])
 	_bind_key("toggle_mute", [KEY_M])
+	_bind_key("toggle_fullscreen", [KEY_F11])
 
 	# 5. 确保内置 UI 焦点导航支持手柄十字键、左摇杆与 A 键确认
 	_bind_joy_button("ui_accept", [JOY_BUTTON_A])

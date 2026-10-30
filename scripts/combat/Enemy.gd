@@ -590,18 +590,20 @@ func _draw() -> void:
 
 	# 绘制敌人血条、护盾条与护甲状态
 	if hp < max_hp or shield > 0.0 or is_boss or is_elite:
-		var bw: float = maxf(32.0, radius * 1.8)
-		var bh: float = 6.0 if (is_boss or is_elite) else 4.0
-		var by: float = -radius - 14.0
-		draw_rect(Rect2(-bw * 0.5, by, bw, bh), Color(0.1, 0.1, 0.1, 0.85))
+		var bw: float = maxf(36.0, radius * 2.0)
+		var bh: float = 8.0 if is_boss else (6.5 if is_elite else 5.0)
+		var by: float = -radius - 15.0
+		draw_rect(Rect2(-bw * 0.5 - 1.0, by - 1.0, bw + 2.0, bh + 2.0), Color(0.05, 0.05, 0.05, 0.92))
 		var ratio: float = clampf(hp / max_hp, 0.0, 1.0)
-		var bar_col: Color = Color(0.95, 0.22, 0.20) if is_boss else (Color(1.0, 0.78, 0.15) if is_elite else Color(0.95, 0.45, 0.20))
+		var bar_col: Color = Color(0.98, 0.22, 0.22) if is_boss else (Color(1.0, 0.78, 0.15) if is_elite else Color(0.95, 0.35, 0.20))
 		draw_rect(Rect2(-bw * 0.5, by, bw * ratio, bh), bar_col)
 		if shield > 0.0 and max_shield > 0.0:
 			var s_ratio: float = clampf(shield / max_shield, 0.0, 1.0)
-			draw_rect(Rect2(-bw * 0.5, by - 5.0, bw * s_ratio, 4.0), Color(0.30, 0.85, 1.0))
+			draw_rect(Rect2(-bw * 0.5 - 1.0, by - 6.0, bw + 2.0, 5.0), Color(0.05, 0.05, 0.05, 0.90))
+			draw_rect(Rect2(-bw * 0.5, by - 5.0, bw * s_ratio, 3.5), Color(0.30, 0.85, 1.0))
 		if armor < 0.0:
-			draw_string(ThemeDB.fallback_font, Vector2(-bw * 0.5, by - 6), "酸蚀%d" % int(armor), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.5, 1.0, 0.3))
+			draw_string_outline(ThemeDB.fallback_font, Vector2(-bw * 0.5, by - 7), "💧%d" % int(armor), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 2, Color.BLACK)
+			draw_string(ThemeDB.fallback_font, Vector2(-bw * 0.5, by - 7), "💧%d" % int(armor), HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(0.5, 1.0, 0.3))
 
 func _draw_regular(c: Color) -> void:
 	# 狙击手激光红线预警
