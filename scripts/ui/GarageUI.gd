@@ -333,18 +333,68 @@ func _refresh_perk_bar() -> void:
 	shuffled.shuffle()
 	for i in range(min(4, shuffled.size())):
 		var p: Dictionary = shuffled[i]
+		var val: float = float(p["val"])
+		var disp_num: int = int(roundf(val * 100.0)) if p.get("is_pct", true) else int(roundf(val))
+		var desc_txt: String = String(p["desc"]) % disp_num
 		var btn := Button.new()
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.custom_minimum_size = Vector2(0, 34)
-		btn.text = "★ %s (%s)" % [p["name"], p["desc"]]
+		btn.text = "★ %s (%s)" % [p["name"], desc_txt]
 		btn.pressed.connect(func():
 			var st: String = p["stat"]
-			GameState.bonus_stats[st] = GameState.bonus_stats.get(st, 0.0) + float(p["val"])
+			GameState.bonus_stats[st] = GameState.bonus_stats.get(st, 0.0) + val
 			GameState.pending_level_ups -= 1
 			SoundManager.play("upgrade", 0.05, 0.0)
 			refresh_all()
 		)
 		perk_hbox.add_child(btn)
+
+func _get_max_shop_rarity_for_wave(w: int) -> int:
+	if w <= 2:
+		return 0 # 第1~2波：仅限 ★1 普通白装
+	elif w <= 4:
+		return 1 # 第3~4波：最高 ★2 精良绿装
+	elif w <= 6:
+		return 2 # 第5~6波：最高 ★3 稀有蓝装
+	elif w <= 8:
+		return 3 # 第7~8波：最高 ★4 史诗紫装
+	return 4     # 第9波+：极小概率刷出 ★5 传说红装
+
+func _roll_brotato_shop_rarity(w: int, min_r: int, max_allowed_r: int) -> int:
+	var roll: float = randf()
+	var picked: int = 0
+	if w <= 2:
+		picked = 0
+	elif w <= 4:
+		picked = 1 if roll < 0.25 else 0
+	elif w <= 6:
+		if roll < 0.12:
+			picked = 2
+		elif roll < 0.48:
+			picked = 1
+		else:
+			picked = 0
+	elif w <= 8:
+		if roll < 0.06:
+			picked = 3
+		elif roll < 0.26:
+			picked = 2
+		elif roll < 0.66:
+			picked = 1
+		else:
+			picked = 0
+	else:
+		if roll < 0.03:
+			picked = 4
+		elif roll < 0.15:
+			picked = 3
+		elif roll < 0.42:
+			picked = 2
+		elif roll < 0.80:
+			picked = 1
+		else:
+			picked = 0
+	return clampi(max(min_r, picked), 0, max_allowed_r)
 
 func _roll_shop_items() -> void:
 	var locked_items: Array = []
@@ -354,37 +404,56 @@ func _roll_shop_items() -> void:
 	shop_items = locked_items
 
 	var total_slots: int = 5 if GameState.is_feature_unlocked("shop_5th_slot") else 4
+	var max_allowed_r: int = _get_max_shop_rarity_for_wave(GameState.current_wave)
 	var w_keys: Array = GameData.WEAPONS.keys()
 	var valid_w: Array = []
 	for k in w_keys:
-		if GameData.WEAPONS[k].get("is_evo", false):
+		var w_def: Dictionary = GameData.WEAPONS[k]
+		if w_def.get("is_evo", false):
 			continue
-		if String(k).begins_with("boss_") and GameState.current_wave < 10:
-			continue
-		if GameState.bonus_stats.get("no_main_cannon", false) and GameData.WEAPONS[k]["slot"] == "MAIN":
+		if String(k).begins_with("boss_"):
+			continue # 赏金首专属红武仅限击杀对应赏金首掉落
+		if int(w_def.get("min_rarity", 0)) > max_allowed_r:
+			continue # 严格按波次限制高阶武器池，杜绝前期出现紫装/红装
+		if GameState.bonus_stats.get("no_main_cannon", false) and w_def["slot"] == "MAIN":
 			continue
 		valid_w.append(String(k))
+
+	if valid_w.is_empty():
+		valid_w.append("mg_77mm")
+
+	var max_part_r: int = maxi(1, max_allowed_r)
+	var valid_engines: Array = []
+	for ek in GameData.ENGINES.keys():
+		if int(GameData.ENGINES[ek].get("rarity", 0)) <= max_part_r:
+			valid_engines.append(String(ek))
+	if valid_engines.is_empty():
+		valid_engines.append("eng_bulldog_v8")
+
+	var valid_c_units: Array = []
+	for ck in GameData.C_UNITS.keys():
+		if int(GameData.C_UNITS[ck].get("rarity", 0)) <= max_part_r:
+			valid_c_units.append(String(ck))
+	if valid_c_units.is_empty():
+		valid_c_units.append("cu_type66")
 
 	while shop_items.size() < total_slots:
 		var is_last_slot: bool = (shop_items.size() == total_slots - 1)
 		if not is_last_slot:
 			var w_id: String = valid_w[randi() % valid_w.size()]
 			var min_r: int = int(GameData.WEAPONS[w_id].get("min_rarity", 0))
-			var max_r: int = mini(4, int(GameState.current_wave / 4) + 1)
-			var rar: int = clampi(randi_range(min_r, max(min_r, max_r)), 0, 4)
+			var rar: int = _roll_brotato_shop_rarity(GameState.current_wave, min_r, max_allowed_r)
 			var base_c: int = int(GameData.WEAPONS[w_id].get("cost", 55))
-			var price: int = int(base_c * pow(1.45, rar - min_r) * (1.0 + GameState.current_wave * 0.06) * (1.0 + GameState.bonus_stats.get("shop_price_pct", 0.0)))
+			var price: int = int(base_c * pow(1.55, rar - min_r) * (1.0 + GameState.current_wave * 0.08) * (1.0 + GameState.bonus_stats.get("shop_price_pct", 0.0)))
 			shop_items.append({"kind": "weapon", "id": w_id, "rarity": rar, "price": price, "bought": false, "locked": false})
 		else:
 			if randf() < 0.55:
-				var e_keys: Array = GameData.ENGINES.keys()
-				var e_id: String = String(e_keys[randi() % e_keys.size()])
-				var price: int = int(GameData.ENGINES[e_id]["cost"] * (1.0 + GameState.current_wave * 0.05))
+				var e_id: String = valid_engines[randi() % valid_engines.size()]
+				var price: int = int(GameData.ENGINES[e_id]["cost"] * (1.0 + GameState.current_wave * 0.06))
 				shop_items.append({"kind": "engine", "id": e_id, "price": price, "bought": false, "locked": false})
 			else:
-				var c_keys: Array = GameData.C_UNITS.keys()
-				var c_id: String = String(c_keys[randi() % c_keys.size()])
-				var price: int = int(GameData.C_UNITS[c_id]["cost"] * (1.0 + GameState.current_wave * 0.05))
+				var c_id: String = valid_c_units[randi() % valid_c_units.size()]
+				var price: int = int(GameData.C_UNITS[c_id]["cost"] * (1.0 + GameState.current_wave * 0.06))
 				shop_items.append({"kind": "c_unit", "id": c_id, "price": price, "bought": false, "locked": false})
 
 # --- 左上：土豆兄弟风格 4~5 张立式商店商品卡 ---
@@ -471,7 +540,7 @@ func _refresh_shop_cards() -> void:
 			var sv := VBoxContainer.new()
 			sv.add_theme_constant_override("separation", 2)
 			stat_box.add_child(sv)
-			var dmg_val: float = float(w_def["base_dmg"]) * pow(1.65, rar)
+			var dmg_val: float = float(w_def["base_dmg"]) * pow(1.32, rar)
 			_add_mini_stat_row(sv, "💥 伤害", "%.0f" % dmg_val, Color(1.0, 0.55, 0.32))
 			_add_mini_stat_row(sv, "⚖️ 重量", "%.1f t" % float(w_def["weight"]), Color(0.95, 0.85, 0.40))
 			_add_mini_stat_row(sv, "⏱️ 冷却", "%.1f s" % float(w_def["cooldown"]), Color(0.55, 0.90, 1.0))
@@ -839,19 +908,19 @@ func _on_vending_machine() -> void:
 	if not GameState.is_feature_unlocked("vending_unlock"):
 		lbl_event_toast.text = "🔒 【自动售货机】未解锁！可在大本营【局外养成】中用 80💎 解锁。"
 		return
-	if GameState.gold < 15:
-		lbl_event_toast.text = "❌ 需要 15 G 投币买冷饮！"
+	if GameState.gold < 20:
+		lbl_event_toast.text = "❌ 需要 20 G 投币买冷饮！"
 		return
-	GameState.gold -= 15
-	GameState.bonus_stats["flat_sp_bonus"] = GameState.bonus_stats.get("flat_sp_bonus", 0.0) + 25.0
-	if randf() < 0.35:
-		GameState.bonus_stats["crit_chance"] = GameState.bonus_stats.get("crit_chance", 0.08) + 0.05
-		GameState.gold += 30
+	GameState.gold -= 20
+	GameState.bonus_stats["flat_sp_bonus"] = GameState.bonus_stats.get("flat_sp_bonus", 0.0) + 12.0
+	if randf() < 0.25:
+		GameState.bonus_stats["crit_chance"] = GameState.bonus_stats.get("crit_chance", 0.08) + 0.03
+		GameState.gold += 25
 		SoundManager.play("upgrade", 0.04, 2.0)
-		lbl_event_toast.text = "🎉 【再来一瓶大奖！】额外 +30G、+5%暴击率、+25最大SP！"
+		lbl_event_toast.text = "🎉 【再来一瓶大奖！】额外 +25G、+3%暴击率、+12最大SP！"
 	else:
 		SoundManager.play("coin", 0.1, 0.0)
-		lbl_event_toast.text = "🥤 畅饮冰镇可乐！最大装甲永久 +25 SP！"
+		lbl_event_toast.text = "🥤 畅饮冰镇可乐！最大装甲永久 +12 SP！"
 	refresh_all()
 
 func _on_metal_detector() -> void:
@@ -867,29 +936,29 @@ func _on_metal_detector() -> void:
 	GameState.gold -= 35
 	dig_used_this_wave = true
 	if randf() < 0.55:
-		var bonus: int = randi_range(55, 110)
+		var bonus: int = randi_range(40, 75)
 		GameState.gold += bonus
 		SoundManager.play("upgrade", 0.05, 1.0)
 		lbl_event_toast.text = "📡 挖出旧时代金条，获得 +%d G！" % bonus
 	else:
-		GameState.bonus_stats["max_weight_pct"] = GameState.bonus_stats.get("max_weight_pct", 0.0) + 0.10
+		GameState.bonus_stats["max_weight_pct"] = GameState.bonus_stats.get("max_weight_pct", 0.0) + 0.06
 		SoundManager.play("upgrade", 0.05, 1.0)
-		lbl_event_toast.text = "📡 挖出【古代超导轴承】！引擎最大载重永久 +10%！"
+		lbl_event_toast.text = "📡 挖出【古代超导轴承】！引擎最大载重永久 +6%！"
 	refresh_all()
 
 func _on_wax_tank() -> void:
 	if waxed_this_wave:
 		lbl_event_toast.text = "✨ 本波战车已打过蜡！"
 		return
-	if GameState.gold < 25:
-		lbl_event_toast.text = "❌ 需要 25 G 给战车打蜡！"
+	if GameState.gold < 30:
+		lbl_event_toast.text = "❌ 需要 30 G 给战车打蜡！"
 		return
-	GameState.gold -= 25
+	GameState.gold -= 30
 	waxed_this_wave = true
-	GameState.bonus_stats["dodge"] = GameState.bonus_stats.get("dodge", 0.0) + 0.06
-	GameState.bonus_stats["flat_sp_bonus"] = GameState.bonus_stats.get("flat_sp_bonus", 0.0) + 60.0
+	GameState.bonus_stats["dodge"] = GameState.bonus_stats.get("dodge", 0.0) + 0.03
+	GameState.bonus_stats["flat_sp_bonus"] = GameState.bonus_stats.get("flat_sp_bonus", 0.0) + 20.0
 	SoundManager.play("upgrade", 0.08, 0.0)
-	lbl_event_toast.text = "✨ 防弹打蜡完成！闪避率 +6%，最大装甲 +60 SP！"
+	lbl_event_toast.text = "✨ 防弹打蜡完成！闪避率 +3%，最大装甲 +20 SP！"
 	refresh_all()
 
 func _on_show_evo_recipes() -> void:
@@ -899,7 +968,7 @@ func _on_show_evo_recipes() -> void:
 	var lines: Array = []
 	for r in GameData.SUPER_EVOLUTIONS:
 		lines.append("%s=%s" % [r["name"].replace("★【超武】", ""), r["formula_text"]])
-	lbl_event_toast.text = "🌟 超武配方(组件达★2或捡宝箱自动合成): " + " | ".join(lines.slice(0, 3))
+	lbl_event_toast.text = "🌟 超武配方(需两件组件升星至★4史诗自动进化): " + " | ".join(lines.slice(0, 3))
 
 func _on_launch_pressed() -> void:
 	visible = false

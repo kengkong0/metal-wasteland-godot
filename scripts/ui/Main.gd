@@ -396,8 +396,8 @@ func _refresh_top_showcase_cards() -> void:
 	c_titles.add_child(sl_lbl)
 
 	# 装甲转化率条 & 机动评分条
-	var sp_rate: float = float(ch.get("sp_per_ton", 100.0))
-	var sp_bar_d: Dictionary = _create_bar(Vector2(0, 18), Color(0.22, 0.82, 0.40), 11, sp_rate, 160.0)
+	var sp_rate: float = float(ch.get("sp_per_ton", 20.0))
+	var sp_bar_d: Dictionary = _create_bar(Vector2(0, 18), Color(0.22, 0.82, 0.40), 11, sp_rate, 32.0)
 	sp_bar_d["label"].text = "🛡️ 装甲转化率: %.0f SP / 吨" % sp_rate
 	showcase_chassis_box.add_child(sp_bar_d["container"])
 

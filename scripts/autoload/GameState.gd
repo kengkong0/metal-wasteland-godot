@@ -297,10 +297,10 @@ func start_new_run(hunter_id: String, chassis_id: String, map_idx: int = -1, dif
 	var d_def: Dictionary = get_current_difficulty_def()
 	current_wave = 1
 	max_waves = int(m_def.get("waves", 10))
-	gold = 120 + get_meta_level("meta_start_gold") * 35 + int(d_def.get("bonus_start_gold", 0))
+	gold = 35 + get_meta_level("meta_start_gold") * 20 + int(d_def.get("bonus_start_gold", 0))
 	xp = 0
 	level = 1
-	xp_to_next = 10
+	xp_to_next = 18
 	pending_level_ups = 0
 	total_kills = 0
 	bounties_hunted = 0
@@ -328,13 +328,13 @@ func start_new_run(hunter_id: String, chassis_id: String, map_idx: int = -1, dif
 		"max_weight_pct": lv_weight * 0.05,
 		"sp_per_ton_pct": 0.0,
 		"sp_regen_pct": 0.0,
-		"flat_sp_regen": lv_rep * 12.0,
+		"flat_sp_regen": lv_rep * 3.0,
 		"reload_speed_pct": lv_reload * 0.04,
 		"move_speed_pct": 0.0,
 		"crit_chance": 0.08 + lv_crit * 0.025,
 		"dodge": lv_crit * 0.02,
 		"gold_gain_pct": lv_mag * 0.08,
-		"flat_sp_bonus": lv_sp * 60.0
+		"flat_sp_bonus": lv_sp * 25.0
 	}
 
 	var hunter: Dictionary = GameData.HUNTERS.get(hunter_id, GameData.HUNTERS["bounty_hunter"])
@@ -370,14 +370,14 @@ func start_new_run(hunter_id: String, chassis_id: String, map_idx: int = -1, dif
 func add_xp(amount: int) -> void:
 	var mult: float = 1.0 + get_meta_level("meta_magnet_gold") * 0.08
 	if synergy_counts.get("tycoon", 0) >= 4:
-		mult += 0.30
+		mult += 0.25
 	xp += int(ceil(float(amount) * mult))
 	var leveled: bool = false
 	while xp >= xp_to_next:
 		xp -= xp_to_next
 		level += 1
 		pending_level_ups += 1
-		xp_to_next = int(10 + level * 6 + pow(level, 1.45))
+		xp_to_next = int(18 + level * 14 + pow(level, 1.85))
 		leveled = true
 	if leveled:
 		emit_signal("level_up_triggered")
@@ -385,7 +385,7 @@ func add_xp(amount: int) -> void:
 func add_gold(amount: int) -> void:
 	var mult: float = 1.0 + bonus_stats.get("gold_gain_pct", 0.0)
 	if synergy_counts.get("tycoon", 0) >= 4:
-		mult += 0.30
+		mult += 0.25
 	gold += int(ceil(float(amount) * mult))
 
 # --- 核心计算：引擎载重 -> 剩余载重 -> 战车SP装甲片 ---
@@ -416,12 +416,12 @@ func recalculate_stats() -> void:
 	overweight_tons = maxf(0.0, used_weight - max_weight)
 
 	# 4. 计算最大 SP (基础SP + 剩余吨位 * 底盘装甲转化率)
-	var sp_per_ton: float = float(ch.get("sp_per_ton", 100.0))
+	var sp_per_ton: float = float(ch.get("sp_per_ton", 20.0))
 	if synergy_counts.get("juggernaut", 0) >= 2:
-		sp_per_ton += 30.0
+		sp_per_ton += 6.0
 	sp_per_ton *= (1.0 + bonus_stats.get("sp_per_ton_pct", 0.0))
 
-	var raw_sp: float = float(ch.get("base_sp", 240.0)) + bonus_stats.get("flat_sp_bonus", 0.0) + free_weight * sp_per_ton
+	var raw_sp: float = float(ch.get("base_sp", 140.0)) + bonus_stats.get("flat_sp_bonus", 0.0) + free_weight * sp_per_ton
 	max_sp = maxf(100.0, roundf(raw_sp))
 
 	# 5. 计算移速 (含超载惩罚)
@@ -434,14 +434,14 @@ func recalculate_stats() -> void:
 	# 6. 计算 SP 自动修复、暴击率、闪避率、拾取范围与步兵 HP
 	sp_regen_per_sec = max_sp * bonus_stats.get("sp_regen_pct", 0.0) + bonus_stats.get("flat_sp_regen", 0.0)
 	if selected_chassis_id == "tyrannos":
-		sp_regen_per_sec += max_sp * 0.01
+		sp_regen_per_sec += max_sp * 0.008
 	if synergy_counts.get("lone_cub", 0) >= 4:
-		sp_regen_per_sec += 25.0
+		sp_regen_per_sec += 8.0
 	for w_entry in equipped_weapons:
 		if w_entry["id"] == "se_drone":
-			sp_regen_per_sec += 18.0 * (1.0 + 0.35 * w_entry.get("rarity", 0))
+			sp_regen_per_sec += 6.0 * (1.0 + 0.30 * w_entry.get("rarity", 0))
 	if selected_chassis_id == "ambulance":
-		sp_regen_per_sec *= 2.0
+		sp_regen_per_sec *= 1.65
 
 	crit_chance = clampf(bonus_stats.get("crit_chance", 0.08) + float(cu.get("crit_bonus", 0.0)), 0.0, 0.90)
 	dodge_chance = clampf(bonus_stats.get("dodge", 0.05) + float(cu.get("dodge_bonus", 0.0)), 0.0, 0.75)
@@ -450,7 +450,7 @@ func recalculate_stats() -> void:
 	var h_mult: float = float(bonus_stats.get("human_hp_mult", 1.0))
 	if synergy_counts.get("lone_cub", 0) >= 2:
 		h_mult += 0.5
-	var base_h_hp: float = 160.0 + get_meta_level("meta_sp") * 20.0 + level * 18.0
+	var base_h_hp: float = 140.0 + get_meta_level("meta_sp") * 15.0 + level * 14.0
 	max_human_hp = roundf(base_h_hp * h_mult)
 
 	emit_signal("stats_updated")
@@ -470,7 +470,7 @@ func get_weapon_effective_damage(weapon_id: String, rarity: int) -> float:
 	var w_def: Dictionary = GameData.WEAPONS.get(weapon_id, {})
 	var base: float = float(w_def.get("base_dmg", 20.0))
 	if not w_def.get("is_evo", false):
-		base *= pow(1.65, float(rarity))
+		base *= pow(1.32, float(rarity))
 
 	var mult: float = 1.0
 	var slot: String = w_def.get("slot", "SUB")
@@ -564,7 +564,7 @@ func check_super_evolution_partner(candidate_id: String) -> String:
 	return ""
 
 # --- 类似《吸血鬼幸存者》的超武进化合成检查 ---
-# 触发条件：车上同时装有配方要求的 A 与 B，且 (任意一件达到 ★2精良以上 或 开启了战场埋藏金属箱!)
+# 触发条件：车上同时装有配方要求的 A 与 B，且 (两件均达到 ★4史诗以上，或第6波以后拾取精英宝箱且一件★4+一件★3)
 func try_trigger_super_evolutions(from_chest: bool = false) -> Array:
 	var triggered_list: Array = []
 	var changed: bool = true
@@ -582,7 +582,10 @@ func try_trigger_super_evolutions(from_chest: bool = false) -> Array:
 			if idx_a != -1 and idx_b != -1:
 				var wa: Dictionary = equipped_weapons[idx_a]
 				var wb: Dictionary = equipped_weapons[idx_b]
-				if from_chest or int(wa.get("rarity", 0)) >= 1 or int(wb.get("rarity", 0)) >= 1:
+				var ra: int = int(wa.get("rarity", 0))
+				var rb: int = int(wb.get("rarity", 0))
+				var can_evo: bool = (ra >= 3 and rb >= 3) or (from_chest and current_wave >= 6 and ((ra >= 3 and rb >= 2) or (rb >= 3 and ra >= 2)))
+				if can_evo:
 					var name_a: String = GameData.WEAPONS[wa["id"]]["name"]
 					var name_b: String = GameData.WEAPONS[wb["id"]]["name"]
 					var res_id: String = recipe["result"]

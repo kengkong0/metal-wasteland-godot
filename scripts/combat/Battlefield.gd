@@ -532,16 +532,16 @@ func start_wave() -> void:
 		GameState.active_wanted_boss_id = GameState.get_current_map_def()["final_boss_id"]
 
 	boss_spawned_this_wave = false
-	spawn_timer = 0.5
-	elite_spawn_timer = 10.5
+	spawn_timer = 0.4
+	elite_spawn_timer = 7.5
 	fx_layer.mortar_strikes.clear()
 
 	player_tank.init_for_wave(arena_rect.get_center())
 
-	var chest_cnt: int = int(GameState.bonus_stats.get("guaranteed_chest", 0))
-	if GameState.is_feature_unlocked("detector_unlock"):
+	var chest_cnt: int = 0
+	if int(GameState.bonus_stats.get("guaranteed_chest", 0)) > 0 and GameState.current_wave >= 3:
 		chest_cnt += 1
-	if randf() < 0.45:
+	if GameState.is_feature_unlocked("detector_unlock") and GameState.current_wave >= 4 and randf() < 0.40:
 		chest_cnt += 1
 	for i in range(chest_cnt):
 		var cpos := Vector2(randf_range(arena_rect.position.x + 120, arena_rect.end.x - 120), randf_range(arena_rect.position.y + 120, arena_rect.end.y - 120))
@@ -590,15 +590,15 @@ func _process(delta: float) -> void:
 	# 3. 定时刷重装精英与小怪
 	elite_spawn_timer -= delta
 	if elite_spawn_timer <= 0.0:
-		elite_spawn_timer = 11.5
+		elite_spawn_timer = maxf(6.0, 9.5 - GameState.current_wave * 0.25)
 		_spawn_map_elite()
 
 	spawn_timer -= delta
 	if spawn_timer <= 0.0:
 		var spawn_mult: float = float(GameState.get_current_difficulty_def().get("spawn_mult", 1.0))
-		var interval: float = maxf(0.35, (1.40 - GameState.current_wave * 0.05) / spawn_mult)
+		var interval: float = maxf(0.26, (1.05 - GameState.current_wave * 0.045) / spawn_mult)
 		spawn_timer = interval
-		var batch: int = 1 + int(GameState.current_wave / 3)
+		var batch: int = 2 + int(GameState.current_wave / 2)
 		for i in range(batch):
 			_queue_enemy_spawn()
 
@@ -631,7 +631,7 @@ func _get_alive_boss() -> Node2D:
 	return null
 
 func _queue_enemy_spawn() -> void:
-	if enemies_container.get_child_count() >= 55:
+	if enemies_container.get_child_count() >= 80:
 		return
 	var pos := Vector2(
 		randf_range(arena_rect.position.x + 45, arena_rect.end.x - 45),
@@ -644,7 +644,7 @@ func _queue_enemy_spawn() -> void:
 
 	var m_pool: Array = GameState.get_current_map_def().get("enemy_pool", ["bio_ant", "kamikaze_wheel"])
 	var chosen: String = String(m_pool[randi() % m_pool.size()])
-	spawn_telegraphs.append({"id": chosen, "pos": pos, "timer": 0.85})
+	spawn_telegraphs.append({"id": chosen, "pos": pos, "timer": 0.65})
 
 func _do_spawn_enemy(e_id: String, pos: Vector2) -> void:
 	var e := Node2D.new()
@@ -760,13 +760,40 @@ func _on_battlefield_level_up() -> void:
 	SoundManager.play("upgrade", 0.04, 1.5)
 	_populate_battlefield_level_cards()
 
+func _roll_perk_tier_for_wave(w: int) -> int:
+	var roll: float = randf()
+	if w <= 2:
+		return 1 if roll < 0.15 else 0
+	elif w <= 5:
+		if roll < 0.08:
+			return 2
+		elif roll < 0.42:
+			return 1
+		return 0
+	elif w <= 8:
+		if roll < 0.06:
+			return 3
+		elif roll < 0.28:
+			return 2
+		elif roll < 0.70:
+			return 1
+		return 0
+	else:
+		if roll < 0.15:
+			return 3
+		elif roll < 0.48:
+			return 2
+		elif roll < 0.85:
+			return 1
+		return 0
+
 func _populate_battlefield_level_cards() -> void:
 	for c in level_up_cards_hbox.get_children():
 		c.queue_free()
 
 	var show_hints: bool = GameState.should_show_build_hints()
 	if show_hints:
-		lbl_level_up_sub.text = "💡 集齐特定两把关联武器并升至 ★2 (或拾取宝箱)，自动融合成不占槽位的【★6 神话超武】"
+		lbl_level_up_sub.text = "💡 选择一项猎人专精强化 (随波次解锁 ★2精良 / ★3稀有 / ★4史诗 高阶属性卡)"
 	else:
 		lbl_level_up_sub.text = "🔴 【地狱模式盲配】已隐藏流派与超武配件提示，全凭老猎人直觉搭配！"
 
@@ -776,11 +803,22 @@ func _populate_battlefield_level_cards() -> void:
 		"main_dmg": "💥", "sub_se_dmg": "🔫", "max_weight": "⚖️", "reload_spd": "⚡",
 		"crit_chance": "🎯", "sp_regen": "🔧", "move_ram": "🚜", "bounty_magnet": "🧲"
 	}
+	var tier_mults: Array = [1.0, 1.5, 2.0, 2.75]
+	var offer_airdrop_on_3rd: bool = (GameState.current_wave >= 4 and randf() < 0.18)
+	var stat_card_count: int = 2 if offer_airdrop_on_3rd else 3
 
-	# 前 2 张：土豆兄弟风格属性升级卡
-	for i in range(2):
+	# 土豆兄弟风格：1~4 阶颜色边框属性强化卡
+	for i in range(stat_card_count):
 		var p: Dictionary = perks[i]
-		var card := _make_card_box(Color(0.16, 0.17, 0.21), Color(0.35, 0.85, 0.50))
+		var tier: int = _roll_perk_tier_for_wave(GameState.current_wave)
+		var t_col: Color = GameData.RARITY_COLORS[tier]
+		var t_name: String = GameData.RARITY_NAMES[tier]
+		var mult: float = float(tier_mults[tier])
+		var final_val: float = float(p["val"]) * mult
+		var disp_num: int = int(roundf(final_val * 100.0)) if p.get("is_pct", true) else int(roundf(final_val))
+		var desc_txt: String = String(p["desc"]) % disp_num
+
+		var card := _make_card_box(Color(0.16, 0.17, 0.21), t_col)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		level_up_cards_hbox.add_child(card)
@@ -789,18 +827,18 @@ func _populate_battlefield_level_cards() -> void:
 		cv.add_theme_constant_override("separation", 10)
 		card.add_child(cv)
 
-		var badge_lbl := _make_outlined_label("🎖️ 猎人专精强化", 13, Color(0.55, 0.95, 0.65))
+		var badge_lbl := _make_outlined_label("🎖️ 猎人专精  ·  %s" % t_name, 13, t_col)
 		badge_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cv.add_child(badge_lbl)
 
-		var icon_lbl := _make_outlined_label("%s %s" % [perk_icons.get(p["id"], "★"), p["name"]], 20, Color(1.0, 0.92, 0.35))
+		var icon_lbl := _make_outlined_label("%s %s" % [perk_icons.get(p["id"], "★"), p["name"]], 20, t_col)
 		icon_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cv.add_child(icon_lbl)
 
 		var sep := HSeparator.new()
 		cv.add_child(sep)
 
-		var desc_lbl := _make_outlined_label("✅ %s\n💚 立即恢复 15%% 战车装甲(SP)" % p["desc"], 15, Color(0.45, 1.0, 0.55))
+		var desc_lbl := _make_outlined_label("✅ %s\n💚 战地应急抢修 +6%% SP" % desc_txt, 15, Color(0.92, 0.96, 0.92))
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -812,10 +850,10 @@ func _populate_battlefield_level_cards() -> void:
 		btn.add_theme_font_size_override("font_size", 16)
 		btn.pressed.connect(func():
 			var st: String = p["stat"]
-			GameState.bonus_stats[st] = GameState.bonus_stats.get(st, 0.0) + float(p["val"])
+			GameState.bonus_stats[st] = GameState.bonus_stats.get(st, 0.0) + final_val
 			GameState.pending_level_ups = max(0, GameState.pending_level_ups - 1)
 			GameState.recalculate_stats()
-			player_tank.heal_sp(GameState.max_sp * 0.15)
+			player_tank.heal_sp(GameState.max_sp * 0.06)
 			SoundManager.play("coin", 0.08, 0.0)
 			_close_or_next_level_modal()
 		)
@@ -823,13 +861,16 @@ func _populate_battlefield_level_cards() -> void:
 		if i == 0:
 			btn.call_deferred("grab_focus")
 
-	# 第 3 张：战场空投武器卡
+	if not offer_airdrop_on_3rd:
+		return
+
+	# 第 4 波以后仅 18% 概率在第 3 张出现 ★1 稀有空投补给卡
 	var airdrop_w_id: String = _pick_smart_airdrop_weapon()
 	var w_def: Dictionary = GameData.WEAPONS[airdrop_w_id]
 	var evo_partner_name: String = GameState.check_super_evolution_partner(airdrop_w_id)
 	var can_merge: bool = false
 	for ew in GameState.equipped_weapons:
-		if ew["id"] == airdrop_w_id and int(ew.get("rarity", 0)) < 4:
+		if ew["id"] == airdrop_w_id and int(ew.get("rarity", 0)) == 0:
 			can_merge = true
 			break
 
@@ -842,7 +883,7 @@ func _populate_battlefield_level_cards() -> void:
 	wv.add_theme_constant_override("separation", 8)
 	w_card.add_child(wv)
 
-	var air_badge := _make_outlined_label("🪂 战场空投补给 [%s孔]" % w_def["slot"], 13, Color(1.0, 0.82, 0.32))
+	var air_badge := _make_outlined_label("🪂 稀有战场空投 [★1·%s孔]" % w_def["slot"], 13, Color(1.0, 0.82, 0.32))
 	air_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	wv.add_child(air_badge)
 
@@ -868,7 +909,7 @@ func _populate_battlefield_level_cards() -> void:
 		if evo_partner_name != "":
 			hint_text += "\n🌟 超武配件 ➔ " + evo_partner_name
 		elif can_merge:
-			hint_text += "\n🔥 同名武器！拾取直接二合一升星！"
+			hint_text += "\n🔥 同名★1武器！拾取直接二合一升至 ★2！"
 
 	var w_desc := _make_outlined_label(hint_text, 13, Color(1.0, 0.88, 0.45) if (evo_partner_name != "" or can_merge) else Color(0.85, 0.85, 0.85))
 	w_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -876,20 +917,19 @@ func _populate_battlefield_level_cards() -> void:
 	w_desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	wv.add_child(w_desc)
 
+	var can_take_w: bool = GameState.can_equip_or_merge(airdrop_w_id, 0)
 	var air_btn := Button.new()
 	air_btn.custom_minimum_size = Vector2(0, 44)
-	air_btn.text = "空投装配 (+15% SP)"
+	air_btn.text = "空投装配 (+6% SP)" if can_take_w else "槽位已满：折算 +35G"
 	air_btn.add_theme_font_size_override("font_size", 16)
 	air_btn.pressed.connect(func():
 		GameState.pending_level_ups = max(0, GameState.pending_level_ups - 1)
-		if not GameState.can_equip_or_merge(airdrop_w_id, 0):
-			if GameState.chassis_slots.size() < 7:
-				GameState.chassis_slots.append(w_def["slot"])
-			elif GameState.chassis_slots.size() > 0:
-				GameState.chassis_slots[GameState.chassis_slots.size() - 1] = w_def["slot"]
-		GameState.add_weapon_to_first_valid_slot(airdrop_w_id, 0, true)
-		player_tank.sync_weapons_from_state(1.0 + GameState.get_meta_level("meta_reload") * 0.15)
-		player_tank.heal_sp(GameState.max_sp * 0.15)
+		if can_take_w:
+			GameState.add_weapon_to_first_valid_slot(airdrop_w_id, 0, true)
+			player_tank.sync_weapons_from_state(1.0 + GameState.get_meta_level("meta_reload") * 0.15)
+		else:
+			GameState.add_gold(35)
+		player_tank.heal_sp(GameState.max_sp * 0.06)
 		SoundManager.play("upgrade", 0.05, 1.5)
 		_close_or_next_level_modal()
 	)
@@ -897,24 +937,18 @@ func _populate_battlefield_level_cards() -> void:
 
 func _pick_smart_airdrop_weapon() -> String:
 	var candidates: Array = []
-	var priority: Array = []
 	for k in GameData.WEAPONS.keys():
 		var wid: String = String(k)
 		var def: Dictionary = GameData.WEAPONS[wid]
 		if def.get("is_evo", false) or wid.begins_with("boss_"):
 			continue
+		if int(def.get("min_rarity", 0)) > 1:
+			continue # 空投补给仅限基础/中阶武器，绝不空投紫装/红装
 		if GameState.bonus_stats.get("no_main_cannon", false) and def["slot"] == "MAIN":
 			continue
 		candidates.append(wid)
-		if GameState.check_super_evolution_partner(wid) != "":
-			priority.append(wid)
-		else:
-			for ew in GameState.equipped_weapons:
-				if ew["id"] == wid and int(ew.get("rarity", 0)) < 4:
-					priority.append(wid)
-					break
-	if GameState.should_show_build_hints() and not priority.is_empty() and randf() < 0.72:
-		return priority[randi() % priority.size()]
+	if candidates.is_empty():
+		return "mg_77mm"
 	return candidates[randi() % candidates.size()]
 
 func _close_or_next_level_modal() -> void:

@@ -38,23 +38,23 @@ func _collect(bf: Node, player: Node2D) -> void:
 	match drop_type:
 		"scrap":
 			GameState.add_xp(value)
-			GameState.add_gold(max(1, int(value * 0.6)))
+			GameState.add_gold(1)
 		"gold":
 			GameState.add_gold(value)
 			SoundManager.play("coin", 0.12, -5.0)
 		"sp_kit":
-			player.heal_sp(GameState.max_sp * 0.20 + 60.0)
+			player.heal_sp(GameState.max_sp * 0.12 + 18.0)
 			bf.fx_layer.spawn_text(global_position, "+SP 装甲修复!", Color(0.3, 1.0, 0.5), 1.15)
 			SoundManager.play("coin", 0.05, -2.0)
 		"bio_meat":
-			GameState.bonus_stats["flat_sp_bonus"] = GameState.bonus_stats.get("flat_sp_bonus", 0.0) + 18.0
-			GameState.bonus_stats["reload_speed_pct"] = GameState.bonus_stats.get("reload_speed_pct", 0.0) + 0.015
+			GameState.bonus_stats["flat_sp_bonus"] = GameState.bonus_stats.get("flat_sp_bonus", 0.0) + 4.0
+			GameState.bonus_stats["reload_speed_pct"] = GameState.bonus_stats.get("reload_speed_pct", 0.0) + 0.008
 			GameState.recalculate_stats()
-			player.heal_sp(35.0)
-			bf.fx_layer.spawn_text(global_position, "基因吞噬 SP+18!", Color(1.0, 0.45, 0.75), 1.1)
+			player.heal_sp(15.0)
+			bf.fx_layer.spawn_text(global_position, "基因吞噬 SP+4!", Color(1.0, 0.45, 0.75), 1.1)
 			SoundManager.play("coin", 0.08, -2.0)
 		"buried_chest":
-			var bonus_g: int = 35 + GameState.current_wave * 12
+			var bonus_g: int = 22 + GameState.current_wave * 6
 			GameState.add_gold(bonus_g)
 			player.refill_all_ammo(5)
 			var evos: Array = GameState.try_trigger_super_evolutions(true)

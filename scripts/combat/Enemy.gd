@@ -52,14 +52,14 @@ func setup_regular(def: Dictionary, wave_num: int, pos: Vector2) -> void:
 	enemy_name = def["name"]
 	global_position = pos
 
-	var hp_scale: float = (1.0 + 0.25 * float(wave_num - 1) + 0.045 * pow(float(wave_num - 1), 2.0)) * GameState.get_enemy_hp_multiplier()
-	var dmg_scale: float = (1.0 + 0.12 * float(wave_num - 1)) * GameState.get_enemy_dmg_multiplier()
+	var hp_scale: float = (1.0 + 0.38 * float(wave_num - 1) + 0.085 * pow(float(wave_num - 1), 2.0)) * GameState.get_enemy_hp_multiplier()
+	var dmg_scale: float = (1.0 + 0.22 * float(wave_num - 1) + 0.03 * pow(float(wave_num - 1), 1.8)) * GameState.get_enemy_dmg_multiplier()
 
 	max_hp = roundf(float(def["hp"]) * hp_scale)
 	hp = max_hp
 	max_shield = roundf(float(def.get("shield", 0.0)) * hp_scale)
 	shield = max_shield
-	armor = float(def["armor"]) + float(wave_num - 1) * 1.2 + float(GameState.selected_map_idx) * 4.0
+	armor = float(def["armor"]) + float(wave_num - 1) * 1.8 + float(GameState.selected_map_idx) * 5.0
 	move_speed = float(def["speed"]) * GameState.get_enemy_speed_multiplier()
 	contact_dmg = roundf(float(def["dmg"]) * dmg_scale)
 	radius = float(def["radius"])
@@ -67,8 +67,8 @@ func setup_regular(def: Dictionary, wave_num: int, pos: Vector2) -> void:
 	gold_val = int(def["gold"])
 	base_color = def["color"]
 	behavior = def["behavior"]
-	attack_timer = randf_range(0.8, 2.0)
-	skill_timer = randf_range(1.8, 3.2)
+	attack_timer = randf_range(0.6, 1.6)
+	skill_timer = randf_range(1.4, 2.6)
 
 func setup_boss(boss_def: Dictionary, wave_num: int, pos: Vector2) -> void:
 	is_boss = true
@@ -77,15 +77,15 @@ func setup_boss(boss_def: Dictionary, wave_num: int, pos: Vector2) -> void:
 	boss_mechanic = boss_def["mechanic"]
 	reward_weapon_id = boss_def.get("reward_weapon", "cannon_205_peony")
 	var b_mult: float = float(GameState.get_current_difficulty_def().get("bounty_mult", 1.0))
-	bounty_gold = int(float(boss_def.get("bounty", 500)) * b_mult)
+	bounty_gold = int(float(boss_def.get("bounty", 300)) * b_mult)
 	global_position = pos
 
-	var wave_factor: float = maxf(0.85, 1.0 + (wave_num - 4) * 0.10) * GameState.get_enemy_hp_multiplier()
+	var wave_factor: float = maxf(1.0, 1.0 + float(wave_num - 2) * 0.22) * GameState.get_enemy_hp_multiplier()
 	max_hp = roundf(float(boss_def["hp"]) * wave_factor)
 	hp = max_hp
-	armor = float(boss_def["armor"])
+	armor = float(boss_def["armor"]) + float(wave_num - 1) * 2.0
 	move_speed = float(boss_def["speed"]) * GameState.get_enemy_speed_multiplier()
-	contact_dmg = roundf(float(boss_def["dmg"]) * GameState.get_enemy_dmg_multiplier())
+	contact_dmg = roundf(float(boss_def["dmg"]) * maxf(1.0, 1.0 + float(wave_num - 2) * 0.12) * GameState.get_enemy_dmg_multiplier())
 	radius = float(boss_def["radius"])
 	base_color = boss_def["color"]
 	xp_val = 25
@@ -567,12 +567,13 @@ func _die(bf: Node, crit_main_kill: bool) -> void:
 			bf.fx_layer.spawn_puddle(global_position, 85.0, "toxic", 4.5)
 		bf.spawn_drop("scrap", xp_val, global_position)
 		if is_elite:
+			bf.spawn_drop("gold", gold_val, global_position + Vector2(12, 12))
 			bf.spawn_drop("sp_kit", 1, global_position + Vector2(16, 0))
-			if randf() < 0.50:
+			if randf() < 0.35:
 				bf.spawn_drop("buried_chest", 1, global_position + Vector2(-16, 0))
-		elif randf() < 0.12:
+		elif randf() < 0.04:
 			bf.spawn_drop("sp_kit", 1, global_position + Vector2(12, 0))
-		if GameState.bonus_stats.get("bio_devour", false) and randf() < 0.16:
+		if GameState.bonus_stats.get("bio_devour", false) and randf() < 0.10:
 			bf.spawn_drop("bio_meat", 1, global_position + Vector2(-12, 0))
 
 	bf.fx_layer.spawn_explosion(global_position, radius * 1.8, base_color)

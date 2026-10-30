@@ -206,13 +206,13 @@ const CHASSIS: Dictionary = {
 		"name": "荒野巴吉 (Buggy)",
 		"unlock_cost": 0,
 		"slots": ["MAIN", "SUB", "SUB", "SE"],
-		"base_weight": 3.0,
-		"sp_per_ton": 85.0,
-		"base_sp": 180.0,
-		"speed": 265.0,
+		"base_weight": 3.5,
+		"sp_per_ton": 16.0,
+		"base_sp": 90.0,
+		"speed": 255.0,
 		"color": Color(0.32, 0.58, 0.85),
-		"desc": "【沙地漂移】1主/2副/1SE。高机动轻型战车，移动时所有副炮射速 +35%。",
-		"starter_weapons": ["cannon_45mm", "mg_77mm", "mg_77mm"],
+		"desc": "【沙地漂移】1主/2副/1SE。高机动轻型战车，移动时所有副炮射速 +25%。",
+		"starter_weapons": ["cannon_45mm", "mg_77mm"],
 		"starter_engine": "eng_bulldog_v8",
 		"starter_c_unit": "cu_type66"
 	},
@@ -221,29 +221,29 @@ const CHASSIS: Dictionary = {
 		"name": "红狼战车 (R-Wolf)",
 		"unlock_cost": 150,
 		"slots": ["MAIN", "MAIN", "SUB", "SE", "SE"],
-		"base_weight": 7.5,
-		"sp_per_ton": 105.0,
-		"base_sp": 280.0,
-		"speed": 225.0,
+		"base_weight": 8.0,
+		"sp_per_ton": 20.0,
+		"base_sp": 130.0,
+		"speed": 220.0,
 		"color": Color(0.85, 0.18, 0.15),
-		"desc": "【深红连星】2主/1副/2SE。传奇猎人红狼座驾，主炮暴击时 35% 概率立即免费追加发射一发！",
-		"starter_weapons": ["cannon_105mm", "mg_vulcan"],
-		"starter_engine": "eng_rwolf_turbo",
-		"starter_c_unit": "cu_type99"
+		"desc": "【深红连星】2主/1副/2SE。传奇猎人红狼座驾，主炮暴击时 30% 概率立即免费追加发射一发！",
+		"starter_weapons": ["cannon_105mm", "mg_77mm"],
+		"starter_engine": "eng_bulldog_v8",
+		"starter_c_unit": "cu_type66"
 	},
 	"abrams": {
 		"id": "abrams",
 		"name": "复合重坦 M1 (Abrams)",
 		"unlock_cost": 0,
 		"slots": ["MAIN", "MAIN", "SUB", "SUB", "SE"],
-		"base_weight": 9.0,
-		"sp_per_ton": 135.0,
-		"base_sp": 360.0,
-		"speed": 195.0,
+		"base_weight": 9.5,
+		"sp_per_ton": 26.0,
+		"base_sp": 160.0,
+		"speed": 190.0,
 		"color": Color(0.45, 0.58, 0.35),
-		"desc": "【反应装甲】2主/2副/1SE。每吨剩余载重转化高达 135 SP，受到碰撞与近战伤害 -30%。",
-		"starter_weapons": ["cannon_105mm", "mg_77mm", "se_atm"],
-		"starter_engine": "eng_dozer",
+		"desc": "【反应装甲】2主/2副/1SE。每吨剩余载重转化 26 SP，受到碰撞与近战伤害 -25%。",
+		"starter_weapons": ["cannon_105mm", "mg_77mm"],
+		"starter_engine": "eng_bulldog_v8",
 		"starter_c_unit": "cu_type66"
 	},
 	"missile_carrier": {
@@ -252,14 +252,14 @@ const CHASSIS: Dictionary = {
 		"unlock_cost": 150,
 		"slots": ["SUB", "SE", "SE", "SE", "SE", "SE"],
 		"base_weight": 6.5,
-		"sp_per_ton": 95.0,
-		"base_sp": 240.0,
+		"sp_per_ton": 18.0,
+		"base_sp": 115.0,
 		"speed": 210.0,
 		"color": Color(0.38, 0.52, 0.48),
-		"desc": "【模块化发射架】0主/1副/5SE。所有 S-E 装备重量减轻 35%，S-E 齐射冷却缩短 20%。",
-		"starter_weapons": ["mg_77mm", "se_atm", "se_atm"],
+		"desc": "【模块化发射架】0主/1副/5SE。所有 S-E 装备重量减轻 30%，S-E 齐射冷却缩短 20%。",
+		"starter_weapons": ["mg_77mm", "se_atm"],
 		"starter_engine": "eng_bulldog_v8",
-		"starter_c_unit": "cu_solomon2"
+		"starter_c_unit": "cu_type66"
 	},
 	"mammoth": {
 		"id": "mammoth",
@@ -267,12 +267,12 @@ const CHASSIS: Dictionary = {
 		"unlock_cost": 320,
 		"slots": ["MAIN", "MAIN", "MAIN", "SUB", "SUB", "SE", "SE"],
 		"base_weight": 15.0,
-		"sp_per_ton": 155.0,
-		"base_sp": 500.0,
-		"speed": 160.0,
+		"sp_per_ton": 30.0,
+		"base_sp": 210.0,
+		"speed": 155.0,
 		"dual_engine": true,
 		"color": Color(0.55, 0.44, 0.30),
-		"desc": "【双核驱动】3主/2副/2SE。天生拥有 2 个引擎插槽(载重+60%)！碾压伤害 +200% 且免疫击退。",
+		"desc": "【双核驱动】3主/2副/2SE。双引擎插槽(载重+45%)！碾压伤害 +150% 且免疫击退。",
 		"starter_weapons": ["cannon_105mm", "se_spike_ball"],
 		"starter_engine": "eng_dozer",
 		"starter_c_unit": "cu_type66"
@@ -282,13 +282,13 @@ const CHASSIS: Dictionary = {
 		"name": "白色恶魔救护车 (Ambulance)",
 		"unlock_cost": 200,
 		"slots": ["SUB", "SUB", "SUB", "SUB", "SE", "SE"],
-		"base_weight": 4.5,
-		"sp_per_ton": 100.0,
-		"base_sp": 260.0,
-		"speed": 240.0,
+		"base_weight": 5.0,
+		"sp_per_ton": 19.0,
+		"base_sp": 125.0,
+		"speed": 235.0,
 		"color": Color(0.92, 0.92, 0.95),
-		"desc": "【过量医疗】0主/4副/2SE。每秒自动维修量翻倍，且周围持续散发高腐蚀生化毒雾。",
-		"starter_weapons": ["sub_acid", "sub_flame", "se_drone"],
+		"desc": "【过量医疗】0主/4副/2SE。每秒自动维修量 +60%，且周围持续散发生化毒雾。",
+		"starter_weapons": ["sub_acid", "mg_77mm"],
 		"starter_engine": "eng_bulldog_v8",
 		"starter_c_unit": "cu_type66"
 	},
@@ -297,30 +297,30 @@ const CHASSIS: Dictionary = {
 		"name": "武装大巴 (Wasteland Bus)",
 		"unlock_cost": 240,
 		"slots": ["MAIN", "SUB", "SUB", "SE", "SE"],
-		"base_weight": 8.0,
-		"sp_per_ton": 115.0,
-		"base_sp": 320.0,
-		"speed": 205.0,
+		"base_weight": 8.5,
+		"sp_per_ton": 22.0,
+		"base_sp": 145.0,
+		"speed": 200.0,
 		"color": Color(0.88, 0.68, 0.18),
-		"desc": "【车窗齐射】1主/2副/2SE。车内搭载 4 名雇佣兵随从，自动探出车窗向四周密集射击！",
-		"starter_weapons": ["cannon_45mm", "sub_shotgun", "se_drone"],
-		"starter_engine": "eng_dozer",
-		"starter_c_unit": "cu_valkyrie"
+		"desc": "【车窗齐射】1主/2副/2SE。车内搭载雇佣兵随从，自动探出车窗向四周射击！",
+		"starter_weapons": ["cannon_45mm", "sub_shotgun"],
+		"starter_engine": "eng_bulldog_v8",
+		"starter_c_unit": "cu_type66"
 	},
 	"tyrannos": {
 		"id": "tyrannos",
 		"name": "暴龙生物战车 (Bio-Tyrannos)",
 		"unlock_cost": 400,
 		"slots": ["MAIN", "SUB", "SE", "MAIN"],
-		"base_weight": 5.0,
-		"sp_per_ton": 125.0,
-		"base_sp": 340.0,
-		"speed": 230.0,
+		"base_weight": 5.5,
+		"sp_per_ton": 24.0,
+		"base_sp": 150.0,
+		"speed": 225.0,
 		"color": Color(0.48, 0.25, 0.58),
-		"desc": "【血肉再生】每过 3 波自动进化长出 1 个新武器槽位(上限7孔)，每秒自动再生 1% 最大SP。",
-		"starter_weapons": ["cannon_cement", "sub_acid"],
+		"desc": "【血肉再生】每过 3 波进化长出 1 个新槽位(上限7孔)，每秒自动再生 0.8% 最大SP。",
+		"starter_weapons": ["cannon_cement", "mg_77mm"],
 		"starter_engine": "eng_bulldog_v8",
-		"starter_c_unit": "cu_mirage"
+		"starter_c_unit": "cu_type66"
 	}
 }
 
@@ -508,44 +508,44 @@ const SUPER_EVOLUTIONS: Array = [
 	{
 		"result": "evo_red_wolf",
 		"name": "★【超武】血色红狼·双星歼灭炮",
-		"comp_a": ["cannon_105mm", "cannon_205_peony", "cannon_45mm"],
-		"comp_b": ["mg_vulcan", "mg_77mm"],
-		"formula_text": "【皇家加农 / 红牡丹 / 45mm机炮】 + 【火神加特林 / 7.7mm机枪】"
+		"comp_a": ["cannon_105mm", "cannon_205_peony"],
+		"comp_b": ["mg_vulcan"],
+		"formula_text": "【105mm皇家加农 / 205mm红牡丹 (★4)】 + 【火神六管加特林 (★4)】"
 	},
 	{
 		"result": "evo_omega_railgun",
 		"name": "★【超武】Ω 诺亚天谴轨道炮",
 		"comp_a": ["cannon_cosmic_laser"],
 		"comp_b": ["sub_tesla"],
-		"formula_text": "【SE-宇宙激光主炮】 + 【特斯拉连锁电弧】"
+		"formula_text": "【SE-宇宙激光主炮 (★4)】 + 【特斯拉连锁电弧 (★4)】"
 	},
 	{
 		"result": "evo_iron_curtain",
 		"name": "★【超武】末日铁幕·核子蜂群",
 		"comp_a": ["se_atm"],
 		"comp_b": ["se_tornado"],
-		"formula_text": "【ATM 追踪导弹箱】 + 【龙卷风12联装火箭】"
+		"formula_text": "【ATM 追踪导弹箱 (★4)】 + 【龙卷风12联装火箭 (★4)】"
 	},
 	{
 		"result": "evo_plague_inferno",
 		"name": "★【超武】明奇的炼狱黑死病",
 		"comp_a": ["sub_acid"],
 		"comp_b": ["sub_flame"],
-		"formula_text": "【强酸腐蚀喷雾器】 + 【地狱火焰喷射器】"
+		"formula_text": "【强酸腐蚀喷雾器 (★4)】 + 【地狱火焰喷射器 (★4)】"
 	},
 	{
 		"result": "evo_aegis_star",
 		"name": "★【超武】绝对领域·神盾粉碎星",
 		"comp_a": ["se_spike_ball"],
 		"comp_b": ["se_aegis"],
-		"formula_text": "【旋转刺球撞角】 + 【宙斯盾迎击激光网】"
+		"formula_text": "【旋转刺球撞角 (★4)】 + 【宙斯盾迎击激光网 (★4)】"
 	},
 	{
 		"result": "evo_gaia_nuke",
 		"name": "★【超武】盖亚毁灭者·石化核弹",
 		"comp_a": ["cannon_cement"],
-		"comp_b": ["cannon_195mm", "sub_shotgun"],
-		"formula_text": "【水泥弹发射器】 + 【195mm爆裂巨炮 / 废铁霰弹轰击炮】"
+		"comp_b": ["cannon_195mm"],
+		"formula_text": "【水泥弹发射器 (★4)】 + 【195mm爆裂巨炮 (★4)】"
 	}
 ]
 
@@ -647,90 +647,90 @@ const SYNERGIES: Dictionary = {
 const ENEMIES: Dictionary = {
 	# --- 1. 近战突袭类 ---
 	"bio_ant": {
-		"id": "bio_ant", "name": "钳甲机械蚁", "hp": 32.0, "speed": 135.0, "dmg": 12.0,
-		"armor": 5.0, "radius": 13.0, "xp": 1, "gold": 2, "color": Color(0.75, 0.35, 0.20),
+		"id": "bio_ant", "name": "钳甲机械蚁", "hp": 46.0, "speed": 145.0, "dmg": 18.0,
+		"armor": 6.0, "radius": 13.0, "xp": 1, "gold": 1, "color": Color(0.75, 0.35, 0.20),
 		"behavior": "melee"
 	},
 	"bionic_hound": {
-		"id": "bionic_hound", "name": "狂暴生化猎犬", "hp": 44.0, "speed": 165.0, "dmg": 16.0,
-		"armor": 8.0, "radius": 14.0, "xp": 2, "gold": 3, "color": Color(0.88, 0.45, 0.25),
+		"id": "bionic_hound", "name": "狂暴生化猎犬", "hp": 65.0, "speed": 175.0, "dmg": 24.0,
+		"armor": 10.0, "radius": 14.0, "xp": 1, "gold": 1, "color": Color(0.88, 0.45, 0.25),
 		"behavior": "leap_hound"
 	},
 
 	# --- 2. 自爆特攻类 ---
 	"kamikaze_wheel": {
-		"id": "kamikaze_wheel", "name": "自爆滚雷车", "hp": 26.0, "speed": 215.0, "dmg": 34.0,
-		"armor": 0.0, "radius": 13.0, "xp": 2, "gold": 3, "color": Color(0.95, 0.25, 0.15),
+		"id": "kamikaze_wheel", "name": "自爆滚雷车", "hp": 38.0, "speed": 225.0, "dmg": 46.0,
+		"armor": 0.0, "radius": 13.0, "xp": 1, "gold": 2, "color": Color(0.95, 0.25, 0.15),
 		"behavior": "suicide"
 	},
 	"gas_walker": {
-		"id": "gas_walker", "name": "毒气自爆铁桶", "hp": 68.0, "speed": 115.0, "dmg": 28.0,
-		"armor": 18.0, "radius": 16.0, "xp": 2, "gold": 4, "color": Color(0.55, 0.88, 0.22),
+		"id": "gas_walker", "name": "毒气自爆铁桶", "hp": 96.0, "speed": 122.0, "dmg": 38.0,
+		"armor": 20.0, "radius": 16.0, "xp": 2, "gold": 2, "color": Color(0.55, 0.88, 0.22),
 		"behavior": "toxic_suicide"
 	},
 
 	# --- 3. 远程弹幕、狙击与曲射迫击炮类 ---
 	"sand_turret": {
-		"id": "sand_turret", "name": "沙漠机枪炮台", "hp": 58.0, "speed": 48.0, "dmg": 14.0,
-		"armor": 15.0, "radius": 17.0, "xp": 2, "gold": 4, "color": Color(0.65, 0.60, 0.38),
+		"id": "sand_turret", "name": "沙漠机枪炮台", "hp": 82.0, "speed": 52.0, "dmg": 20.0,
+		"armor": 16.0, "radius": 17.0, "xp": 1, "gold": 2, "color": Color(0.65, 0.60, 0.38),
 		"behavior": "shooter"
 	},
 	"acid_snail": {
-		"id": "acid_snail", "name": "辐射酸液蜗牛", "hp": 95.0, "speed": 80.0, "dmg": 18.0,
-		"armor": 32.0, "radius": 19.0, "xp": 3, "gold": 5, "color": Color(0.42, 0.82, 0.28),
+		"id": "acid_snail", "name": "辐射酸液蜗牛", "hp": 135.0, "speed": 85.0, "dmg": 26.0,
+		"armor": 35.0, "radius": 19.0, "xp": 2, "gold": 2, "color": Color(0.42, 0.82, 0.28),
 		"behavior": "shooter"
 	},
 	"sniper_cannon": {
-		"id": "sniper_cannon", "name": "远程狙击自行炮", "hp": 72.0, "speed": 65.0, "dmg": 36.0,
-		"armor": 12.0, "radius": 18.0, "xp": 3, "gold": 6, "color": Color(0.92, 0.28, 0.42),
+		"id": "sniper_cannon", "name": "远程狙击自行炮", "hp": 105.0, "speed": 70.0, "dmg": 48.0,
+		"armor": 14.0, "radius": 18.0, "xp": 2, "gold": 3, "color": Color(0.92, 0.28, 0.42),
 		"behavior": "sniper"
 	},
 	"mortar_crab": {
-		"id": "mortar_crab", "name": "迫击炮机械蟹", "hp": 110.0, "speed": 72.0, "dmg": 32.0,
-		"armor": 38.0, "radius": 20.0, "xp": 3, "gold": 6, "color": Color(0.85, 0.52, 0.20),
+		"id": "mortar_crab", "name": "迫击炮机械蟹", "hp": 155.0, "speed": 76.0, "dmg": 44.0,
+		"armor": 40.0, "radius": 20.0, "xp": 2, "gold": 3, "color": Color(0.85, 0.52, 0.20),
 		"behavior": "mortar"
 	},
 
 	# --- 4. 护盾防御、战地医疗与EMP控制类 ---
 	"shield_mecha": {
-		"id": "shield_mecha", "name": "电磁护盾卫士", "hp": 105.0, "shield": 90.0, "speed": 95.0, "dmg": 18.0,
-		"armor": 30.0, "radius": 20.0, "xp": 3, "gold": 6, "color": Color(0.28, 0.68, 0.95),
+		"id": "shield_mecha", "name": "电磁护盾卫士", "hp": 145.0, "shield": 120.0, "speed": 100.0, "dmg": 26.0,
+		"armor": 32.0, "radius": 20.0, "xp": 2, "gold": 3, "color": Color(0.28, 0.68, 0.95),
 		"behavior": "shield_guard"
 	},
 	"repair_bot": {
-		"id": "repair_bot", "name": "诺亚战地维修蜂", "hp": 62.0, "speed": 150.0, "dmg": 10.0,
-		"armor": 10.0, "radius": 15.0, "xp": 3, "gold": 7, "color": Color(0.30, 0.95, 0.55),
+		"id": "repair_bot", "name": "诺亚战地维修蜂", "hp": 90.0, "speed": 155.0, "dmg": 15.0,
+		"armor": 12.0, "radius": 15.0, "xp": 2, "gold": 3, "color": Color(0.30, 0.95, 0.55),
 		"behavior": "healer"
 	},
 	"emp_spider": {
-		"id": "emp_spider", "name": "磁暴捕猎蛛", "hp": 78.0, "speed": 125.0, "dmg": 16.0,
-		"armor": 16.0, "radius": 16.0, "xp": 3, "gold": 6, "color": Color(0.55, 0.42, 0.95),
+		"id": "emp_spider", "name": "磁暴捕猎蛛", "hp": 112.0, "speed": 132.0, "dmg": 24.0,
+		"armor": 18.0, "radius": 16.0, "xp": 2, "gold": 3, "color": Color(0.55, 0.42, 0.95),
 		"behavior": "emp_shooter"
 	},
 
 	# --- 5. 四大区域重装精英怪 (ELITE MINI-BOSSES) ---
 	"auto_tank": {
 		"id": "auto_tank", "name": "⚡【精英】自律杀戮重坦", "is_elite": true,
-		"hp": 320.0, "speed": 105.0, "dmg": 28.0, "armor": 45.0, "radius": 26.0,
-		"xp": 8, "gold": 18, "color": Color(0.50, 0.58, 0.68),
+		"hp": 520.0, "speed": 112.0, "dmg": 38.0, "armor": 48.0, "radius": 26.0,
+		"xp": 5, "gold": 12, "color": Color(0.50, 0.58, 0.68),
 		"behavior": "elite_tank"
 	},
 	"elite_flame_juggernaut": {
 		"id": "elite_flame_juggernaut", "name": "⚡【精英】炼狱喷火装甲车", "is_elite": true,
-		"hp": 420.0, "speed": 145.0, "dmg": 32.0, "armor": 40.0, "radius": 27.0,
-		"xp": 10, "gold": 22, "color": Color(0.95, 0.38, 0.15),
+		"hp": 680.0, "speed": 150.0, "dmg": 44.0, "armor": 44.0, "radius": 27.0,
+		"xp": 6, "gold": 14, "color": Color(0.95, 0.38, 0.15),
 		"behavior": "elite_flamer"
 	},
 	"elite_missile_mammoth": {
 		"id": "elite_missile_mammoth", "name": "⚡【精英】双联装导弹巨兽", "is_elite": true,
-		"hp": 540.0, "speed": 85.0, "dmg": 38.0, "armor": 55.0, "radius": 30.0,
-		"xp": 12, "gold": 26, "color": Color(0.68, 0.55, 0.32),
+		"hp": 860.0, "speed": 90.0, "dmg": 52.0, "armor": 58.0, "radius": 30.0,
+		"xp": 7, "gold": 16, "color": Color(0.68, 0.55, 0.32),
 		"behavior": "elite_mortar"
 	},
 	"elite_cyber_executioner": {
 		"id": "elite_cyber_executioner", "name": "⚡【精英】诺亚量子处决者", "is_elite": true,
-		"hp": 680.0, "speed": 135.0, "dmg": 44.0, "armor": 50.0, "radius": 28.0,
-		"xp": 15, "gold": 32, "color": Color(0.85, 0.25, 0.85),
+		"hp": 1080.0, "speed": 142.0, "dmg": 58.0, "armor": 54.0, "radius": 28.0,
+		"xp": 8, "gold": 20, "color": Color(0.85, 0.25, 0.85),
 		"behavior": "elite_blinker"
 	}
 }
@@ -742,8 +742,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_killdozer",
 		"name": "杀人推土机 (Killdozer)",
-		"stars": 1, "min_wave": 2, "bounty": 300,
-		"hp": 950.0, "armor": 40.0, "speed": 155.0, "dmg": 38.0, "radius": 38.0,
+		"stars": 1, "min_wave": 2, "bounty": 180,
+		"hp": 1650.0, "armor": 42.0, "speed": 160.0, "dmg": 48.0, "radius": 38.0,
 		"color": Color(0.92, 0.72, 0.12),
 		"mechanic": "charge_plow",
 		"reward_weapon": "cannon_195mm",
@@ -752,8 +752,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_jelly",
 		"name": "加农水母 (Cannon Jelly)",
-		"stars": 1, "min_wave": 3, "bounty": 380,
-		"hp": 1200.0, "armor": 20.0, "speed": 110.0, "dmg": 28.0, "radius": 40.0,
+		"stars": 1, "min_wave": 3, "bounty": 240,
+		"hp": 2100.0, "armor": 24.0, "speed": 115.0, "dmg": 38.0, "radius": 40.0,
 		"color": Color(0.28, 0.78, 0.95),
 		"mechanic": "bullet_ring",
 		"reward_weapon": "sub_tesla",
@@ -762,8 +762,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_sand_shark",
 		"name": "沙漠之鲛·沙鲨 (Sand Shark)",
-		"stars": 2, "min_wave": 5, "bounty": 650,
-		"hp": 2200.0, "armor": 45.0, "speed": 195.0, "dmg": 45.0, "radius": 44.0,
+		"stars": 2, "min_wave": 5, "bounty": 380,
+		"hp": 3600.0, "armor": 48.0, "speed": 200.0, "dmg": 58.0, "radius": 44.0,
 		"color": Color(0.32, 0.48, 0.72),
 		"mechanic": "burrow_shark",
 		"reward_weapon": "boss_shark_torpedo",
@@ -772,8 +772,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_skunks",
 		"name": "臭鼬军团长·斯卡鲁 (Skunks)",
-		"stars": 2, "min_wave": 7, "bounty": 800,
-		"hp": 2800.0, "armor": 35.0, "speed": 240.0, "dmg": 42.0, "radius": 36.0,
+		"stars": 2, "min_wave": 7, "bounty": 480,
+		"hp": 4600.0, "armor": 38.0, "speed": 245.0, "dmg": 54.0, "radius": 36.0,
 		"color": Color(0.88, 0.35, 0.18),
 		"mechanic": "flame_circle",
 		"reward_weapon": "se_tornado",
@@ -782,8 +782,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_centipede",
 		"name": "百足装甲列车 (Centipede Express)",
-		"stars": 3, "min_wave": 9, "bounty": 1150,
-		"hp": 3600.0, "armor": 55.0, "speed": 165.0, "dmg": 50.0, "radius": 42.0,
+		"stars": 3, "min_wave": 9, "bounty": 680,
+		"hp": 6000.0, "armor": 58.0, "speed": 170.0, "dmg": 65.0, "radius": 42.0,
 		"color": Color(0.55, 0.65, 0.35),
 		"mechanic": "multi_segment",
 		"reward_weapon": "cannon_205_peony",
@@ -792,8 +792,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_gomez",
 		"name": "掠夺王·戈麦斯 (Gomez)",
-		"stars": 3, "min_wave": 11, "bounty": 1450,
-		"hp": 4600.0, "armor": 65.0, "speed": 150.0, "dmg": 62.0, "radius": 44.0,
+		"stars": 3, "min_wave": 11, "bounty": 850,
+		"hp": 7600.0, "armor": 68.0, "speed": 155.0, "dmg": 78.0, "radius": 44.0,
 		"color": Color(0.45, 0.32, 0.25),
 		"mechanic": "emp_stealth",
 		"reward_weapon": "cannon_cosmic_laser",
@@ -802,8 +802,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_chimera",
 		"name": "生化融合兽·奇美拉 (Bio-Chimera)",
-		"stars": 4, "min_wave": 13, "bounty": 1850,
-		"hp": 6200.0, "armor": 50.0, "speed": 130.0, "dmg": 68.0, "radius": 48.0,
+		"stars": 4, "min_wave": 13, "bounty": 1100,
+		"hp": 10200.0, "armor": 54.0, "speed": 135.0, "dmg": 86.0, "radius": 48.0,
 		"color": Color(0.62, 0.22, 0.68),
 		"mechanic": "regen_acid",
 		"reward_weapon": "cannon_220_gaia",
@@ -812,8 +812,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_desert_boat",
 		"name": "陆地战舰·沙漠之舟 (Desert Boat)",
-		"stars": 4, "min_wave": 15, "bounty": 2500,
-		"hp": 8500.0, "armor": 80.0, "speed": 95.0, "dmg": 78.0, "radius": 64.0,
+		"stars": 4, "min_wave": 15, "bounty": 1500,
+		"hp": 14000.0, "armor": 82.0, "speed": 100.0, "dmg": 96.0, "radius": 64.0,
 		"color": Color(0.65, 0.58, 0.45),
 		"mechanic": "battleship_parts",
 		"reward_weapon": "boss_yamato_cannon",
@@ -822,8 +822,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_bighemoth",
 		"name": "钢铁暴君·重装帕鲁 (Bighemoth)",
-		"stars": 5, "min_wave": 17, "bounty": 3800,
-		"hp": 11500.0, "armor": 90.0, "speed": 120.0, "dmg": 88.0, "radius": 58.0,
+		"stars": 5, "min_wave": 17, "bounty": 2200,
+		"hp": 18500.0, "armor": 92.0, "speed": 125.0, "dmg": 108.0, "radius": 58.0,
 		"color": Color(0.78, 0.25, 0.25),
 		"mechanic": "magnet_laser",
 		"reward_weapon": "cannon_220_gaia",
@@ -832,8 +832,8 @@ const WANTED_BOSSES: Array = [
 	{
 		"id": "boss_noah",
 		"name": "灭世主脑·诺亚核心 (Master NOAH)",
-		"stars": 5, "min_wave": 20, "bounty": 9999,
-		"hp": 16000.0, "armor": 100.0, "speed": 115.0, "dmg": 95.0, "radius": 68.0,
+		"stars": 5, "min_wave": 20, "bounty": 5000,
+		"hp": 26000.0, "armor": 100.0, "speed": 120.0, "dmg": 120.0, "radius": 68.0,
 		"color": Color(0.95, 0.20, 0.45),
 		"mechanic": "noah_core",
 		"reward_weapon": "boss_yamato_cannon",
@@ -842,17 +842,17 @@ const WANTED_BOSSES: Array = [
 ]
 
 # ============================================================================
-# 9. 猎人升级天赋池 (LEVEL_PERKS)
+# 9. 猎人升级天赋池 (LEVEL_PERKS —— 土豆兄弟式 1~4 阶属性强化基数)
 # ============================================================================
 const LEVEL_PERKS: Array = [
-	{"id": "main_dmg", "name": "炮术专精", "desc": "主炮伤害 +18%", "stat": "main_dmg_pct", "val": 0.18},
-	{"id": "sub_se_dmg", "name": "弹幕协同", "desc": "副炮与 S-E 伤害 +20%", "stat": "sub_dmg_pct", "val": 0.20},
-	{"id": "max_weight", "name": "底盘加固弹簧", "desc": "引擎最大载重 +12% (直接转化更多SP)", "stat": "max_weight_pct", "val": 0.12},
-	{"id": "reload_spd", "name": "自动装填液压", "desc": "全武器攻速与装填速度 +14%", "stat": "reload_speed_pct", "val": 0.14},
-	{"id": "crit_chance", "name": "精密鹰眼雷达", "desc": "暴击率 +10%", "stat": "crit_chance", "val": 0.10},
-	{"id": "sp_regen", "name": "纳米板金焊枪", "desc": "每秒额外恢复 +22 点战车 SP", "stat": "flat_sp_regen", "val": 22.0},
-	{"id": "move_ram", "name": "氮气冲角改装", "desc": "战车移速 +12%，冲撞伤害 +40%", "stat": "move_speed_pct", "val": 0.12},
-	{"id": "bounty_magnet", "name": "高倍金属探头", "desc": "拾取范围 +45%，每波赏金获取 +15%", "stat": "gold_gain_pct", "val": 0.15}
+	{"id": "main_dmg", "name": "炮术专精", "desc": "主炮伤害 +%d%%", "stat": "main_dmg_pct", "val": 0.08, "is_pct": true},
+	{"id": "sub_se_dmg", "name": "弹幕协同", "desc": "副炮与 S-E 伤害 +%d%%", "stat": "sub_dmg_pct", "val": 0.08, "is_pct": true},
+	{"id": "max_weight", "name": "底盘加固弹簧", "desc": "引擎最大载重 +%d%% (转化更多SP)", "stat": "max_weight_pct", "val": 0.06, "is_pct": true},
+	{"id": "reload_spd", "name": "自动装填液压", "desc": "全武器攻速与装填速度 +%d%%", "stat": "reload_speed_pct", "val": 0.06, "is_pct": true},
+	{"id": "crit_chance", "name": "精密鹰眼雷达", "desc": "暴击率 +%d%%", "stat": "crit_chance", "val": 0.04, "is_pct": true},
+	{"id": "sp_regen", "name": "纳米板金焊枪", "desc": "每秒额外恢复 +%d 点战车 SP", "stat": "flat_sp_regen", "val": 4.0, "is_pct": false},
+	{"id": "move_ram", "name": "氮气冲角改装", "desc": "战车移速 +%d%%，冲撞伤害提升", "stat": "move_speed_pct", "val": 0.05, "is_pct": true},
+	{"id": "bounty_magnet", "name": "高倍金属探头", "desc": "拾取范围扩大，赏金获取 +%d%%", "stat": "gold_gain_pct", "val": 0.07, "is_pct": true}
 ]
 
 # ============================================================================
@@ -915,7 +915,7 @@ const META_UPGRADES: Array = [
 		"max_lv": 10,
 		"base_cost": 40,
 		"cost_step": 25,
-		"desc_per_lv": "战车基础装甲片永久 +60 SP / 级，步兵HP +20 / 级"
+		"desc_per_lv": "战车基础装甲片永久 +25 SP / 级，步兵HP +15 / 级"
 	},
 	{
 		"id": "meta_dmg",
@@ -931,7 +931,7 @@ const META_UPGRADES: Array = [
 		"max_lv": 8,
 		"base_cost": 40,
 		"cost_step": 30,
-		"desc_per_lv": "每局开局初始携带赏金永久 +35 G / 级"
+		"desc_per_lv": "每局开局初始携带赏金永久 +20 G / 级"
 	},
 	{
 		"id": "meta_reload",
@@ -955,7 +955,7 @@ const META_UPGRADES: Array = [
 		"max_lv": 6,
 		"base_cost": 50,
 		"cost_step": 40,
-		"desc_per_lv": "战场每秒自动修复 +12 SP / 级，大破下车抢修速度 +12% / 级"
+		"desc_per_lv": "战场每秒自动修复 +3 SP / 级，大破下车抢修速度 +12% / 级"
 	},
 	{
 		"id": "meta_magnet_gold",
@@ -1065,44 +1065,44 @@ const DIFFICULTIES: Dictionary = {
 	"easy": {
 		"id": "easy",
 		"name": "🟢 简单 (废土巡逻)",
-		"hp_mult": 0.75,
-		"dmg_mult": 0.75,
-		"speed_mult": 0.95,
-		"spawn_mult": 0.85,
-		"bounty_mult": 1.0,
-		"chip_mult": 1.0,
-		"bonus_start_gold": 50,
-		"show_hints": true,
-		"color": Color(0.38, 0.95, 0.50),
-		"desc": "敌军生命与伤害 ×0.75，开局+50G；【显示流派与超武配件提示】，通关解锁下一张地图！"
-	},
-	"normal": {
-		"id": "normal",
-		"name": "🟡 困难 (赏金猎人)",
 		"hp_mult": 1.00,
 		"dmg_mult": 1.00,
 		"speed_mult": 1.00,
 		"spawn_mult": 1.00,
-		"bounty_mult": 1.25,
-		"chip_mult": 1.35,
+		"bounty_mult": 1.0,
+		"chip_mult": 1.0,
+		"bonus_start_gold": 20,
+		"show_hints": true,
+		"color": Color(0.38, 0.95, 0.50),
+		"desc": "标准废土兽潮强度，开局额外+20G；【显示流派与超武配件提示】，通关解锁下一张地图！"
+	},
+	"normal": {
+		"id": "normal",
+		"name": "🟡 困难 (赏金猎人)",
+		"hp_mult": 1.45,
+		"dmg_mult": 1.35,
+		"speed_mult": 1.08,
+		"spawn_mult": 1.22,
+		"bounty_mult": 1.20,
+		"chip_mult": 1.40,
 		"bonus_start_gold": 0,
 		"show_hints": true,
 		"color": Color(1.00, 0.85, 0.25),
-		"desc": "标准废土兽潮强度；【显示流派与超武配件提示】，悬赏金 ×1.25，结算诺亚晶片 ×1.35！"
+		"desc": "敌军生命×1.45、伤害×1.35、密度+22%！【显示流派与超武配件提示】，结算诺亚晶片 ×1.40！"
 	},
 	"hell": {
 		"id": "hell",
 		"name": "🔴 地狱 (大破坏梦魇)",
-		"hp_mult": 1.75,
-		"dmg_mult": 1.50,
-		"speed_mult": 1.12,
-		"spawn_mult": 1.30,
-		"bounty_mult": 1.80,
-		"chip_mult": 2.20,
+		"hp_mult": 2.35,
+		"dmg_mult": 1.90,
+		"speed_mult": 1.18,
+		"spawn_mult": 1.50,
+		"bounty_mult": 1.50,
+		"chip_mult": 2.30,
 		"bonus_start_gold": 0,
 		"show_hints": false,
 		"color": Color(1.00, 0.28, 0.25),
-		"desc": "敌军生命×1.75、伤害×1.50、密度+30%！【硬核盲配：隐藏所有流派与超武合成提示】，结算晶片 ×2.20！"
+		"desc": "敌军生命×2.35、伤害×1.90、密度+50%！【硬核盲配：隐藏所有流派与超武合成提示】，结算晶片 ×2.30！"
 	}
 }
 
