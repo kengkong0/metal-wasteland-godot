@@ -215,7 +215,7 @@ func _process_regular_ai(delta: float, bf: Node, _player: Node2D, target_pos: Ve
 				attack_timer = 2.3
 				bf.spawn_enemy_projectile(global_position, dir, 340.0, contact_dmg, Color(0.35, 0.80, 1.0), 6.5)
 
-		"healer": # 诺亚战地维修蜂：寻找场上受伤的精英怪/Boss并为其回血！
+		"healer": # 机械战地维修蜂：寻找场上受伤的精英怪/Boss并为其回血！
 			var heal_target: Node2D = null
 			var best_score: float = -1.0
 			for other in bf.enemies_container.get_children():
@@ -280,7 +280,7 @@ func _process_regular_ai(delta: float, bf: Node, _player: Node2D, target_pos: Ve
 				for i in range(6):
 					bf.spawn_enemy_projectile(global_position, Vector2.from_angle(TAU * i / 6.0), 310.0, contact_dmg * 0.9, Color(1.0, 0.75, 0.25), 7.0)
 
-		"elite_blinker": # ⚡【精英】诺亚量子处决者：周期瞬移闪烁到玩家附近释放十字激光
+		"elite_blinker": # ⚡【精英】天穹量子处决者：周期瞬移闪烁到玩家附近释放十字激光
 			global_position += dir * move_speed * spd_mult * delta
 			if skill_timer <= 0.0:
 				skill_timer = 3.4
@@ -371,7 +371,7 @@ func _process_boss_ai(delta: float, bf: Node, player: Node2D, target_pos: Vector
 				for i in range(train_segments_left):
 					bf.spawn_enemy_projectile(segment_trail[i], (target_pos - segment_trail[i]).normalized(), 360.0, contact_dmg * 0.75)
 
-		"emp_stealth": # ★★★ 掠夺王·戈麦斯
+		"emp_stealth": # ★★★ 荒原劫掠王·巴洛克
 			facing_angle = dir.angle()
 			global_position += dir * move_speed * spd_mult * delta
 			if skill_timer <= 0.0:
@@ -411,7 +411,7 @@ func _process_boss_ai(delta: float, bf: Node, player: Node2D, target_pos: Vector
 						SoundManager.play("cannon_heavy", 0.05, 1.0)
 						bf.spawn_enemy_projectile(p_world, dir, 540.0, contact_dmg * 1.6, Color(1.0, 0.35, 0.1), 13.0)
 
-		"magnet_laser", "noah_core": # ★★★★★ 重装帕鲁 & 灭世主脑·诺亚核心
+		"magnet_laser", "noah_core": # ★★★★★ 重装帕鲁 & 终焉主脑·原核矩阵
 			facing_angle += delta * 1.4
 			global_position += dir * move_speed * spd_mult * delta
 			# 引力牵引玩家
@@ -541,11 +541,11 @@ func take_damage(raw_dmg: float, is_crit: bool, effect: String, hit_pos: Vector2
 
 func _die(bf: Node, crit_main_kill: bool) -> void:
 	GameState.total_kills += 1
-	# 红狼传人：主炮暴击击杀返还1发弹药
+	# 绯红孤狼：主炮暴击击杀返还1发弹药
 	if crit_main_kill and GameState.selected_hunter_id == "lone_wolf" and is_instance_valid(bf.player_tank):
 		bf.player_tank.refill_all_ammo(1)
 
-	# 明奇学徒：元素击杀20%概率生成带电僵尸激光电击周围敌人
+	# 特斯拉学徒：元素击杀20%概率生成带电僵尸激光电击周围敌人
 	if GameState.bonus_stats.get("zombie_summon", false) and randf() < 0.22:
 		bf.trigger_zombie_shock(global_position)
 

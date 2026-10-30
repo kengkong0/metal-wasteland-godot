@@ -80,7 +80,7 @@ var lbl_meta_toast: Label
 # --- 赏金通缉图鉴界面引用 ---
 var bounties_grid: GridContainer
 
-# --- 明奇结算弹窗引用 ---
+# --- 特斯拉救护所结算弹窗引用 ---
 var mince_stats_vbox: VBoxContainer
 var btn_mince_continue: Button
 var btn_mince_settle_to_meta: Button
@@ -164,7 +164,7 @@ func _build_view_title() -> void:
 	top_row.add_theme_constant_override("separation", 14)
 	root_vbox.add_child(top_row)
 
-	lbl_title_chips = _make_outlined_label("💎 0 诺亚晶片", 20, Color(0.40, 0.95, 1.0))
+	lbl_title_chips = _make_outlined_label("💎 0 原核晶片", 20, Color(0.40, 0.95, 1.0))
 	top_row.add_child(lbl_title_chips)
 
 	lbl_title_stats = _make_outlined_label("", 14, Color(0.85, 0.88, 0.92))
@@ -229,7 +229,7 @@ func _build_view_title() -> void:
 	var sub_lbl := _make_outlined_label("METAL WASTELAND: BOUNTY OVERDRIVE", 16, Color(0.40, 0.90, 1.0))
 	title_box.add_child(sub_lbl)
 
-	var tip_lbl := _make_outlined_label("《重装机兵》战车武装改装 × 《土豆兄弟》俯视角割草肉鸽", 13, Color(0.75, 0.78, 0.82))
+	var tip_lbl := _make_outlined_label("废土战车自由改装 × 俯视角肉鸽割草突围", 13, Color(0.75, 0.78, 0.82))
 	title_box.add_child(tip_lbl)
 
 	# 按钮组
@@ -1248,7 +1248,7 @@ func _switch_to_screen(new_state: ScreenState) -> void:
 
 # --- 刷新首页 ---
 func _refresh_title_view() -> void:
-	lbl_title_chips.text = "💎 %d 诺亚晶片" % GameState.noah_chips
+	lbl_title_chips.text = "💎 %d 原核晶片" % GameState.noah_chips
 	lbl_title_stats.text = "轮回历练:%d次 | 最高波次:%d | 狩猎赏金首:%d名" % [
 		GameState.lifetime_runs, GameState.best_wave, GameState.lifetime_bounties
 	]
@@ -1733,7 +1733,7 @@ func _refresh_meta_view() -> void:
 				lbl_meta_toast.text = "🎉 已永久解锁【%s】！" % f_def["name"]
 				_refresh_meta_view()
 			else:
-				lbl_meta_toast.text = "❌ 诺亚晶片不足，需要 %d 💎！" % int(f_def["cost"])
+				lbl_meta_toast.text = "❌ 原核晶片不足，需要 %d 💎！" % int(f_def["cost"])
 				SoundManager.play("cannon_empty", 0.1, 0.0)
 		)
 		row.add_child(btn)
@@ -1741,7 +1741,7 @@ func _refresh_meta_view() -> void:
 	# 2. 永久数值科技树 (带进度条)
 	for c in meta_upgrades_vbox.get_children():
 		c.queue_free()
-	meta_upgrades_vbox.add_child(_make_outlined_label("🧬 明奇与多拉姆改造所 (永久属性科技树)", 16, Color(0.90, 0.60, 1.0)))
+	meta_upgrades_vbox.add_child(_make_outlined_label("🧬 特斯拉重工改造所 (永久属性科技树)", 16, Color(0.90, 0.60, 1.0)))
 
 	for u_def in GameData.META_UPGRADES:
 		var u_id: String = u_def["id"]
@@ -1786,7 +1786,7 @@ func _refresh_meta_view() -> void:
 				lbl_meta_toast.text = "⚡ 【%s】已强化至 Lv.%d！" % [u_def["name"], lv + 1]
 				_refresh_meta_view()
 			else:
-				lbl_meta_toast.text = "❌ 诺亚晶片不足，需要 %d 💎！" % cost
+				lbl_meta_toast.text = "❌ 原核晶片不足，需要 %d 💎！" % cost
 				SoundManager.play("cannon_empty", 0.1, 0.0)
 		)
 		row.add_child(btn)
@@ -1854,11 +1854,11 @@ func _refund_all_meta_tech() -> void:
 	GameState.save_meta_data()
 
 	SoundManager.play("upgrade", 0.05, 1.2)
-	lbl_meta_toast.text = "🎉 已全额重置所有科技点，成功返还 %d 💎 诺亚晶片！" % total_refund
+	lbl_meta_toast.text = "🎉 已全额重置所有科技点，成功返还 %d 💎 原核晶片！" % total_refund
 	_refresh_meta_view()
 
 # ============================================================================
-# 明奇博士战绩与晶片结算弹窗
+# 特斯拉战地救护所与原核晶片结算弹窗
 # ============================================================================
 func _build_mince_modal() -> void:
 	mince_modal = Control.new()
@@ -1883,7 +1883,7 @@ func _build_mince_modal() -> void:
 	vbox.add_theme_constant_override("separation", 12)
 	box.add_child(vbox)
 
-	var title := _make_outlined_label("⚡ 明奇博士研究所 — 轮回战绩与晶片结算 ⚡", 22, Color(0.45, 0.95, 1.0))
+	var title := _make_outlined_label("⚡ 特斯拉战地救护所 — 轮回战绩与原核晶片结算 ⚡", 22, Color(0.45, 0.95, 1.0))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(title)
 

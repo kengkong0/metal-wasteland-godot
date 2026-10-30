@@ -2,7 +2,7 @@ extends Node
 ## 《重装废土：赏金狂飙》 - 核心配置与图鉴数据库 (对应 GDD v1.0)
 ## 包含：6大猎人、8大底盘、武器库(主炮/副炮/S-E/Boss专属红武)、引擎库、C装置库、6大羁绊、10大赏金首。
 
-const RARITY_NAMES: Array = ["普通(★1)", "精良(★2)", "稀有(★3)", "史诗(★4)", "红狼传奇(★5)", "【神话超武(★6)】"]
+const RARITY_NAMES: Array = ["普通(★1)", "精良(★2)", "稀有(★3)", "史诗(★4)", "绯红传奇(★5)", "【神话超武(★6)】"]
 const RARITY_COLORS: Array = [
 	Color(0.82, 0.82, 0.82), # ★1 白
 	Color(0.35, 0.88, 0.45), # ★2 绿
@@ -116,8 +116,8 @@ const HUNTERS: Dictionary = {
 		"char_name": "雷恩 (Rayne)",
 		"title": "废土红鹰 · 主炮寻宝专家",
 		"quote": "“只要战车的引擎还在跳动，荒原上就没有我追不上的赏金首！”",
-		"bio": "在钢铁与风沙中长大的热血赤发少年。为了寻找失踪的父亲以及传说中击溃超级计算机诺亚的‘红狼’战车，他驾驶着由废铁手工打磨拼装的巴吉越野车踏上荒漠。凭借天生敏锐的直觉，他能在极限绝境中捕捉到赏金首的装甲弱点与地下埋藏的金属宝箱。",
-		"recommended_chassis": "荒野巴吉 (Buggy) / 艾布拉姆斯 (Abrams)",
+		"bio": "在钢铁与风沙中长大的热血赤发少年。为了寻找失踪的父亲以及传说中击溃终末智脑的‘绯红孤狼’战车，他驾驶着由废铁手工打磨拼装的巴吉越野车踏上荒漠。凭借天生敏锐的直觉，他能在极限绝境中捕捉到赏金首的装甲弱点与地下埋藏的金属宝箱。",
+		"recommended_chassis": "荒野巴吉 (Buggy) / 复合重坦 (Abrams)",
 		"trait_tags": ["主炮高爆", "赏金宝箱", "热血少年"],
 		"unlock_cost": 0,
 		"color": Color(0.95, 0.65, 0.20),
@@ -131,12 +131,12 @@ const HUNTERS: Dictionary = {
 	},
 	"lone_wolf": {
 		"id": "lone_wolf",
-		"name": "克莱因 · 红狼传人 (Klein)",
+		"name": "克莱因 · 绯红孤狼 (Klein)",
 		"char_name": "克莱因 (Klein)",
-		"title": "绯红孤狼 · 极限单主炮狙击手",
-		"quote": "“闪开。红狼的炮火从不落空，这一击会把整座要塞撕成碎片。”",
-		"bio": "身裹染血深红防风斗篷的冷冽赏金猎人。黑发赤瞳，沉默少言，贯彻‘一发入魂’的绝对炮术美学。传闻他曾在雷鸣要塞一人一车击落三架诺亚近地巡航艇。当他如狼般的血色眼眸锁定目标时，死亡倒计时便已开始。",
-		"recommended_chassis": "红狼战车 (R-Wolf) / 暴龙双炮车 (Tyrannos)",
+		"title": "绯红死神 · 极限单主炮狙击手",
+		"quote": "“闪开。绯红孤狼的炮火从不落空，这一击会把整座要塞撕成碎片。”",
+		"bio": "身裹染血深红防风斗篷的冷冽赏金猎人。黑发赤瞳，沉默少言，贯彻‘一发入魂’的绝对炮术美学。传闻他曾在雷鸣要塞一人一车击落三架近地巡航战舰。当他如狼般的血色眼眸锁定目标时，死亡倒计时便已开始。",
+		"recommended_chassis": "绯红之狼 (Crimson-Wolf) / 暴龙双炮车 (Tyrannos)",
 		"trait_tags": ["单炮极致", "超高暴击", "冷酷孤狼"],
 		"unlock_cost": 120,
 		"color": Color(0.92, 0.22, 0.18),
@@ -175,7 +175,7 @@ const HUNTERS: Dictionary = {
 		"title": "东洋修罗 · 机械外骨骼肉搏大师",
 		"quote": "“东方武道的终极奥义——这一拳，连百吨主战坦克也能彻底击穿！”",
 		"bio": "来自隐秘东方避难所的古武道传人。身着融合了高弹纳米纤维的无袖战术旗袍，双臂配备重工业碳纤维格斗外骨骼。性格英气豪爽，坚信人类血肉之躯在极限锤炼与东方内劲加持下，不仅能凌驾于冰冷的钢铁之上，甚至能将战车视作发射飞踢的弹药！",
-		"recommended_chassis": "荒野巴吉 (Buggy) / 导弹战车 (Missile Carrier)",
+		"recommended_chassis": "荒野巴吉 (Buggy) / 暴风导弹车 (Missile Carrier)",
 		"trait_tags": ["肉搏飞踢", "自爆核击", "飒爽英气"],
 		"unlock_cost": 160,
 		"color": Color(0.95, 0.40, 0.65),
@@ -189,11 +189,11 @@ const HUNTERS: Dictionary = {
 	},
 	"pochi": {
 		"id": "pochi",
-		"name": "波奇 · 生化柴犬 (Pochi)",
-		"char_name": "波奇 (Pochi)",
+		"name": "麦克斯 · 战术柴犬 (Max)",
+		"char_name": "麦克斯 (Max)",
 		"title": "荒原神犬 · 敏捷突袭与基因吞噬",
-		"quote": "“汪呜！(柴犬警惕地立起耳朵，背上的微型加特林发出清脆的上膛声)”",
-		"bio": "明奇博士最引以为傲的生化奇迹改造萌宠。一只眼神聪明机警、毛发蓬松金黄的秋田柴犬，脖子上戴着红色冒险围巾与风镜。背部搭载高科技轻量化旋转加特林机枪，拥有远超普通猎犬的极速飞奔能力与惊人的基因吞噬本能，是废土每位老猎人梦寐以求的灵魂战友。",
+		"quote": "“汪呜！(麦克斯警惕地立起耳朵，背上的微型加特林发出清脆的上膛声)”",
+		"bio": "特斯拉博士最引以为傲的生化奇迹改造萌宠。一只眼神聪明机警、毛发蓬松金黄的秋田柴犬，脖子上戴着红色冒险围巾与风镜。背部搭载高科技轻量化旋转加特林机枪，拥有远超普通猎犬的极速飞奔能力与惊人的基因吞噬本能，是废土每位老猎人梦寐以求的灵魂战友。",
 		"recommended_chassis": "武装大巴 (Battle Bus) / 荒野巴吉 (Buggy)",
 		"trait_tags": ["极速游击", "基因成长", "萌系战犬"],
 		"unlock_cost": 220,
@@ -212,8 +212,8 @@ const HUNTERS: Dictionary = {
 		"char_name": "伊戈尔 (Igor)",
 		"title": "雷法秘术 · 元素异常与电击傀儡",
 		"quote": "“电极已就绪……呵呵，愿九天雷霆与高压电弧超度尔等机械残骸。”",
-		"bio": "随身悬挂神秘符文电极管的银发紫瞳少年，明奇博士唯一的亲传炼金术士兼东方雷法修习者。性格优雅慵懒却心怀玄机，擅长将古老东方五行雷火与现代赛博生化科技交织。谈笑间即可召唤布满特斯拉电弧的高压僵尸傀儡，将整座机械兽潮化为灰烬。",
-		"recommended_chassis": "导弹战车 (Missile Carrier) / 艾布拉姆斯 (Abrams)",
+		"bio": "随身悬挂神秘符文电极管的银发紫瞳少年，特斯拉博士唯一的亲传炼金术士兼东方雷法修习者。性格优雅慵懒却心怀玄机，擅长将古老东方五行雷火与现代赛博生化科技交织。谈笑间即可召唤布满特斯拉电弧的高压机甲傀儡，将整座机械兽潮化为灰烬。",
+		"recommended_chassis": "暴风导弹车 (Missile Carrier) / 复合重坦 (Abrams)",
 		"trait_tags": ["雷火元素", "电击傀儡", "神秘方士"],
 		"unlock_cost": 280,
 		"color": Color(0.65, 0.42, 0.95),
@@ -248,7 +248,7 @@ const CHASSIS: Dictionary = {
 	},
 	"r_wolf": {
 		"id": "r_wolf",
-		"name": "红狼战车 (R-Wolf)",
+		"name": "绯红之狼 (Crimson Wolf)",
 		"unlock_cost": 150,
 		"slots": ["MAIN", "MAIN", "SUB", "SE", "SE"],
 		"base_weight": 8.0,
@@ -256,7 +256,7 @@ const CHASSIS: Dictionary = {
 		"base_sp": 130.0,
 		"speed": 220.0,
 		"color": Color(0.85, 0.18, 0.15),
-		"desc": "【深红连星】2主/1副/2SE。传奇猎人红狼座驾，主炮暴击时 30% 概率立即免费追加发射一发！",
+		"desc": "【深红连星】2主/1副/2SE。传说游侠座驾，主炮暴击时 30% 概率立即免费追加发射一发！",
 		"starter_weapons": ["cannon_105mm", "mg_77mm"],
 		"starter_engine": "eng_bulldog_v8",
 		"starter_c_unit": "cu_type66"
@@ -375,7 +375,7 @@ const WEAPONS: Dictionary = {
 		"id": "cannon_cement", "name": "水泥弹发射器", "slot": "MAIN", "min_rarity": 1,
 		"weight": 3.5, "base_dmg": 70.0, "cooldown": 2.3, "ammo": 16, "cost": 80,
 		"proj_speed": 560.0, "splash": 110.0, "burst": 1, "effect": "cement", "tags": ["artillery", "bio"],
-		"desc": "重装机兵经典神器！命中使范围敌人减速60%并削减25点护甲。"
+		"desc": "废土经典控场神器！命中使范围敌人减速60%并削减25点护甲。"
 	},
 	"cannon_195mm": {
 		"id": "cannon_195mm", "name": "195mm 爆裂巨炮", "slot": "MAIN", "min_rarity": 2,
@@ -384,10 +384,10 @@ const WEAPONS: Dictionary = {
 		"desc": "重型火炮，爆炸时向四周分裂出 5 颗子母高爆弹二次轰炸。"
 	},
 	"cannon_205_peony": {
-		"id": "cannon_205_peony", "name": "205mm 红牡丹", "slot": "MAIN", "min_rarity": 3,
+		"id": "cannon_205_peony", "name": "205mm 绯红牡丹", "slot": "MAIN", "min_rarity": 3,
 		"weight": 10.5, "base_dmg": 390.0, "cooldown": 3.5, "ammo": 10, "cost": 175,
 		"proj_speed": 680.0, "splash": 135.0, "burst": 1, "crit_bonus": 0.35, "tags": ["artillery"],
-		"desc": "名炮【红牡丹】！极高暴击倍率(2.5x)，对半血以下目标必定暴击。"
+		"desc": "名炮【绯红牡丹】！极高暴击倍率(2.5x)，对半血以下目标必定暴击。"
 	},
 	"cannon_cosmic_laser": {
 		"id": "cannon_cosmic_laser", "name": "SE-宇宙激光主炮", "slot": "MAIN", "min_rarity": 3,
@@ -494,13 +494,13 @@ const WEAPONS: Dictionary = {
 
 	# --- 六大隐藏合成【神话超武 (MYTHIC SUPER WEAPONS)】 ---
 	"evo_red_wolf": {
-		"id": "evo_red_wolf", "name": "★【超武】血色红狼·双星歼灭炮", "slot": "MAIN", "min_rarity": 5, "is_evo": true,
+		"id": "evo_red_wolf", "name": "★【超武】绯红双星·超重歼灭炮", "slot": "MAIN", "min_rarity": 5, "is_evo": true,
 		"weight": 4.0, "base_dmg": 520.0, "cooldown": 0.75, "ammo": 999, "cost": 500,
 		"proj_speed": 960.0, "splash": 150.0, "burst": 2, "crit_bonus": 1.0, "effect": "cluster", "tags": ["artillery", "lone_cub"],
-		"desc": "【皇家加农/红牡丹 + 火神加特林 融合超武】无限弹药深红等离子速射双星炮，100%必定暴击并引发十字爆破！"
+		"desc": "【皇家加农/绯红牡丹 + 火神加特林 融合超武】无限弹药深红等离子速射双星炮，100%必定暴击并引发十字爆破！"
 	},
 	"evo_omega_railgun": {
-		"id": "evo_omega_railgun", "name": "★【超武】Ω 诺亚天谴轨道炮", "slot": "MAIN", "min_rarity": 5, "is_evo": true,
+		"id": "evo_omega_railgun", "name": "★【超武】Ω 泰坦天谴轨道炮", "slot": "MAIN", "min_rarity": 5, "is_evo": true,
 		"weight": 4.2, "base_dmg": 480.0, "cooldown": 1.35, "ammo": 999, "cost": 500,
 		"proj_speed": 1600.0, "splash": 80.0, "burst": 1, "pierce": 15, "effect": "omega_laser", "tags": ["artillery", "bio", "missile"],
 		"desc": "【SE-宇宙激光炮 + 特斯拉电弧 融合超武】贯穿全屏的紫金雷霆轨道炮，命中后在全场10个敌人间弹跳高压天谴闪电！"
@@ -512,7 +512,7 @@ const WEAPONS: Dictionary = {
 		"desc": "【ATM追踪导弹 + 龙卷风多管火箭 融合超武】全自动核子导弹母巢，每2.2秒倾泻20枚高爆钻地追踪飞弹洗地！"
 	},
 	"evo_plague_inferno": {
-		"id": "evo_plague_inferno", "name": "★【超武】明奇的炼狱黑死病", "slot": "SUB", "min_rarity": 5, "is_evo": true,
+		"id": "evo_plague_inferno", "name": "★【超武】特斯拉的炼狱黑死病", "slot": "SUB", "min_rarity": 5, "is_evo": true,
 		"weight": 1.8, "base_dmg": 95.0, "cooldown": 0.14, "cost": 500,
 		"proj_speed": 620.0, "range": 440.0, "pierce": 6, "effect": "plague_fire", "tags": ["bio", "tycoon"],
 		"desc": "【强酸喷雾器 + 地狱火焰喷射器 融合超武】喷射翠绿炼狱酸火，瞬间融化18点护甲并叠满灼烧，死后触发连环尸爆！"
@@ -537,14 +537,14 @@ const WEAPONS: Dictionary = {
 const SUPER_EVOLUTIONS: Array = [
 	{
 		"result": "evo_red_wolf",
-		"name": "★【超武】血色红狼·双星歼灭炮",
+		"name": "★【超武】绯红双星·超重歼灭炮",
 		"comp_a": ["cannon_105mm", "cannon_205_peony"],
 		"comp_b": ["mg_vulcan"],
-		"formula_text": "【105mm皇家加农 / 205mm红牡丹 (★4)】 + 【火神六管加特林 (★4)】"
+		"formula_text": "【105mm皇家加农 / 205mm绯红牡丹 (★4)】 + 【火神六管加特林 (★4)】"
 	},
 	{
 		"result": "evo_omega_railgun",
-		"name": "★【超武】Ω 诺亚天谴轨道炮",
+		"name": "★【超武】Ω 泰坦天谴轨道炮",
 		"comp_a": ["cannon_cosmic_laser"],
 		"comp_b": ["sub_tesla"],
 		"formula_text": "【SE-宇宙激光主炮 (★4)】 + 【特斯拉连锁电弧 (★4)】"
@@ -558,7 +558,7 @@ const SUPER_EVOLUTIONS: Array = [
 	},
 	{
 		"result": "evo_plague_inferno",
-		"name": "★【超武】明奇的炼狱黑死病",
+		"name": "★【超武】特斯拉的炼狱黑死病",
 		"comp_a": ["sub_acid"],
 		"comp_b": ["sub_flame"],
 		"formula_text": "【强酸腐蚀喷雾器 (★4)】 + 【地狱火焰喷射器 (★4)】"
@@ -594,7 +594,7 @@ const ENGINES: Dictionary = {
 		"desc": "最大载重 28.0 吨，冲撞碾压伤害 +50%，移速 -5%。"
 	},
 	"eng_rwolf_turbo": {
-		"id": "eng_rwolf_turbo", "name": "红狼特制涡轮引擎", "rarity": 2,
+		"id": "eng_rwolf_turbo", "name": "绯红特制涡轮引擎", "rarity": 2,
 		"max_weight": 32.0, "speed_Bonus": 0.22, "main_dmg_bonus": 0.15, "cost": 140,
 		"desc": "最大载重 32.0 吨，移速 +22%，主炮伤害 +15%。"
 	},
@@ -604,7 +604,7 @@ const ENGINES: Dictionary = {
 		"desc": "最大载重 46.0 吨！为巨炮与超厚SP装甲片提供澎湃动力。"
 	},
 	"eng_noah_fusion": {
-		"id": "eng_noah_fusion", "name": "诺亚核融超载引擎", "rarity": 4,
+		"id": "eng_noah_fusion", "name": "泰坦核融超载引擎", "rarity": 4,
 		"max_weight": 62.0, "speed_Bonus": 0.25, "all_dmg_bonus": 0.35, "cost": 290,
 		"desc": "【传奇】最大载重 62.0 吨，全伤害 +35%，移速 +25%！"
 	}
@@ -728,7 +728,7 @@ const ENEMIES: Dictionary = {
 		"behavior": "shield_guard"
 	},
 	"repair_bot": {
-		"id": "repair_bot", "name": "诺亚战地维修蜂", "hp": 90.0, "speed": 155.0, "dmg": 15.0,
+		"id": "repair_bot", "name": "机械战地维修蜂", "hp": 90.0, "speed": 155.0, "dmg": 15.0,
 		"armor": 12.0, "radius": 21.0, "xp": 2, "gold": 3, "color": Color(0.30, 0.95, 0.55),
 		"behavior": "healer"
 	},
@@ -758,7 +758,7 @@ const ENEMIES: Dictionary = {
 		"behavior": "elite_mortar"
 	},
 	"elite_cyber_executioner": {
-		"id": "elite_cyber_executioner", "name": "⚡【精英】诺亚量子处决者", "is_elite": true,
+		"id": "elite_cyber_executioner", "name": "⚡【精英】天穹量子处决者", "is_elite": true,
 		"hp": 1080.0, "speed": 142.0, "dmg": 58.0, "armor": 54.0, "radius": 40.0,
 		"xp": 8, "gold": 20, "color": Color(0.85, 0.25, 0.85),
 		"behavior": "elite_blinker"
@@ -791,7 +791,7 @@ const WANTED_BOSSES: Array = [
 	},
 	{
 		"id": "boss_sand_shark",
-		"name": "沙漠之鲛·沙鲨 (Sand Shark)",
+		"name": "深沙巨鲛·地龙 (Sand Maw)",
 		"stars": 2, "min_wave": 5, "bounty": 380,
 		"hp": 3600.0, "armor": 48.0, "speed": 200.0, "dmg": 58.0, "radius": 60.0,
 		"color": Color(0.32, 0.48, 0.72),
@@ -801,7 +801,7 @@ const WANTED_BOSSES: Array = [
 	},
 	{
 		"id": "boss_skunks",
-		"name": "臭鼬军团长·斯卡鲁 (Skunks)",
+		"name": "狂飙沙盗首领·斯卡普 (Scarp)",
 		"stars": 2, "min_wave": 7, "bounty": 480,
 		"hp": 4600.0, "armor": 38.0, "speed": 245.0, "dmg": 54.0, "radius": 50.0,
 		"color": Color(0.88, 0.35, 0.18),
@@ -821,13 +821,13 @@ const WANTED_BOSSES: Array = [
 	},
 	{
 		"id": "boss_gomez",
-		"name": "掠夺王·戈麦斯 (Gomez)",
+		"name": "荒原劫掠王·巴洛克 (Baroque)",
 		"stars": 3, "min_wave": 11, "bounty": 850,
 		"hp": 7600.0, "armor": 68.0, "speed": 155.0, "dmg": 78.0, "radius": 58.0,
 		"color": Color(0.45, 0.32, 0.25),
 		"mechanic": "emp_stealth",
 		"reward_weapon": "cannon_cosmic_laser",
-		"desc": "★★★☆☆ | 红狼宿敌！投掷烟雾隐身，发射电磁网减速并蓄力轰击。"
+		"desc": "★★★☆☆ | 宿命死敌！投掷烟雾隐身，发射电磁网减速并蓄力轰击。"
 	},
 	{
 		"id": "boss_chimera",
@@ -861,7 +861,7 @@ const WANTED_BOSSES: Array = [
 	},
 	{
 		"id": "boss_noah",
-		"name": "灭世主脑·诺亚核心 (Master NOAH)",
+		"name": "终焉主脑·原核矩阵 (Master OMEGA CORE)",
 		"stars": 5, "min_wave": 20, "bounty": 5000,
 		"hp": 26000.0, "armor": 100.0, "speed": 120.0, "dmg": 120.0, "radius": 88.0,
 		"color": Color(0.95, 0.20, 0.45),
@@ -921,14 +921,14 @@ const META_FEATURES: Array = [
 	},
 	{
 		"id": "mince_defib_lv2",
-		"name": "⚡ 明奇卫星轨道除颤仪",
+		"name": "⚡ 特斯拉轨道除颤卫星",
 		"cost": 320,
 		"desc": "除车库复活外，每局额外获得 1 次【战场原地满血电击复苏】：步兵HP归零时降下雷霆满血复活并麻痹全场！"
 	}
 ]
 
 # ============================================================================
-# 11. 局外永久数值强化科技树 (META_UPGRADES —— 明奇与多拉姆改造所)
+# 11. 局外永久数值强化科技树 (META_UPGRADES —— 特斯拉重工改造所)
 # ============================================================================
 const META_UPGRADES: Array = [
 	{
@@ -973,7 +973,7 @@ const META_UPGRADES: Array = [
 	},
 	{
 		"id": "meta_crit_dodge",
-		"name": "💻 诺亚量子火控校准",
+		"name": "💻 天穹量子火控校准",
 		"max_lv": 6,
 		"base_cost": 65,
 		"cost_step": 45,
@@ -1004,7 +1004,7 @@ const MAPS: Array = [
 	{
 		"id": "map_1",
 		"index": 0,
-		"name": "第1章：拉多镇荒野·巨炮峡谷",
+		"name": "第1章：红石哨所荒野·巨炮峡谷",
 		"waves": 10,
 		"hp_mult": 1.0,
 		"dmg_mult": 1.0,
@@ -1033,7 +1033,7 @@ const MAPS: Array = [
 		"bg_color": Color(0.28, 0.19, 0.11),
 		"grid_color": Color(0.35, 0.24, 0.14),
 		"border_color": Color(0.95, 0.65, 0.20),
-		"desc": "【炽热沙海】小怪：猎犬/毒气桶/酸蜗牛/迫击炮蟹 | 精英：喷火装甲车 | 赏金首：【沙鲨】&【臭鼬斯卡鲁】"
+		"desc": "【炽热沙海】小怪：猎犬/毒气桶/酸蜗牛/迫击炮蟹 | 精英：喷火装甲车 | 赏金首：【深沙巨鲛】&【狂飙斯卡普】"
 	},
 	{
 		"id": "map_3",
@@ -1050,7 +1050,7 @@ const MAPS: Array = [
 		"bg_color": Color(0.15, 0.16, 0.18),
 		"grid_color": Color(0.21, 0.22, 0.25),
 		"border_color": Color(0.50, 0.75, 0.92),
-		"desc": "【工业废墟】小怪：远程狙击炮/护盾卫士/战地维修蜂 | 精英：导弹巨兽 | 赏金首：【百足列车】&【戈麦斯】"
+		"desc": "【工业废墟】小怪：远程狙击炮/护盾卫士/战地维修蜂 | 精英：导弹巨兽 | 赏金首：【百足列车】&【劫掠王巴洛克】"
 	},
 	{
 		"id": "map_4",
@@ -1072,7 +1072,7 @@ const MAPS: Array = [
 	{
 		"id": "map_5",
 		"index": 4,
-		"name": "第5章：地球救济中心·诺亚地心",
+		"name": "第5章：人类终焉中枢·深层地核",
 		"waves": 10,
 		"hp_mult": 5.50,
 		"dmg_mult": 3.00,
@@ -1084,7 +1084,7 @@ const MAPS: Array = [
 		"bg_color": Color(0.13, 0.09, 0.18),
 		"grid_color": Color(0.20, 0.13, 0.28),
 		"border_color": Color(0.95, 0.25, 0.60),
-		"desc": "【终局要塞】全特种军团混编 | 精英：诺亚量子处决者 | 赏金首：【重装帕鲁】&【灭世主脑·诺亚】"
+		"desc": "【终局要塞】全特种军团混编 | 精英：天穹量子处决者 | 赏金首：【重装帕鲁】&【终焉主脑·原核矩阵】"
 	}
 ]
 
@@ -1118,7 +1118,7 @@ const DIFFICULTIES: Dictionary = {
 		"bonus_start_gold": 0,
 		"show_hints": true,
 		"color": Color(1.00, 0.85, 0.25),
-		"desc": "敌军生命×1.45、伤害×1.35、密度+22%！【显示流派与超武配件提示】，结算诺亚晶片 ×1.40！"
+		"desc": "敌军生命×1.45、伤害×1.35、密度+22%！【显示流派与超武配件提示】，结算原核晶片 ×1.40！"
 	},
 	"hell": {
 		"id": "hell",
@@ -1132,7 +1132,7 @@ const DIFFICULTIES: Dictionary = {
 		"bonus_start_gold": 0,
 		"show_hints": false,
 		"color": Color(1.00, 0.28, 0.25),
-		"desc": "敌军生命×2.35、伤害×1.90、密度+50%！【硬核盲配：隐藏所有流派与超武合成提示】，结算晶片 ×2.30！"
+		"desc": "敌军生命×2.35、伤害×1.90、密度+50%！【硬核盲配：隐藏所有流派与超武合成提示】，结算原核晶片 ×2.30！"
 	}
 }
 

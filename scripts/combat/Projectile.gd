@@ -159,7 +159,7 @@ func _on_hit_enemy(bf: Node, target: Node2D) -> void:
 					if not weapon_id.is_empty():
 						GameState.record_weapon_damage(weapon_id, sub_dmg)
 
-	# 4. 特斯拉电弧 / Ω诺亚天谴轨道炮 连锁闪电
+	# 4. 特斯拉电弧 / Ω泰坦天谴轨道炮 连锁闪电
 	if effect_type == "electric" or effect_type == "omega_laser":
 		var jumps: int = 10 if effect_type == "omega_laser" else 3
 		var max_dist: float = 340.0 if effect_type == "omega_laser" else 210.0

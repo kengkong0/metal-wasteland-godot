@@ -1,5 +1,5 @@
 extends Node
-## 《重装废土：赏金狂飙》 - 全局状态机、局外永久存档与《重装机兵》载重=SP 核心公式引擎
+## 《重装废土：赏金狂飙》 - 全局状态机、局外永久存档与战车载重=SP 核心公式引擎
 
 signal stats_updated
 signal meta_updated
@@ -34,7 +34,7 @@ var settings: Dictionary = {}
 # ============================================================================
 # 一、 局外永久养成与轮回存档数据 (Meta-Progression)
 # ============================================================================
-var noah_chips: int = 160 # 局外永久货币：诺亚晶片 💎 (新档默认赠送160晶片供体验)
+var noah_chips: int = 160 # 局外永久货币：原核晶片 💎 (新档默认赠送160晶片供体验)
 var unlocked_hunters: Array = ["bounty_hunter", "mechanic"]
 var unlocked_chassis: Array = ["buggy", "abrams"]
 var unlocked_features: Array = []
@@ -323,7 +323,7 @@ func get_enemy_dmg_multiplier() -> float:
 func get_enemy_speed_multiplier() -> float:
 	return float(get_current_difficulty_def()["speed_mult"])
 
-# --- 轮回结束结算：将本局波次、击杀、赏金首与金币折算为【诺亚晶片 💎】并判定解锁下一张地图 ---
+# --- 轮回结束结算：将本局波次、击杀、赏金首与金币折算为【原核晶片 💎】并判定解锁下一张地图 ---
 func settle_run_rewards(is_victory: bool) -> Dictionary:
 	if run_already_settled:
 		return {"total": 0, "wave_chips": 0, "kill_chips": 0, "boss_chips": 0, "gold_chips": 0, "win_chips": 0, "chip_mult": 1.0, "unlocked_next_map": ""}

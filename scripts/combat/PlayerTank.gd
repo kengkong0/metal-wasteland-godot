@@ -327,7 +327,7 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 		var splash: float = float(w_def.get("splash", 60.0))
 		var p_spd: float = float(w_def.get("proj_speed", 650.0))
 
-		# 判定主炮连射 (红狼底盘暴击连射 / 99式神话C装置 / 重炮轰鸣6件)
+		# 判定主炮连射 (绯红之狼底盘暴击连射 / 99式神话C装置 / 重炮轰鸣6件)
 		var extra_shots: int = 0
 		if is_crit and GameState.selected_chassis_id == "r_wolf" and randf() < 0.35:
 			extra_shots += 1
@@ -532,7 +532,7 @@ func take_damage(amount: float, _source_pos: Vector2) -> void:
 				bf.trigger_screen_shake(14.0, 0.4)
 				bf.fx_layer.spawn_laser_beam(human_pos + Vector2(0, -450), human_pos, Color(0.35, 0.95, 1.0), 16.0)
 				bf.fx_layer.spawn_explosion(human_pos, 240.0, Color(0.35, 0.95, 1.0))
-				bf.fx_layer.spawn_text(human_pos, "⚡ 明奇卫星轨道除颤仪触发! 原地满血复苏! ⚡", Color(0.35, 1.0, 0.95), 1.55)
+				bf.fx_layer.spawn_text(human_pos, "⚡ 特斯拉轨道除颤卫星触发! 原地满血复苏! ⚡", Color(0.35, 1.0, 0.95), 1.55)
 				for e in bf.enemies_container.get_children():
 					if is_instance_valid(e):
 						e.take_damage(350.0, true, "electric", human_pos, false)

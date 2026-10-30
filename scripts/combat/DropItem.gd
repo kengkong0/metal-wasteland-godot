@@ -1,5 +1,5 @@
 extends Node2D
-## 战场掉落物节点：废铁零件(XP)、赏金金币(G)、装甲维修包(SP)、波奇基因肉块、埋藏金属宝箱
+## 战场掉落物节点：废铁零件(XP)、赏金金币(G)、装甲维修包(SP)、战犬基因肉块、埋藏金属宝箱
 
 var drop_type: String = "scrap" # "scrap", "gold", "sp_kit", "bio_meat", "buried_chest"
 var value: int = 1

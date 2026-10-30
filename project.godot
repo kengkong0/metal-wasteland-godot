@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="重装废土：赏金狂飙 (Metal Wasteland: Bounty Overdrive)"
-config/description="《重装机兵》战车改装与赏金首狩猎 × 《土豆兄弟》俯视角波次割草肉鸽"
+config/description="废土战车自由改装与赏金首狩猎 × 俯视角波次割草肉鸽"
 run/main_scene="res://scenes/Main.tscn"
 config/features=PackedStringArray("4.2", "Forward Plus")
 config/icon="res://icon.svg"

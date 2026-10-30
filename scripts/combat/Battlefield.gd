@@ -741,7 +741,7 @@ func _process(delta: float) -> void:
 		wave_time_left = maxf(wave_time_left + 15.0, 45.0)
 		_spawn_wanted_boss(GameState.active_wanted_boss_id)
 
-	# 2. 红狼乱入救援
+	# 2. 绯红孤狼乱入救援
 	if boss_spawned_this_wave and not red_wolf_rescued_this_run and not player_tank.is_human_mode:
 		if player_tank.current_sp > 0.0 and player_tank.current_sp <= GameState.max_sp * 0.25:
 			_trigger_red_wolf_rescue()
@@ -855,7 +855,7 @@ func _trigger_red_wolf_rescue() -> void:
 	trigger_screen_shake(16.0, 0.5)
 	banner_wanted.visible = true
 	banner_timer = 4.5
-	lbl_wanted_banner.text = "🔥 传奇猎人【红狼】驾驶红狼号乱入支援！！ 🔥"
+	lbl_wanted_banner.text = "🔥 传奇游侠【绯红孤狼】驾驶绯红之狼乱入支援！！ 🔥"
 
 	var p_pos: Vector2 = player_tank.global_position
 	fx_layer.spawn_laser_beam(Vector2(arena_rect.position.x, p_pos.y), Vector2(arena_rect.end.x, p_pos.y), Color(1.0, 0.2, 0.15), 18.0)
@@ -905,7 +905,7 @@ func on_wanted_boss_defeated(boss_node: Node2D) -> void:
 
 func trigger_zombie_shock(pos: Vector2) -> void:
 	fx_layer.spawn_explosion(pos, 115.0, Color(0.55, 0.35, 1.0))
-	fx_layer.spawn_text(pos, "⚡明奇电击脉冲!", Color(0.65, 0.5, 1.0), 1.05)
+	fx_layer.spawn_text(pos, "⚡特斯拉电弧脉冲!", Color(0.65, 0.5, 1.0), 1.05)
 	for e in enemies_container.get_children():
 		if is_instance_valid(e) and pos.distance_to(e.global_position) <= 130.0:
 			e.take_damage(75.0 + GameState.level * 12.0, false, "electric", pos, false)
