@@ -23,6 +23,12 @@ var weapon_timers: Array = []
 var weapon_ammo: Array = []
 var all_out_timer: float = 0.0
 var all_out_max_cd: float = 10.0
+var intercept_timers: Dictionary = {}
+var nitro_boost_timer: float = 0.0
+var overclock_timer: float = 0.0
+var smoke_evade_timer: float = 0.0
+var iron_dome_timer: float = 0.0
+var iron_dome_zap_timer: float = 0.0
 var orbit_angle: float = 0.0
 var repair_progress: float = 0.0
 var repair_time_needed: float = 4.5
@@ -46,6 +52,12 @@ func init_for_wave(spawn_pos: Vector2) -> void:
 	var cu: Dictionary = GameData.C_UNITS.get(GameState.equipped_c_unit_id, GameData.C_UNITS["cu_type66"])
 	all_out_max_cd = float(cu.get("all_out_cd", 10.0))
 	all_out_timer = 0.0
+	intercept_timers.clear()
+	nitro_boost_timer = 0.0
+	overclock_timer = 0.0
+	smoke_evade_timer = 0.0
+	iron_dome_timer = 0.0
+	iron_dome_zap_timer = 0.0
 
 	var ammo_mult: float = 1.0 + GameState.get_meta_level("meta_reload") * 0.15
 	sync_weapons_from_state(ammo_mult)
@@ -92,6 +104,14 @@ func _process(delta: float) -> void:
 		dodge_roll_timer -= delta
 	if emp_slow_timer > 0.0:
 		emp_slow_timer -= delta
+	if nitro_boost_timer > 0.0:
+		nitro_boost_timer -= delta
+	if overclock_timer > 0.0:
+		overclock_timer -= delta
+	if smoke_evade_timer > 0.0:
+		smoke_evade_timer -= delta
+	if iron_dome_timer > 0.0:
+		iron_dome_timer -= delta
 
 	# 检查是否踩在毒气铁桶留下的强酸毒池上
 	toxic_tick_timer += delta
@@ -129,6 +149,7 @@ func _process(delta: float) -> void:
 	# 如果在战车中，或者搭载了【瓦尔基里自律战斗AI】，战车武器持续开火
 	var cu: Dictionary = GameData.C_UNITS.get(GameState.equipped_c_unit_id, {})
 	if not is_human_mode or cu.get("auto_turret_wreck", false):
+		_process_interception_system(delta, bf)
 		_process_tank_weapons(delta, bf)
 
 	queue_redraw()
@@ -165,7 +186,7 @@ func _process_tank_mode(delta: float, bf: Node, move_input: Vector2) -> void:
 	if GameState.sp_regen_per_sec > 0.0:
 		current_sp = minf(GameState.max_sp, current_sp + GameState.sp_regen_per_sec * delta)
 
-	var combo_spd_boost: float = float(GameState.bonus_stats.get("combo_speed_pct", 0.0))
+	var combo_spd_boost: float = float(GameState.bonus_stats.get("combo_speed_pct", 0.0)) + (0.42 if nitro_boost_timer > 0.0 else 0.0)
 	var eff_spd: float = GameState.move_speed * (0.58 if emp_slow_timer > 0.0 else 1.0) * (1.0 + combo_spd_boost)
 	var target_vel: Vector2 = move_input * eff_spd
 	current_velocity = current_velocity.lerp(target_vel, 10.0 * delta)
@@ -265,14 +286,14 @@ func _process_tank_weapons(delta: float, bf: Node) -> void:
 	else:
 		turret_angle = chassis_angle
 
-	# C装置【全弹发射】触发 (按 [Q] 或 所罗门2型自动触发)
+	# C装置专属战术主动技触发 (按 [Q] / 坦克模式下按 [空格] / 所罗门2型自动触发)
 	var cu: Dictionary = GameData.C_UNITS.get(GameState.equipped_c_unit_id, {})
 	if all_out_timer <= 0.0:
-		if Input.is_action_just_pressed("all_out_attack") or GameState.equipped_c_unit_id == "cu_solomon2":
-			if bf.enemies_container.get_child_count() > 0:
-				_trigger_all_out_attack(bf)
+		var manual_skill_pressed: bool = Input.is_action_just_pressed("all_out_attack") or (not is_human_mode and Input.is_action_just_pressed("dodge_roll"))
+		if manual_skill_pressed or (GameState.equipped_c_unit_id == "cu_solomon2" and bf.enemies_container.get_child_count() > 0):
+			_trigger_all_out_attack(bf)
 
-	var reload_mult: float = 1.0 + GameState.bonus_stats.get("reload_speed_pct", 0.0) + GameState.bonus_stats.get("combo_reload_pct", 0.0)
+	var reload_mult: float = 1.0 + GameState.bonus_stats.get("reload_speed_pct", 0.0) + GameState.bonus_stats.get("combo_reload_pct", 0.0) + (0.35 if overclock_timer > 0.0 else 0.0)
 	var is_moving: bool = current_velocity.length() > 25.0
 
 	for i in range(GameState.equipped_weapons.size()):
@@ -336,7 +357,7 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 		if is_crit and GameState.selected_chassis_id == "r_wolf" and randf() < 0.35:
 			extra_shots += 1
 		var cu: Dictionary = GameData.C_UNITS.get(GameState.equipped_c_unit_id, {})
-		if randf() < float(cu.get("double_shot_chance", 0.0)):
+		if overclock_timer > 0.0 or randf() < float(cu.get("double_shot_chance", 0.0)):
 			extra_shots += 1
 		if GameState.synergy_counts.get("artillery", 0) >= 6 and randf() < 0.50:
 			extra_shots += 1
@@ -347,11 +368,16 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 				var spread: float = (float(b) - float(burst - 1) * 0.5) * 0.08 + v * 0.05
 				bf.spawn_player_projectile(global_position + aim_dir * 26.0, aim_dir.rotated(spread), p_spd, dmg, splash, effect, is_crit, true, pierce, w_id)
 
+		var w_tons: float = float(w_def.get("weight", 5.0))
 		if effect == "laser":
 			SoundManager.play("laser", 0.06, 0.0)
 		else:
-			SoundManager.play_cannon_by_caliber(float(w_def.get("weight", 5.0)))
-		bf.trigger_screen_shake(4.5, 0.12)
+			SoundManager.play_cannon_by_caliber(w_tons)
+		# 定向后坐力冲量反推与方向性弹簧震屏
+		if not free_all_out:
+			var recoil_kick: float = clampf(w_tons * 9.5, 24.0, 105.0)
+			current_velocity -= aim_dir * recoil_kick
+		bf.trigger_screen_shake(4.5 + w_tons * 0.35, 0.14, -aim_dir)
 		return true
 
 	elif slot == "SUB":
@@ -360,7 +386,7 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 		if not is_instance_valid(target):
 			return false
 		var aim_dir: Vector2 = (target.global_position - global_position).normalized()
-		var pellets: int = int(w_def.get("pellets", 1))
+		var pellets: int = int(w_def.get("pellets", 1)) * (2 if overclock_timer > 0.0 else 1)
 		var pierce: int = int(w_def.get("pierce", 1))
 		var p_spd: float = float(w_def.get("proj_speed", 720.0))
 
@@ -422,19 +448,188 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 
 	return false
 
+func _process_interception_system(delta: float, bf: Node) -> void:
+	# 1. 【铁穹电磁力场】主动开启期间：320px 绝对防御圈瞬间蒸发一切敌弹并电击震退近身怪
+	if iron_dome_timer > 0.0:
+		for p in bf.projectiles_container.get_children():
+			if is_instance_valid(p) and p.is_enemy and global_position.distance_to(p.global_position) <= 320.0:
+				_execute_interception_hit(bf, p, Color(0.35, 0.95, 1.0), 3.0, 0.0, false)
+		iron_dome_zap_timer -= delta
+		if iron_dome_zap_timer <= 0.0:
+			iron_dome_zap_timer = 0.45
+			bf.fx_layer.spawn_shockwave(global_position, 220.0, Color(0.35, 0.95, 1.0))
+			for e in bf.enemies_container.get_children():
+				if is_instance_valid(e) and global_position.distance_to(e.global_position) <= 210.0 + e.radius:
+					var zap_d: float = 45.0 + GameState.level * 10.0
+					e.take_damage(zap_d, false, "electric", global_position, false)
+					GameState.record_weapon_damage("cu_all_out", zap_d)
+					if not e.is_boss:
+						e.global_position += (e.global_position - global_position).normalized() * 36.0
+
+	# 2. 统计所有独立迎击源 (神之右手C装置 + 密集阵CIWS + 宙斯盾激光网 + 极星超武)
+	var cd_haste: float = 1.0 + float(GameState.bonus_stats.get("intercept_cd_mult", 0.0))
+	if GameState.equipped_c_unit_id == "cu_interceptor_ai":
+		cd_haste += 0.30
+
+	var sources: Array = []
+	var cu: Dictionary = GameData.C_UNITS.get(GameState.equipped_c_unit_id, {})
+	if float(cu.get("interception_range", 0.0)) > 0.0:
+		sources.append({
+			"key": "cu_radar",
+			"range": float(cu.get("interception_range", 220.0)),
+			"cd": float(cu.get("interception_cd", 0.35)) / cd_haste,
+			"col": Color(0.35, 0.95, 1.0),
+			"heal": 4.0,
+			"splash_dmg": 0.0,
+			"reflect": false
+		})
+
+	for idx in range(GameState.equipped_weapons.size()):
+		var w_entry: Dictionary = GameState.equipped_weapons[idx]
+		var wid: String = w_entry["id"]
+		var rar: int = int(w_entry.get("rarity", 0))
+		if wid == "sub_ciws_phalanx":
+			sources.append({
+				"key": "ciws_%d" % idx,
+				"range": 195.0 + rar * 12.0,
+				"cd": maxf(0.10, (0.28 - rar * 0.03) / cd_haste),
+				"col": Color(1.0, 0.88, 0.35),
+				"heal": 2.0,
+				"splash_dmg": GameState.get_weapon_effective_damage(wid, rar) * 1.25,
+				"reflect": false
+			})
+		elif wid == "se_aegis":
+			sources.append({
+				"key": "aegis_%d" % idx,
+				"range": 240.0 + rar * 15.0,
+				"cd": maxf(0.12, (0.38 - rar * 0.04) / cd_haste),
+				"col": Color(0.30, 1.0, 0.65),
+				"heal": 8.0 + rar * 2.0,
+				"splash_dmg": 0.0,
+				"reflect": false
+			})
+		elif wid == "evo_aegis_star":
+			sources.append({
+				"key": "evostar_%d" % idx,
+				"range": 320.0,
+				"cd": 0.10 / cd_haste,
+				"col": Color(0.45, 0.95, 1.0),
+				"heal": 10.0,
+				"splash_dmg": 85.0 + GameState.level * 12.0,
+				"reflect": true
+			})
+
+	if sources.is_empty():
+		return
+
+	for s in sources:
+		var k: String = s["key"]
+		var cur_t: float = float(intercept_timers.get(k, 0.0)) - delta
+		if cur_t <= 0.0:
+			var hit_proj: Node2D = null
+			var best_d: float = float(s["range"])
+			for p in bf.projectiles_container.get_children():
+				if is_instance_valid(p) and p.is_enemy and not p.is_queued_for_deletion():
+					var d: float = global_position.distance_to(p.global_position)
+					if d <= best_d:
+						best_d = d
+						hit_proj = p
+			if is_instance_valid(hit_proj):
+				_execute_interception_hit(bf, hit_proj, s["col"], float(s["heal"]), float(s["splash_dmg"]), bool(s["reflect"]))
+				cur_t = float(s["cd"])
+			else:
+				cur_t = 0.0
+		intercept_timers[k] = cur_t
+
+func _execute_interception_hit(bf: Node, proj: Node2D, beam_col: Color, sp_heal: float, splash_dmg: float, reflect_laser: bool) -> void:
+	var p_pos: Vector2 = proj.global_position
+	bf.fx_layer.spawn_laser_beam(global_position, p_pos, beam_col, 3.5)
+	bf.fx_layer.spawn_explosion(p_pos, 22.0, beam_col)
+	bf.fx_layer.spawn_metal_debris(p_pos, beam_col, 4)
+	bf.fx_layer.spawn_text(p_pos + Vector2(0, -10), "🛡️迎击!", beam_col, 0.92)
+	SoundManager.play("interception_chirp", 0.08, -3.0)
+	GameState.report_metric("intercept_count", 1, true)
+	if sp_heal > 0.0:
+		heal_sp(sp_heal)
+	if splash_dmg > 0.0:
+		for e in bf.enemies_container.get_children():
+			if is_instance_valid(e) and p_pos.distance_to(e.global_position) <= 85.0 + e.radius:
+				e.take_damage(splash_dmg, false, "electric", p_pos, false)
+	if reflect_laser:
+		var near_e: Node2D = bf.get_nearest_enemy(p_pos, 480.0)
+		if is_instance_valid(near_e):
+			bf.fx_layer.spawn_laser_beam(p_pos, near_e.global_position, Color(0.4, 0.95, 1.0), 4.5)
+			near_e.take_damage(splash_dmg * 1.5, true, "laser", p_pos, false)
+	if bf.has_method("recycle_projectile"):
+		bf.recycle_projectile(proj)
+	else:
+		proj.queue_free()
+
 func _trigger_all_out_attack(bf: Node) -> void:
 	all_out_timer = all_out_max_cd
 	GameState.report_metric("all_out_count", 1, true)
-	bf.fx_layer.spawn_text(global_position + Vector2(0, -28), "★ C装置：全弹发射 (ALL-OUT ATTACK)!! ★", Color(1.0, 0.85, 0.2), 1.45)
-	bf.trigger_screen_shake(9.0, 0.28)
-	SoundManager.play("se_missile", 0.04, 2.0)
-
+	var cu: Dictionary = GameData.C_UNITS.get(GameState.equipped_c_unit_id, GameData.C_UNITS["cu_type66"])
+	var skill_id: String = cu.get("skill_id", "all_out")
 	var main_target: Node2D = bf.get_highest_threat_enemy(global_position, 950.0)
-	for i in range(GameState.equipped_weapons.size()):
-		var w_entry: Dictionary = GameState.equipped_weapons[i]
-		var w_def: Dictionary = GameData.WEAPONS.get(w_entry["id"], {})
-		if w_def.get("slot", "") in ["MAIN", "SE"]:
-			_try_fire_weapon(bf, i, w_entry["id"], w_entry.get("rarity", 0), w_def, false, main_target, true)
+
+	match skill_id:
+		"god_barrage":
+			nitro_boost_timer = 3.0
+			bf.fx_layer.spawn_text(global_position + Vector2(0, -28), "🔥 所罗门2型：【神之突击齐射 + 氮气突进】!! 🔥", Color(1.0, 0.65, 0.2), 1.45)
+			bf.fx_layer.spawn_shockwave(global_position, 180.0, Color(1.0, 0.65, 0.2))
+			for i in range(GameState.equipped_weapons.size()):
+				var w_entry: Dictionary = GameState.equipped_weapons[i]
+				var w_def: Dictionary = GameData.WEAPONS.get(w_entry["id"], {})
+				if w_def.get("slot", "") in ["MAIN", "SE"]:
+					_try_fire_weapon(bf, i, w_entry["id"], w_entry.get("rarity", 0), w_def, false, main_target, true)
+		"overclock":
+			overclock_timer = 4.5
+			bf.fx_layer.spawn_text(global_position + Vector2(0, -28), "⚡ 99式神话：【超频双发过载 4.5s】!! ⚡", Color(1.0, 0.90, 0.25), 1.45)
+			bf.fx_layer.spawn_shockwave(global_position, 210.0, Color(1.0, 0.88, 0.25))
+			for i in range(weapon_timers.size()):
+				weapon_timers[i] = 0.0
+		"smoke_decoy":
+			smoke_evade_timer = 2.8
+			var decoy_pos: Vector2 = global_position
+			bf.fx_layer.spawn_text(decoy_pos + Vector2(0, -28), "💨 幻影全息：【热烟幕100%闪避 + 电磁诱饵】!! 💨", Color(0.45, 0.95, 1.0), 1.45)
+			bf.fx_layer.spawn_shockwave(decoy_pos, 220.0, Color(0.45, 0.95, 1.0))
+			for e in bf.enemies_container.get_children():
+				if is_instance_valid(e) and decoy_pos.distance_to(e.global_position) <= 220.0 + e.radius:
+					var emp_d: float = 135.0 + GameState.level * 18.0
+					e.take_damage(emp_d, true, "electric", decoy_pos, false)
+					e.stun_timer = maxf(e.stun_timer, 1.8)
+					GameState.record_weapon_damage("cu_all_out", emp_d)
+		"valkyrie_sweep":
+			bf.fx_layer.spawn_text(global_position + Vector2(0, -28), "🛰️ 瓦尔基里：【女武神天基死光犁地】!! 🛰️", Color(0.4, 0.95, 1.0), 1.45)
+			var base_dir: Vector2 = Vector2.from_angle(turret_angle)
+			for beam_i in range(-1, 2):
+				var b_dir: Vector2 = base_dir.rotated(beam_i * 0.24)
+				var end_pt: Vector2 = global_position + b_dir * 780.0
+				bf.fx_layer.spawn_laser_beam(global_position, end_pt, Color(0.35, 0.95, 1.0), 12.0)
+				for k in range(1, 7):
+					bf.fx_layer.spawn_explosion(global_position + b_dir * (k * 120.0), 75.0, Color(0.35, 0.92, 1.0))
+			for e in bf.enemies_container.get_children():
+				if is_instance_valid(e):
+					var to_e: Vector2 = e.global_position - global_position
+					if to_e.length() <= 800.0 and to_e.normalized().dot(base_dir) >= 0.65:
+						var sweep_dmg: float = 340.0 + GameState.level * 35.0
+						e.take_damage(sweep_dmg, true, "omega_laser", e.global_position, true)
+						GameState.record_weapon_damage("cu_all_out", sweep_dmg)
+		"iron_dome":
+			iron_dome_timer = 3.5
+			iron_dome_zap_timer = 0.0
+			bf.fx_layer.spawn_text(global_position + Vector2(0, -28), "🛡️ 神之右手：【铁穹电磁防御力场 3.5s】!! 🛡️", Color(0.35, 1.0, 0.85), 1.45)
+			bf.fx_layer.spawn_shockwave(global_position, 320.0, Color(0.35, 1.0, 0.85))
+		_:
+			bf.fx_layer.spawn_text(global_position + Vector2(0, -28), "★ C装置：全弹齐射 (ALL-OUT ATTACK)!! ★", Color(1.0, 0.85, 0.2), 1.45)
+			for i in range(GameState.equipped_weapons.size()):
+				var w_entry: Dictionary = GameState.equipped_weapons[i]
+				var w_def: Dictionary = GameData.WEAPONS.get(w_entry["id"], {})
+				if w_def.get("slot", "") in ["MAIN", "SE"]:
+					_try_fire_weapon(bf, i, w_entry["id"], w_entry.get("rarity", 0), w_def, false, main_target, true)
+
+	bf.trigger_screen_shake(9.5, 0.28)
+	SoundManager.play("c_unit_skill", 0.04, 2.0)
 
 	# 导弹暴雨 (6) 羁绊：额外召唤轨道卫星激光轰炸全场
 	if GameState.synergy_counts.get("missile", 0) >= 6:
@@ -485,7 +680,7 @@ func on_enemy_collision(enemy: Node2D, _delta: float) -> void:
 	# 1. 战车重型履带高速物理碾压 (基于战车总吨位与行驶速度)
 	if is_tank_moving_fast and not enemy.is_boss:
 		var eng: Dictionary = GameData.ENGINES.get(GameState.equipped_engine_id, {})
-		var ram_mult: float = 1.0 + float(eng.get("ram_bonus", 0.0))
+		var ram_mult: float = 1.0 + float(eng.get("ram_bonus", 0.0)) + (0.50 if nitro_boost_timer > 0.0 else 0.0)
 		if GameState.selected_chassis_id == "mammoth":
 			ram_mult += 2.5
 		elif GameState.selected_chassis_id == "tyrannos":
@@ -505,9 +700,12 @@ func on_enemy_collision(enemy: Node2D, _delta: float) -> void:
 			GameState.record_weapon_damage("chassis_ram", ram_dmg)
 			GameState.report_metric("crushed_enemies", 1, true)
 			bf.fx_layer.spawn_explosion(enemy.global_position, 55.0, Color(1.0, 0.45, 0.15))
+			bf.fx_layer.spawn_metal_debris(enemy.global_position, enemy.base_color, 7)
 			bf.fx_layer.spawn_text(enemy.global_position, "💥 碾碎 CRUSH!", Color(1.0, 0.88, 0.2), 1.2)
-			SoundManager.play("explosion_small", 0.08, 1.4)
-			bf.trigger_screen_shake(3.2, 0.08)
+			SoundManager.play("ram_metal_crush", 0.08, 1.4)
+			bf.trigger_screen_shake(4.2, 0.10, current_velocity.normalized())
+			if bf.has_method("trigger_hitstop"):
+				bf.trigger_hitstop(0.024, 0.08)
 		else:
 			enemy.take_damage(ram_dmg, false, "ram", global_position, false)
 			GameState.record_weapon_damage("chassis_ram", ram_dmg)
@@ -537,8 +735,8 @@ func take_damage(amount: float, _source_pos: Vector2 = Vector2.ZERO) -> void:
 		return
 	var bf: Node = get_parent()
 
-	# 闪避判定 + 幻影全息诱饵脉冲
-	if randf() < GameState.dodge_chance:
+	# 闪避判定 (含热烟幕 100% 绝对闪避) + 幻影全息诱饵脉冲
+	if smoke_evade_timer > 0.0 or randf() < GameState.dodge_chance:
 		GameState.report_metric("dodge_count", 1, true)
 		bf.fx_layer.spawn_text(get_active_position(), "闪避 MISS!", Color(0.45, 0.95, 1.0), 1.05)
 		if GameState.equipped_c_unit_id == "cu_mirage":
@@ -672,12 +870,29 @@ func _draw() -> void:
 		draw_rect(Rect2(-32, -24, 64, 48), decal_col, false, 2.5)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
-	# 4. 绘制独立旋转主炮瞄准指示与副炮塔环
+	# 3.8 绘制 C 装置主动技光环与迎击警戒圈
+	if iron_dome_timer > 0.0:
+		draw_circle(Vector2.ZERO, 320.0, Color(0.25, 0.95, 0.85, 0.10))
+		draw_arc(Vector2.ZERO, 320.0, 0.0, TAU, 48, Color(0.35, 1.0, 0.90, 0.75), 3.0)
+	elif smoke_evade_timer > 0.0:
+		draw_circle(Vector2.ZERO, 85.0, Color(0.55, 0.85, 1.0, 0.25))
+		draw_arc(Vector2.ZERO, 85.0, 0.0, TAU, 32, Color(0.55, 0.95, 1.0, 0.85), 2.5)
+	elif overclock_timer > 0.0:
+		draw_arc(Vector2.ZERO, 68.0, 0.0, TAU, 28, Color(1.0, 0.88, 0.25, 0.85), 3.0)
+
+	# 4. 绘制独立旋转主炮瞄准指示与双摇杆/手动远程红外激光引导线
 	draw_set_transform(Vector2.ZERO, turret_angle, Vector2.ONE)
 	var main_cnt: int = GameState.count_equipped_slot_type("MAIN")
 	if main_cnt > 0 and not is_human_mode:
-		draw_line(Vector2(28, 0), Vector2(78, 0), decal_col.lightened(0.2), 2.5)
-		draw_circle(Vector2(78, 0), 4.0, decal_col)
+		var r_stick: Vector2 = Input.get_vector("aim_left", "aim_right", "aim_up", "aim_down", 0.25)
+		var is_manual_sight: bool = (not GameState.auto_main_cannon) or r_stick.length() > 0.25 or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
+		if is_manual_sight:
+			draw_line(Vector2(28, 0), Vector2(540, 0), Color(1.0, 0.22, 0.25, 0.38), 1.8)
+			draw_arc(Vector2(540, 0), 14.0, 0.0, TAU, 20, Color(1.0, 0.28, 0.28, 0.78), 2.0)
+			draw_line(Vector2(520, 0), Vector2(560, 0), Color(1.0, 0.35, 0.35, 0.85), 1.5)
+			draw_line(Vector2(540, -18), Vector2(540, 18), Color(1.0, 0.35, 0.35, 0.85), 1.5)
+		draw_line(Vector2(28, 0), Vector2(88, 0), decal_col.lightened(0.2), 2.5)
+		draw_circle(Vector2(88, 0), 4.5, decal_col)
 	if ch_tex == null:
 		draw_circle(Vector2.ZERO, 18.0, turret_col)
 		draw_circle(Vector2.ZERO, 18.0, decal_col, false, 2.0)

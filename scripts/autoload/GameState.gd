@@ -105,6 +105,8 @@ var dodge_chance: float = 0.05
 var pickup_range: float = 140.0
 
 var bonus_stats: Dictionary = {}
+var mod_bonus_stats: Dictionary = {}
+var equipped_tank_mods: Dictionary = {} # {"mod_autoloader": 2, "curse_overloaded_core": 1}
 var synergy_counts: Dictionary = {}
 var weapon_damage_stats: Dictionary = {} # {"cannon_105mm": 15420.0, "mg_77mm": 8900.0, ...}
 
@@ -443,6 +445,8 @@ func start_new_run(hunter_id: String, chassis_id: String, map_idx: int = -1, dif
 	wanted_poster_offset = 0
 	run_already_settled = false
 	weapon_damage_stats.clear()
+	equipped_tank_mods.clear()
+	mod_bonus_stats.clear()
 
 	# 注入局外永久科技树加成 (META_UPGRADES)
 	var lv_weight: int = get_meta_level("meta_weight")
@@ -527,11 +531,15 @@ func recalculate_stats() -> void:
 	var eng: Dictionary = GameData.ENGINES.get(equipped_engine_id, GameData.ENGINES["eng_bulldog_v8"])
 	var cu: Dictionary = GameData.C_UNITS.get(equipped_c_unit_id, GameData.C_UNITS["cu_type66"])
 
-	# 1. 统计流派羁绊数量
+	# 1. 统计流派羁绊数量 (含已安装武器 + 战车战术改装挂件标签)
 	synergy_counts.clear()
 	for w_entry in equipped_weapons:
 		var w_def: Dictionary = GameData.WEAPONS.get(w_entry["id"], {})
 		for tag in w_def.get("tags", []):
+			synergy_counts[tag] = synergy_counts.get(tag, 0) + 1
+	for m_id in equipped_tank_mods.keys():
+		var m_def: Dictionary = GameData.TANK_MODS.get(m_id, {})
+		for tag in m_def.get("tags", []):
 			synergy_counts[tag] = synergy_counts.get(tag, 0) + 1
 
 	# 2. 计算最大载重 W_max
@@ -1009,3 +1017,138 @@ func get_custom_chassis_paint(chassis_id: String) -> Dictionary:
 	for k in raw.keys():
 		col_dict[k] = Color.from_string(raw[k], Color.WHITE)
 	return col_dict
+
+
+# ============================================================================
+# 车库深度构筑：战术改装挂件、以旧换新折抵、三层智能加权与穿透式属性明细
+# ============================================================================
+func buy_tank_mod(mod_id: String, price: int = -1) -> bool:
+	if not GameData.TANK_MODS.has(mod_id):
+		return false
+	var m_def: Dictionary = GameData.TANK_MODS[mod_id]
+	var actual_cost: int = price if price >= 0 else int(m_def.get("cost", 50))
+	if gold < actual_cost:
+		return false
+	gold -= actual_cost
+	equipped_tank_mods[mod_id] = int(equipped_tank_mods.get(mod_id, 0)) + 1
+	var mods: Dictionary = m_def.get("mods", {})
+	for k in mods.keys():
+		var delta_v: float = float(mods[k])
+		bonus_stats[k] = float(bonus_stats.get(k, 0.0)) + delta_v
+		mod_bonus_stats[k] = float(mod_bonus_stats.get(k, 0.0)) + delta_v
+	recalculate_stats()
+	return true
+
+func get_engine_trade_in_value() -> int:
+	var cur_eng: Dictionary = GameData.ENGINES.get(equipped_engine_id, {})
+	return int(float(cur_eng.get("cost", 40)) * 0.50)
+
+func get_c_unit_trade_in_value() -> int:
+	var cur_cu: Dictionary = GameData.C_UNITS.get(equipped_c_unit_id, {})
+	return int(float(cur_cu.get("cost", 45)) * 0.50)
+
+func roll_weighted_weapon_id(valid_w: Array) -> String:
+	if valid_w.is_empty():
+		return "mg_77mm"
+	var weights: Array = []
+	var total_w: float = 0.0
+	for wid in valid_w:
+		var w_def: Dictionary = GameData.WEAPONS.get(wid, {})
+		var w_score: float = 1.0
+		# 第一层：已装备流派 Tag 动态倾向 (+25% / 层)
+		for t in w_def.get("tags", []):
+			w_score += 0.25 * float(synergy_counts.get(t, 0))
+		# 第二层：同名可二合一升星倾向 (+45%)
+		for ew in equipped_weapons:
+			if ew["id"] == wid and int(ew.get("rarity", 0)) < 4:
+				w_score += 0.45
+				break
+		# 第三层：神话超武配方补齐倾向 (+50%)
+		if check_super_evolution_partner(wid) != "":
+			w_score += 0.50
+		weights.append(w_score)
+		total_w += w_score
+
+	var pick: float = randf() * total_w
+	var accum: float = 0.0
+	for i in range(valid_w.size()):
+		accum += float(weights[i])
+		if pick <= accum:
+			return String(valid_w[i])
+	return String(valid_w[valid_w.size() - 1])
+
+func get_stat_breakdown(stat_key: String) -> String:
+	var ch: Dictionary = GameData.CHASSIS.get(selected_chassis_id, GameData.CHASSIS["buggy"])
+	var eng: Dictionary = GameData.ENGINES.get(equipped_engine_id, GameData.ENGINES["eng_bulldog_v8"])
+	var cu: Dictionary = GameData.C_UNITS.get(equipped_c_unit_id, GameData.C_UNITS["cu_type66"])
+	var h: Dictionary = GameData.HUNTERS.get(selected_hunter_id, GameData.HUNTERS["bounty_hunter"])
+	var h_mods: Dictionary = h.get("mods", {})
+
+	match stat_key:
+		"max_sp":
+			var base_sp_val: float = float(ch.get("base_sp", 140.0))
+			var meta_sp_val: float = get_meta_level("meta_sp") * 25.0
+			var mod_sp_val: float = float(mod_bonus_stats.get("flat_sp_bonus", 0.0))
+			var spt: float = float(ch.get("sp_per_ton", 20.0)) + (6.0 if synergy_counts.get("juggernaut", 0) >= 2 else 0.0)
+			spt *= (1.0 + float(bonus_stats.get("sp_per_ton_pct", 0.0)))
+			var weight_sp_val: float = free_weight * spt
+			return "【最大装甲 SP 构成明细】\n• 底盘基础装甲: %.0f SP\n• 特斯拉实验室: +%.0f SP\n• 战术改装挂件: %+.0f SP\n• 富余载重转化 (%.1ft × %.1f): +%.0f SP\n➔ 最终总计: %.0f SP" % [
+				base_sp_val, meta_sp_val, mod_sp_val, free_weight, spt, weight_sp_val, max_sp
+			]
+		"max_weight":
+			var base_w: float = float(eng.get("max_weight", 18.0)) * (1.6 if ch.get("dual_engine", false) else 1.0)
+			var flat_w: float = float(bonus_stats.get("flat_max_weight", 0.0))
+			var pct_w: float = float(bonus_stats.get("max_weight_pct", 0.0)) * 100.0
+			return "【引擎最大载重构成明细】\n• 引擎基础出力: %.1f t\n• 车库扩容与改装件: %+.1f t\n• 百分比载重加成: %+.0f%%\n➔ 最终最大载重: %.1f t (已用 %.1f t)" % [
+				base_w, flat_w, pct_w, max_weight, used_weight
+			]
+		"main_dmg":
+			var meta_d: float = get_meta_level("meta_dmg") * 6.0
+			var h_d: float = float(h_mods.get("main_dmg_pct", 0.0)) * 100.0
+			var mod_d: float = float(mod_bonus_stats.get("main_dmg_pct", 0.0)) * 100.0
+			var eng_d: float = (float(eng.get("all_dmg_bonus", 0.0)) + float(eng.get("main_dmg_bonus", 0.0))) * 100.0
+			var syn_d: float = 35.0 if synergy_counts.get("artillery", 0) >= 4 else 0.0
+			var total_d: float = (float(bonus_stats.get("main_dmg_pct", 0.0)) + float(eng.get("all_dmg_bonus", 0.0)) + float(eng.get("main_dmg_bonus", 0.0))) * 100.0 + syn_d
+			return "【主炮伤害加成明细】\n• 特斯拉实验室: +%.0f%%\n• 猎人天赋加成: %+.0f%%\n• 战术改装挂件: %+.0f%%\n• 引擎出力加成: %+.0f%%\n• 重炮轰鸣(4)羁绊: +%.0f%%\n➔ 综合主炮增伤: %+.0f%%" % [
+				meta_d, h_d, mod_d, eng_d, syn_d, total_d
+			]
+		"sub_dmg":
+			var meta_d: float = get_meta_level("meta_dmg") * 6.0
+			var h_d: float = float(h_mods.get("sub_dmg_pct", 0.0)) * 100.0
+			var mod_d: float = float(mod_bonus_stats.get("sub_dmg_pct", 0.0)) * 100.0
+			var cu_se: float = float(cu.get("se_dmg_bonus", 0.0)) * 100.0
+			var total_d: float = (float(bonus_stats.get("sub_dmg_pct", 0.0)) + float(eng.get("all_dmg_bonus", 0.0))) * 100.0
+			return "【副炮与 S-E 伤害加成明细】\n• 特斯拉实验室: +%.0f%%\n• 猎人天赋加成: %+.0f%%\n• 战术改装挂件: %+.0f%%\n• C装置S-E专项加成: +%.0f%%\n➔ 综合副武增伤: %+.0f%%" % [
+				meta_d, h_d, mod_d, cu_se, total_d
+			]
+		"reload_spd":
+			var meta_r: float = get_meta_level("meta_reload") * 4.0
+			var mod_r: float = float(mod_bonus_stats.get("reload_speed_pct", 0.0)) * 100.0
+			var total_r: float = float(bonus_stats.get("reload_speed_pct", 0.0)) * 100.0
+			return "【装填攻速加成明细】\n• 特斯拉实验室: +%.0f%%\n• 战术改装挂件: %+.0f%%\n• 战地升级与猎人专精: %+.0f%%\n➔ 综合装填加速: %+.0f%%" % [
+				meta_r, mod_r, total_r - meta_r - mod_r, total_r
+			]
+		"crit_chance":
+			var base_c: float = 8.0 + get_meta_level("meta_crit_dodge") * 2.5
+			var cu_c: float = float(cu.get("crit_bonus", 0.0)) * 100.0
+			var mod_c: float = float(mod_bonus_stats.get("crit_chance", 0.0)) * 100.0
+			return "【暴击率构成明细】\n• 基础与实验室: %.1f%%\n• C装置火控加成: +%.0f%%\n• 战术改装挂件: %+.0f%%\n➔ 最终面板暴击率: %.0f%% (上限90%%)" % [
+				base_c, cu_c, mod_c, crit_chance * 100.0
+			]
+		"dodge":
+			var base_d: float = 5.0 + get_meta_level("meta_crit_dodge") * 2.0
+			var cu_d: float = float(cu.get("dodge_bonus", 0.0)) * 100.0
+			var mod_d: float = float(mod_bonus_stats.get("dodge", 0.0)) * 100.0
+			return "【战车闪避率构成明细】\n• 基础与实验室: %.1f%%\n• C装置全息加成: +%.0f%%\n• 战术改装挂件: %+.0f%%\n➔ 最终面板闪避率: %.0f%% (上限75%%)" % [
+				base_d, cu_d, mod_d, dodge_chance * 100.0
+			]
+		"move_speed":
+			var base_s: float = float(ch.get("speed", 210.0))
+			var eng_s: float = float(eng.get("speed_bonus", 0.0)) * 100.0
+			var mod_s: float = float(mod_bonus_stats.get("move_speed_pct", 0.0)) * 100.0
+			var ow_pen: float = overweight_tons * 12.0
+			return "【战车机动移速明细】\n• 底盘基础车速: %.0f\n• 引擎推进加成: %+.0f%%\n• 战术改装挂件: %+.0f%%\n• 超载惩罚: -%.0f%%\n➔ 最终行驶速度: %.0f" % [
+				base_s, eng_s, mod_s, ow_pen, move_speed
+			]
+		_:
+			return "战车实时综合战斗指标（悬停可查看详细构成）"

@@ -4,6 +4,7 @@ extends Node2D
 var effects: Array = []
 var puddles: Array = []
 var mortar_strikes: Array = []
+var debris: Array = []
 
 func spawn_mortar_strike(pos: Vector2, radius: float, dmg: float, delay: float = 1.25) -> void:
 	mortar_strikes.append({
@@ -12,6 +13,33 @@ func spawn_mortar_strike(pos: Vector2, radius: float, dmg: float, delay: float =
 		"dmg": dmg,
 		"age": 0.0,
 		"delay": delay
+	})
+
+func spawn_metal_debris(pos: Vector2, col: Color = Color(0.92, 0.78, 0.4), count: int = 6) -> void:
+	if debris.size() > 120:
+		return
+	for i in range(count):
+		var ang: float = randf_range(0.0, TAU)
+		var spd: float = randf_range(85.0, 250.0)
+		debris.append({
+			"pos": pos,
+			"vel": Vector2.from_angle(ang) * spd,
+			"rot": randf_range(0.0, TAU),
+			"rot_spd": randf_range(-14.0, 14.0),
+			"size": randf_range(3.0, 5.5),
+			"color": col.lerp(Color(0.95, 0.95, 0.95), randf_range(0.0, 0.4)),
+			"age": 0.0,
+			"duration": randf_range(0.42, 0.78)
+		})
+
+func spawn_shockwave(pos: Vector2, radius: float, col: Color = Color(0.35, 0.90, 1.0)) -> void:
+	effects.append({
+		"type": "shockwave",
+		"pos": pos,
+		"radius": radius,
+		"color": col,
+		"age": 0.0,
+		"duration": 0.35
 	})
 
 func spawn_text(pos: Vector2, text: String, col: Color = Color.WHITE, scale_factor: float = 1.0) -> void:
@@ -75,6 +103,15 @@ func _process(delta: float) -> void:
 		if puddles[i]["age"] >= puddles[i]["duration"]:
 			puddles.remove_at(i)
 
+	for i in range(debris.size() - 1, -1, -1):
+		var d: Dictionary = debris[i]
+		d["age"] += delta
+		d["pos"] += d["vel"] * delta
+		d["vel"] *= 0.91
+		d["rot"] += d["rot_spd"] * delta
+		if d["age"] >= d["duration"]:
+			debris.remove_at(i)
+
 	var bf: Node = get_parent()
 	if bf and bf.get("wave_active"):
 		for i in range(mortar_strikes.size() - 1, -1, -1):
@@ -121,6 +158,11 @@ func _draw() -> void:
 			c.a = (1.0 - t) * 0.75
 			draw_circle(e["pos"], r, c)
 			draw_arc(e["pos"], r, 0.0, TAU, 32, Color(1.0, 0.92, 0.6, 1.0 - t), 3.0)
+		elif e["type"] == "shockwave":
+			var r: float = e["radius"] * pow(t, 0.4)
+			var c: Color = e["color"]
+			c.a = (1.0 - t) * 0.90
+			draw_arc(e["pos"], r, 0.0, TAU, 32, c, 3.5 * (1.0 - t * 0.4))
 		elif e["type"] == "beam":
 			var c: Color = e["color"]
 			c.a = 1.0 - t
@@ -132,3 +174,13 @@ func _draw() -> void:
 			var fsize: int = int(15.0 * e["scale"])
 			draw_string_outline(font, e["pos"], e["text"], HORIZONTAL_ALIGNMENT_CENTER, -1, fsize, 4, Color(0, 0, 0, c.a))
 			draw_string(font, e["pos"], e["text"], HORIZONTAL_ALIGNMENT_CENTER, -1, fsize, c)
+
+	# 3. 绘制飞溅金属碎屑零件与齿轮残片
+	for d in debris:
+		var dt: float = clampf(d["age"] / d["duration"], 0.0, 1.0)
+		var c: Color = d["color"]
+		c.a = 1.0 - dt
+		var sz: float = d["size"] * (1.0 - dt * 0.3)
+		draw_set_transform(d["pos"], d["rot"], Vector2.ONE)
+		draw_rect(Rect2(-sz * 0.5, -sz * 0.5, sz, sz), c)
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

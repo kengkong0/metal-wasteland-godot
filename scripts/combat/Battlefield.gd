@@ -47,6 +47,18 @@ var landmarks: Array = []
 var spawn_telegraphs: Array = []
 var shake_timer: float = 0.0
 var shake_intensity: float = 0.0
+var shake_dir_impulse: Vector2 = Vector2.ZERO
+var _hitstop_active: bool = false
+
+# --- 动态战场随机事件 (Dynamic Arena Events) ---
+var active_arena_event: Dictionary = {}
+var arena_event_triggered_this_wave: bool = false
+
+# --- 2D 空间哈希网格与节点对象池 (Spatial Hash Grid & Object Pools) ---
+const SPATIAL_CELL_SIZE: float = 160.0
+var spatial_grid: Dictionary = {}
+var _proj_pool: Array = []
+var _drop_pool: Array = []
 
 # --- 土豆兄弟风格 HUD 控件 ---
 var hud_layer: CanvasLayer
@@ -584,7 +596,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if not visible or level_up_modal.visible:
 		return
-	if event.is_action_pressed("pause_game"):
+	if event.is_action_pressed("pause_game") or (pause_modal.visible and event.is_action_pressed("ui_cancel")):
 		get_viewport().set_input_as_handled()
 		_toggle_pause_modal()
 
@@ -700,6 +712,8 @@ func start_wave() -> void:
 	boss_spawned_this_wave = false
 	is_horde_active = false
 	horde_announced = false
+	active_arena_event.clear()
+	arena_event_triggered_this_wave = false
 	combo_count = 0
 	combo_timer = 0.0
 	ring_spawn_timer = 7.0
@@ -722,13 +736,25 @@ func start_wave() -> void:
 		var cpos := Vector2(randf_range(arena_rect.position.x + 180, arena_rect.end.x - 180), randf_range(arena_rect.position.y + 180, arena_rect.end.y - 180))
 		spawn_drop("buried_chest", 1, cpos)
 
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
+	for p in _proj_pool:
+		if is_instance_valid(p):
+			p.free()
+	_proj_pool.clear()
+	for d in _drop_pool:
+		if is_instance_valid(d):
+			d.free()
+	_drop_pool.clear()
+
 func _clear_entities() -> void:
 	for c in enemies_container.get_children():
 		c.queue_free()
 	for c in projectiles_container.get_children():
-		c.queue_free()
+		recycle_projectile(c)
 	for c in drops_container.get_children():
-		c.queue_free()
+		recycle_drop(c)
+	spatial_grid.clear()
 	spawn_telegraphs.clear()
 
 func _process(delta: float) -> void:
@@ -736,18 +762,25 @@ func _process(delta: float) -> void:
 		return
 
 	_update_arena_bounds()
+	rebuild_spatial_grid()
 	wave_elapsed += delta
 	wave_time_left -= delta
 
-	# 平滑镜头跟随战车 & 震屏处理
+	# 平滑镜头跟随战车 & 弹簧阻尼方向性震屏处理
 	if is_instance_valid(player_tank) and is_instance_valid(battle_cam):
 		battle_cam.global_position = player_tank.get_active_position()
+		shake_dir_impulse = shake_dir_impulse.lerp(Vector2.ZERO, minf(1.0, delta * 14.0))
 		if shake_timer > 0.0:
 			shake_timer -= delta
-			battle_cam.offset = Vector2(randf_range(-shake_intensity, shake_intensity), randf_range(-shake_intensity, shake_intensity))
+			battle_cam.offset = shake_dir_impulse + Vector2(randf_range(-shake_intensity, shake_intensity), randf_range(-shake_intensity, shake_intensity))
+		elif shake_dir_impulse.length_squared() > 0.2:
+			battle_cam.offset = shake_dir_impulse
 		else:
 			battle_cam.offset = Vector2.ZERO
 	position = Vector2.ZERO
+
+	# 动态战场突发事件处理
+	_process_arena_event(delta)
 
 	if banner_timer > 0.0:
 		banner_timer -= delta
@@ -1002,7 +1035,7 @@ func on_wanted_boss_defeated(boss_node: Node2D) -> void:
 	GameState.bounties_hunted += 1
 	GameState.report_metric("kill_" + b_id, 1, false)
 	GameState.report_metric("total_bounties", 1, true)
-	if wave_timer <= 30.0:
+	if wave_elapsed <= 30.0:
 		GameState.report_metric("fast_boss_kill", 1, false)
 	var final_bounty: int = boss_node.bounty_gold
 	if GameState.is_feature_unlocked("black_market_wanted"):
@@ -1365,28 +1398,116 @@ func on_player_total_defeat() -> void:
 	wave_active = false
 	emit_signal("player_defeated")
 
+func _acquire_projectile() -> Node2D:
+	while not _proj_pool.is_empty():
+		var p: Node2D = _proj_pool.pop_back()
+		if is_instance_valid(p):
+			projectiles_container.add_child(p)
+			return p
+	var np := Node2D.new()
+	np.set_script(ProjectileScript)
+	projectiles_container.add_child(np)
+	return np
+
+func recycle_projectile(p: Node2D) -> void:
+	if not is_instance_valid(p):
+		return
+	p.set_process(false)
+	p.visible = false
+	if p.get_parent() == projectiles_container:
+		projectiles_container.remove_child(p)
+	if _proj_pool.size() < 320:
+		if not (p in _proj_pool):
+			_proj_pool.append(p)
+	else:
+		p.queue_free()
+
+func _acquire_drop() -> Node2D:
+	while not _drop_pool.is_empty():
+		var d: Node2D = _drop_pool.pop_back()
+		if is_instance_valid(d):
+			drops_container.add_child(d)
+			return d
+	var nd := Node2D.new()
+	nd.set_script(DropItemScript)
+	drops_container.add_child(nd)
+	return nd
+
+func recycle_drop(d: Node2D) -> void:
+	if not is_instance_valid(d):
+		return
+	d.set_process(false)
+	d.visible = false
+	if d.get_parent() == drops_container:
+		drops_container.remove_child(d)
+	if _drop_pool.size() < 160:
+		if not (d in _drop_pool):
+			_drop_pool.append(d)
+	else:
+		d.queue_free()
+
 func spawn_player_projectile(pos: Vector2, dir: Vector2, spd: float, dmg: float, splash: float, effect: String, is_crit: bool, is_main: bool, pierce: int, weapon_id: String = "") -> void:
-	var p := Node2D.new()
-	p.set_script(ProjectileScript)
-	projectiles_container.add_child(p)
+	var p: Node2D = _acquire_projectile()
 	p.setup_player_proj(pos, dir, spd, dmg, splash, effect, is_crit, is_main, pierce, weapon_id)
 
 func spawn_enemy_projectile(pos: Vector2, dir: Vector2, spd: float, dmg: float, col: Color = Color(1.0, 0.25, 0.35), rad: float = 6.5, eff: String = "") -> void:
-	var p := Node2D.new()
-	p.set_script(ProjectileScript)
-	projectiles_container.add_child(p)
+	var p: Node2D = _acquire_projectile()
 	p.setup_enemy_proj(pos, dir, spd, dmg, col, rad, eff)
 
 func spawn_drop(d_type: String, val: int, pos: Vector2) -> void:
-	var d := Node2D.new()
-	d.set_script(DropItemScript)
-	drops_container.add_child(d)
+	# 高密度同屏掉落物自动合并 (>75个时自动合并邻近同类型零件/金币)
+	if d_type in ["scrap", "gold"] and drops_container.get_child_count() >= 75:
+		var merge_target: Node2D = null
+		var best_dist: float = 999999.0
+		for existing in drops_container.get_children():
+			if is_instance_valid(existing) and existing.get("drop_type") == d_type:
+				var dist: float = existing.global_position.distance_to(pos)
+				if dist < best_dist:
+					best_dist = dist
+					merge_target = existing
+		if is_instance_valid(merge_target):
+			merge_target.value += val
+			return
+	var d: Node2D = _acquire_drop()
 	d.setup(d_type, val, pos)
+
+func rebuild_spatial_grid() -> void:
+	spatial_grid.clear()
+	if not is_instance_valid(enemies_container):
+		return
+	for e in enemies_container.get_children():
+		if is_instance_valid(e) and not e.is_queued_for_deletion():
+			var cx: int = int(floor(e.global_position.x / SPATIAL_CELL_SIZE))
+			var cy: int = int(floor(e.global_position.y / SPATIAL_CELL_SIZE))
+			var key := Vector2i(cx, cy)
+			if not spatial_grid.has(key):
+				spatial_grid[key] = []
+			spatial_grid[key].append(e)
+
+func get_enemies_in_radius(pos: Vector2, radius: float) -> Array:
+	if spatial_grid.is_empty() and is_instance_valid(enemies_container) and enemies_container.get_child_count() > 0:
+		rebuild_spatial_grid()
+	var result: Array = []
+	var pad: float = radius + 68.0
+	var min_cx: int = int(floor((pos.x - pad) / SPATIAL_CELL_SIZE))
+	var max_cx: int = int(floor((pos.x + pad) / SPATIAL_CELL_SIZE))
+	var min_cy: int = int(floor((pos.y - pad) / SPATIAL_CELL_SIZE))
+	var max_cy: int = int(floor((pos.y + pad) / SPATIAL_CELL_SIZE))
+	for cx in range(min_cx, max_cx + 1):
+		for cy in range(min_cy, max_cy + 1):
+			var key := Vector2i(cx, cy)
+			if spatial_grid.has(key):
+				for e in spatial_grid[key]:
+					if is_instance_valid(e) and not e.is_queued_for_deletion():
+						if pos.distance_to(e.global_position) <= radius + float(e.get("radius")):
+							result.append(e)
+	return result
 
 func get_nearest_enemy(from_pos: Vector2, max_range: float) -> Node2D:
 	var best: Node2D = null
 	var best_d: float = max_range
-	for e in enemies_container.get_children():
+	var candidates: Array = get_enemies_in_radius(from_pos, max_range) if not spatial_grid.is_empty() else enemies_container.get_children()
+	for e in candidates:
 		if is_instance_valid(e):
 			var d: float = from_pos.distance_to(e.global_position)
 			if d < best_d:
@@ -1397,7 +1518,8 @@ func get_nearest_enemy(from_pos: Vector2, max_range: float) -> Node2D:
 func get_highest_threat_enemy(from_pos: Vector2, max_range: float) -> Node2D:
 	var best: Node2D = null
 	var best_score: float = -1.0
-	for e in enemies_container.get_children():
+	var candidates: Array = get_enemies_in_radius(from_pos, max_range) if not spatial_grid.is_empty() else enemies_container.get_children()
+	for e in candidates:
 		if is_instance_valid(e):
 			var d: float = from_pos.distance_to(e.global_position)
 			if d <= max_range:
@@ -1412,12 +1534,148 @@ func add_tread_mark(pos: Vector2, angle: float) -> void:
 	if tread_marks.size() > 90:
 		tread_marks.pop_front()
 
-func trigger_screen_shake(intensity: float, duration: float) -> void:
+func trigger_screen_shake(intensity: float, duration: float, dir: Vector2 = Vector2.ZERO) -> void:
 	var mult: float = float(GameState.get_setting("screen_shake_mult", 1.0))
 	if mult <= 0.01:
 		return
 	shake_intensity = maxf(shake_intensity, intensity * mult)
 	shake_timer = maxf(shake_timer, duration)
+	if dir != Vector2.ZERO:
+		shake_dir_impulse = dir.normalized() * intensity * mult * 1.45
+
+func trigger_hitstop(duration: float = 0.032, time_scale: float = 0.05) -> void:
+	if _hitstop_active:
+		return
+	_hitstop_active = true
+	Engine.time_scale = clampf(time_scale, 0.02, 1.0)
+	if is_inside_tree():
+		get_tree().create_timer(duration, true, false, true).timeout.connect(func():
+			Engine.time_scale = 1.0
+			_hitstop_active = false
+		)
+	else:
+		Engine.time_scale = 1.0
+		_hitstop_active = false
+
+# --- 阶段三：动态战场突发事件系统 (Dynamic Arena Events) ---
+func trigger_arena_event(force_type: String = "") -> void:
+	arena_event_triggered_this_wave = true
+	var ev_types: Array = ["airdrop_defense", "acid_sandstorm", "noah_beacon"]
+	var chosen: String = force_type if not force_type.is_empty() else String(ev_types[randi() % ev_types.size()])
+	var p_pos: Vector2 = player_tank.get_active_position() if is_instance_valid(player_tank) else arena_rect.get_center()
+	var ev_pos: Vector2 = p_pos + Vector2.from_angle(randf() * TAU) * 340.0
+	ev_pos.x = clampf(ev_pos.x, arena_rect.position.x + 180.0, arena_rect.end.x - 180.0)
+	ev_pos.y = clampf(ev_pos.y, arena_rect.position.y + 180.0, arena_rect.end.y - 180.0)
+
+	match chosen:
+		"airdrop_defense":
+			active_arena_event = {
+				"type": "airdrop_defense",
+				"name": "🪂 军火空投信标防守",
+				"pos": ev_pos,
+				"radius": 145.0,
+				"progress": 0.0,
+				"goal": 4.0,
+				"timer": 16.0
+			}
+			banner_wanted.visible = true
+			banner_timer = 4.0
+			lbl_wanted_banner.text = "🪂 【战场突发事件】军火空投信标已降落！进入绿圈驻守 4 秒获取战车改装芯片与弹药！"
+		"acid_sandstorm":
+			active_arena_event = {
+				"type": "acid_sandstorm",
+				"name": "🌪️ 强酸腐蚀沙尘暴",
+				"pos": arena_rect.get_center(),
+				"radius": 2800.0,
+				"progress": 0.0,
+				"goal": 10.0,
+				"timer": 10.0,
+				"tick_timer": 0.0
+			}
+			banner_wanted.visible = true
+			banner_timer = 4.0
+			lbl_wanted_banner.text = "🌪️ 【战场突发气象】强酸沙尘暴席卷战区！全场敌军护甲持续腐蚀剥落！"
+		"noah_beacon":
+			active_arena_event = {
+				"type": "noah_beacon",
+				"name": "📡 诺亚超载干扰塔",
+				"pos": ev_pos,
+				"radius": 125.0,
+				"progress": 0.0,
+				"goal": 3.0,
+				"timer": 15.0
+			}
+			banner_wanted.visible = true
+			banner_timer = 4.0
+			lbl_wanted_banner.text = "📡 【战场突发事件】发现诺亚超载信标！靠近骇入 3 秒引发全屏EMP磁暴并夺取诺亚晶片！"
+	SoundManager.play("interception_chirp", 0.05, 1.0)
+
+func _process_arena_event(delta: float) -> void:
+	if not arena_event_triggered_this_wave and GameState.current_wave >= 2 and wave_elapsed >= 9.5:
+		trigger_arena_event()
+
+	if active_arena_event.is_empty():
+		return
+
+	active_arena_event["timer"] = float(active_arena_event.get("timer", 0.0)) - delta
+	var ev_type: String = String(active_arena_event.get("type", ""))
+	var p_pos: Vector2 = player_tank.get_active_position() if is_instance_valid(player_tank) else Vector2.ZERO
+
+	if ev_type == "acid_sandstorm":
+		active_arena_event["tick_timer"] = float(active_arena_event.get("tick_timer", 0.0)) + delta
+		if float(active_arena_event["tick_timer"]) >= 1.0:
+			active_arena_event["tick_timer"] = 0.0
+			for e in enemies_container.get_children():
+				if is_instance_valid(e):
+					e.armor = maxf(-45.0, e.armor - 5.0)
+		if float(active_arena_event["timer"]) <= 0.0:
+			active_arena_event.clear()
+		return
+
+	var ev_pos: Vector2 = active_arena_event.get("pos", Vector2.ZERO)
+	var ev_rad: float = float(active_arena_event.get("radius", 140.0))
+	if p_pos.distance_to(ev_pos) <= ev_rad:
+		active_arena_event["progress"] = float(active_arena_event.get("progress", 0.0)) + delta
+		if float(active_arena_event["progress"]) >= float(active_arena_event.get("goal", 3.5)):
+			_complete_arena_event()
+			return
+
+	if float(active_arena_event["timer"]) <= 0.0:
+		active_arena_event.clear()
+
+func _complete_arena_event() -> void:
+	if active_arena_event.is_empty():
+		return
+	var ev_type: String = String(active_arena_event.get("type", ""))
+	var ev_pos: Vector2 = active_arena_event.get("pos", player_tank.get_active_position())
+	active_arena_event.clear()
+	GameState.report_metric("arena_events_completed", 1, true)
+	SoundManager.play("upgrade", 0.04, 2.0)
+
+	if ev_type == "airdrop_defense":
+		GameState.add_gold(55)
+		if is_instance_valid(player_tank):
+			player_tank.refill_all_ammo(8)
+			player_tank.heal_sp(GameState.max_sp * 0.20)
+		var mod_keys: Array = GameData.TANK_MODS.keys()
+		if not mod_keys.is_empty():
+			var rand_mod: String = String(mod_keys[randi() % mod_keys.size()])
+			GameState.buy_tank_mod(rand_mod, 0)
+			var m_name: String = GameData.TANK_MODS[rand_mod]["name"]
+			if is_instance_valid(fx_layer):
+				fx_layer.spawn_shockwave(ev_pos, 220.0, Color(0.35, 1.0, 0.55))
+				fx_layer.spawn_text(ev_pos + Vector2(0, -28), "🪂 空投解锁：【%s】 +55G & 满弹药!" % m_name, Color(0.35, 1.0, 0.55), 1.45)
+	elif ev_type == "noah_beacon":
+		GameState.noah_chips += 8
+		GameState.add_gold(40)
+		GameState.save_meta_data()
+		if is_instance_valid(fx_layer):
+			fx_layer.spawn_shockwave(ev_pos, 420.0, Color(0.35, 0.90, 1.0))
+			fx_layer.spawn_text(ev_pos + Vector2(0, -28), "📡 诺亚信标骇入成功！全屏EMP过载 +8💎 +40G!", Color(0.40, 0.95, 1.0), 1.5)
+		for e in enemies_container.get_children():
+			if is_instance_valid(e):
+				e.stun_timer = maxf(e.stun_timer, 2.0)
+				e.take_damage(260.0 + GameState.current_wave * 35.0, true, "electric", ev_pos, false)
 
 func _update_hud() -> void:
 	# 1. 更新左上角 SP/HP 主血条
@@ -1448,7 +1706,10 @@ func _update_hud() -> void:
 	bar_all_out.max_value = ao_max
 	bar_all_out.value = ao_max if ao_ready else clampf(ao_max - player_tank.all_out_timer, 0.0, ao_max)
 	style_all_out_fill.bg_color = Color(0.95, 0.78, 0.15) if ao_ready else Color(0.55, 0.35, 0.92)
-	lbl_all_out_val.text = "🚀 [Q] 全弹就绪!" if ao_ready else "🚀 全弹 %.1fs" % player_tank.all_out_timer
+	var cu_info: Dictionary = GameData.C_UNITS.get(GameState.equipped_c_unit_id, {})
+	var sk_icon: String = cu_info.get("skill_icon", "🚀")
+	var sk_name: String = cu_info.get("skill_name", "全弹发射")
+	lbl_all_out_val.text = "%s [Q] %s!" % [sk_icon, sk_name] if ao_ready else "%s %s %.1fs" % [sk_icon, sk_name.substr(0, 4), player_tank.all_out_timer]
 
 	# 4. 更新金币、晶片与弹药胶囊
 	lbl_gold_num.text = "💰 %d" % GameState.gold
@@ -1659,7 +1920,7 @@ func _draw_offscreen_indicators() -> void:
 				"border_col": Color(1.0, 0.95, 0.35)
 			})
 
-	# 3. 埋藏宝箱
+	# 3. 埋藏宝箱与战场动态事件信标
 	for d in drops_container.get_children():
 		if is_instance_valid(d) and d.get("drop_type") == "buried_chest":
 			targets.append({
@@ -1668,6 +1929,14 @@ func _draw_offscreen_indicators() -> void:
 				"color": Color(0.25, 0.85, 1.0),
 				"border_col": Color(0.65, 0.95, 1.0)
 			})
+	if not active_arena_event.is_empty() and String(active_arena_event.get("type", "")) in ["airdrop_defense", "noah_beacon"]:
+		var is_air: bool = (String(active_arena_event.get("type", "")) == "airdrop_defense")
+		targets.append({
+			"pos": active_arena_event["pos"],
+			"icon": "🪂" if is_air else "📡",
+			"color": Color(0.30, 0.95, 0.55) if is_air else Color(0.35, 0.90, 1.0),
+			"border_col": Color(0.85, 1.0, 0.85)
+		})
 
 	var margin: float = 46.0
 	var min_bound := Vector2(margin, margin + 46.0)
@@ -1796,6 +2065,26 @@ func _draw() -> void:
 		draw_arc(p, 24.0, 0.0, TAU, 20, Color(1.0, 0.2, 0.2, 0.75), 2.5)
 		draw_line(p - Vector2(12, 12), p + Vector2(12, 12), Color(1.0, 0.2, 0.2, 0.85), 3.5)
 		draw_line(p - Vector2(12, -12), p + Vector2(12, -12), Color(1.0, 0.2, 0.2, 0.85), 3.5)
+
+	# 7.5 绘制动态战场随机事件区域 (空投防守圈 / 诺亚干扰信标 / 强酸沙尘暴)
+	if not active_arena_event.is_empty():
+		var ev_t: String = String(active_arena_event.get("type", ""))
+		if ev_t in ["airdrop_defense", "noah_beacon"]:
+			var ep: Vector2 = active_arena_event.get("pos", Vector2.ZERO)
+			var er: float = float(active_arena_event.get("radius", 140.0))
+			var prog: float = float(active_arena_event.get("progress", 0.0))
+			var goal: float = maxf(0.1, float(active_arena_event.get("goal", 3.5)))
+			var ratio: float = clampf(prog / goal, 0.0, 1.0)
+			var ecol: Color = Color(0.25, 0.95, 0.52) if ev_t == "airdrop_defense" else Color(0.35, 0.90, 1.0)
+			draw_circle(ep, er, Color(ecol.r, ecol.g, ecol.b, 0.14))
+			draw_arc(ep, er, 0.0, TAU, 36, Color(ecol.r, ecol.g, ecol.b, 0.75), 3.0)
+			if ratio > 0.0:
+				draw_arc(ep, er - 6.0, -PI * 0.5, -PI * 0.5 + TAU * ratio, 32, Color(1.0, 0.92, 0.25, 0.95), 5.0)
+			var ev_label: String = "%s (%d%%)" % [active_arena_event.get("name", "事件"), int(ratio * 100.0)]
+			draw_string_outline(ThemeDB.fallback_font, ep + Vector2(-75, -er - 12), ev_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, 3, Color.BLACK)
+			draw_string(ThemeDB.fallback_font, ep + Vector2(-75, -er - 12), ev_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, ecol)
+		elif ev_t == "acid_sandstorm":
+			draw_rect(arena_rect, Color(0.45, 0.85, 0.20, 0.08))
 
 	# 8. 废土警戒高压电网边界
 	draw_rect(arena_rect, border_col, false, 6.0)

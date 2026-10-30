@@ -454,6 +454,15 @@ const WEAPONS: Dictionary = {
 		"desc": "近距离一次轰出6颗废铁弹丸并击退敌人。"
 	},
 
+	"sub_ciws_phalanx": {
+		"id": "sub_ciws_phalanx", "name": "密集阵CIWS近防炮", "slot": "SUB", "min_rarity": 1,
+		"weight": 1.8, "base_dmg": 22.0, "cooldown": 0.16, "cost": 72,
+		"range": 420.0, "pellets": 1, "pierce": 1, "proj_speed": 840.0,
+		"effect": "ciws_intercept", "intercept_range": 195.0, "intercept_cd": 0.28,
+		"tags": ["bullet_storm", "juggernaut"],
+		"desc": "【迎击副炮】在射击敌怪同时，每0.28秒自动发射钨芯破片弹拦截195px内的敌方导弹并引发破片溅射！"
+	},
+
 	# --- S-E 特殊装备系列 (SE) ---
 	"se_atm": {
 		"id": "se_atm", "name": "ATM 追踪导弹箱", "slot": "SE", "min_rarity": 0,
@@ -469,9 +478,9 @@ const WEAPONS: Dictionary = {
 	},
 	"se_aegis": {
 		"id": "se_aegis", "name": "宙斯盾迎击激光网", "slot": "SE", "min_rarity": 1,
-		"weight": 1.5, "base_dmg": 35.0, "cooldown": 0.75, "cost": 75,
-		"effect": "intercept", "tags": ["missile", "juggernaut"],
-		"desc": "自动用激光击落飞向战车的敌方子弹/鱼雷，每次拦截回复 6 SP！"
+		"weight": 1.5, "base_dmg": 35.0, "cooldown": 0.42, "cost": 75,
+		"effect": "intercept", "intercept_range": 240.0, "intercept_cd": 0.38, "tags": ["missile", "juggernaut"],
+		"desc": "【独立迎击雷达】240px警戒圈内全自动高能激光点爆来袭敌弹，每次成功迎击回复 8 SP！"
 	},
 	"se_spike_ball": {
 		"id": "se_spike_ball", "name": "旋转刺球撞角", "slot": "SE", "min_rarity": 1,
@@ -630,28 +639,142 @@ const ENGINES: Dictionary = {
 const C_UNITS: Dictionary = {
 	"cu_type66": {
 		"id": "cu_type66", "name": "66式标准火控核心", "rarity": 0, "weight": 0.8, "cost": 45,
-		"crit_bonus": 0.08, "all_out_cd": 12.0,
-		"desc": "暴击率 +8%。可按 [Q] 触发【全弹发射】(冷却12秒)。"
+		"crit_bonus": 0.08, "all_out_cd": 11.0,
+		"skill_id": "all_out", "skill_name": "全弹齐射", "skill_icon": "🚀",
+		"desc": "暴击率 +8%。按 [Q/空格] 触发【全弹齐射】(全主炮与S-E无消耗齐射，冷却11秒)。"
 	},
 	"cu_solomon2": {
-		"id": "cu_solomon2", "name": "所罗门 2 型 (全弹核心)", "rarity": 2, "weight": 1.5, "cost": 130,
+		"id": "cu_solomon2", "name": "所罗门 2 型 (突击核心)", "rarity": 2, "weight": 1.5, "cost": 130,
 		"crit_bonus": 0.12, "all_out_cd": 7.5, "se_dmg_bonus": 0.30,
-		"desc": "【全弹发射】冷却缩短至 7.5秒 且自动触发！S-E 伤害 +30%。"
+		"skill_id": "god_barrage", "skill_name": "神之突击齐射", "skill_icon": "🔥",
+		"desc": "S-E伤害+30%。【神之突击齐射】冷却7.5秒且自动触发，齐射同时赋予3秒【氮气极速突进】！"
 	},
 	"cu_type99": {
 		"id": "cu_type99", "name": "99式神话火控", "rarity": 3, "weight": 1.6, "cost": 165,
 		"crit_bonus": 0.25, "all_out_cd": 10.0, "double_shot_chance": 0.30,
-		"desc": "暴击率 +25%，主炮每次开火有 30% 概率触发【免费二连射】！"
+		"skill_id": "overclock", "skill_name": "超频双发过载", "skill_icon": "⚡",
+		"desc": "暴击+25%，主炮30%免费二连射！按[Q/空格]开启4.5秒【超频双发过载】(全武器100%双发+攻速35%)！"
 	},
 	"cu_mirage": {
 		"id": "cu_mirage", "name": "幻影全息系统", "rarity": 2, "weight": 1.0, "cost": 120,
-		"dodge_bonus": 0.25, "all_out_cd": 10.0, "decoy_blast": true,
-		"desc": "战车闪避率 +25%，每次成功闪避对周围敌人释放一次全息脉冲。"
+		"dodge_bonus": 0.25, "all_out_cd": 9.5, "decoy_blast": true,
+		"skill_id": "smoke_decoy", "skill_name": "热烟幕与诱饵", "skill_icon": "💨",
+		"desc": "闪避+25%。按[Q/空格]释放【热烟幕与全息诱饵】，获得2.8秒100%绝对闪避并在原地引爆电磁残影！"
 	},
 	"cu_valkyrie": {
 		"id": "cu_valkyrie", "name": "瓦尔基里自律战斗AI", "rarity": 3, "weight": 1.8, "cost": 160,
 		"crit_bonus": 0.15, "all_out_cd": 9.0, "auto_turret_wreck": true,
-		"desc": "按[E]下车或战车大破时，战车仍会继续自动开火支援，实现【人车同屏双打】！"
+		"skill_id": "valkyrie_sweep", "skill_name": "女武神天基犁地", "skill_icon": "🛰️",
+		"desc": "下车可【人车双打】！按[Q/空格]呼叫【女武神天基犁地】，3道轨道死光沿炮塔方向交叉汽化敌群！"
+	},
+	"cu_interceptor_ai": {
+		"id": "cu_interceptor_ai", "name": "神之右手迎击火控", "rarity": 3, "weight": 1.4, "cost": 168,
+		"crit_bonus": 0.16, "dodge_bonus": 0.10, "all_out_cd": 8.5,
+		"interception_range": 220.0, "interception_cd": 0.35,
+		"skill_id": "iron_dome", "skill_name": "铁穹电磁力场", "skill_icon": "🛡️",
+		"desc": "自带220px全自动激光迎击雷达！按[Q/空格]展开3.5秒【铁穹电磁力场】，蒸发320px内一切敌弹并电击震退近身怪！"
+	}
+}
+
+# ============================================================================
+# 5.5 战车战术改装挂件与诺亚禁忌诅咒件池 (TANK_MODS —— 不占武器孔，可无限叠加)
+# ============================================================================
+const TANK_MODS: Dictionary = {
+	"mod_autoloader": {
+		"id": "mod_autoloader", "name": "液压自动装填机", "rarity": 1, "cost": 45, "is_cursed": false,
+		"icon": "⚙️", "tags": ["artillery", "bullet_storm"],
+		"mods": {"reload_speed_pct": 0.08, "flat_max_weight": 0.8},
+		"desc": "全武器装填速度 +8%，引擎最大载重 +0.8t。"
+	},
+	"mod_reactive_armor": {
+		"id": "mod_reactive_armor", "name": "爆破反应装甲片", "rarity": 1, "cost": 48, "is_cursed": false,
+		"icon": "🛡️", "tags": ["juggernaut"],
+		"mods": {"flat_sp_bonus": 55.0, "sp_per_ton_pct": 0.08},
+		"desc": "战车最大装甲 +55 SP，每吨剩余载重转化 SP 效率 +8%。"
+	},
+	"mod_ap_core": {
+		"id": "mod_ap_core", "name": "钨合金穿甲弹芯", "rarity": 2, "cost": 62, "is_cursed": false,
+		"icon": "💥", "tags": ["artillery"],
+		"mods": {"main_dmg_pct": 0.14, "boss_dmg_pct": 0.10},
+		"desc": "主炮伤害 +14%，对赏金首与精英怪伤害 +10%。"
+	},
+	"mod_bullet_chain": {
+		"id": "mod_bullet_chain", "name": "双联供弹链箱", "rarity": 1, "cost": 50, "is_cursed": false,
+		"icon": "🔫", "tags": ["bullet_storm", "missile"],
+		"mods": {"sub_dmg_pct": 0.14, "reload_speed_pct": 0.05},
+		"desc": "副炮与S-E伤害 +14%，全武器装填速度 +5%。"
+	},
+	"mod_bio_catalyst": {
+		"id": "mod_bio_catalyst", "name": "高浓强酸催化罐", "rarity": 2, "cost": 60, "is_cursed": false,
+		"icon": "🧪", "tags": ["bio"],
+		"mods": {"elemental_dmg_pct": 0.18, "flat_sp_regen": 4.0},
+		"desc": "酸火雷元素伤害 +18%，战车每秒自动修复 +4 SP。"
+	},
+	"mod_bounty_scanner": {
+		"id": "mod_bounty_scanner", "name": "猎人加密悬赏仪", "rarity": 1, "cost": 42, "is_cursed": false,
+		"icon": "📡", "tags": ["tycoon"],
+		"mods": {"gold_gain_pct": 0.15, "crit_chance": 0.05},
+		"desc": "赏金获取 +15%，暴击率 +5%。"
+	},
+	"mod_nano_welder": {
+		"id": "mod_nano_welder", "name": "纳米自修复涂层", "rarity": 2, "cost": 58, "is_cursed": false,
+		"icon": "🔧", "tags": ["lone_cub", "juggernaut"],
+		"mods": {"flat_sp_regen": 8.0, "sp_regen_pct": 0.01},
+		"desc": "战车每秒自动回复 +8 SP 及 1% 最大 SP。"
+	},
+	"mod_gyro_stabilizer": {
+		"id": "mod_gyro_stabilizer", "name": "陀螺仪火控稳定器", "rarity": 2, "cost": 65, "is_cursed": false,
+		"icon": "🎯", "tags": ["lone_cub", "bullet_storm"],
+		"mods": {"crit_chance": 0.09, "dodge": 0.06},
+		"desc": "暴击率 +9%，战车闪避率 +6%。"
+	},
+	"mod_titanium_chassis": {
+		"id": "mod_titanium_chassis", "name": "钛合金轻量化车架", "rarity": 2, "cost": 60, "is_cursed": false,
+		"icon": "🚜", "tags": ["juggernaut", "missile"],
+		"mods": {"flat_max_weight": 3.2, "move_speed_pct": 0.08},
+		"desc": "引擎最大载重 +3.2t，战车移速 +8%。"
+	},
+	"mod_ciws_booster": {
+		"id": "mod_ciws_booster", "name": "相控阵迎击增幅器", "rarity": 2, "cost": 55, "is_cursed": false,
+		"icon": "🛡️", "tags": ["missile", "juggernaut"],
+		"mods": {"intercept_cd_mult": 0.25, "dodge": 0.08},
+		"desc": "迎击雷达与近防炮冷却加快 25%，战车闪避率 +8%。"
+	},
+	"curse_overloaded_core": {
+		"id": "curse_overloaded_core", "name": "☣️【诅咒】过载核融炉", "rarity": 3, "cost": 75, "is_cursed": true,
+		"icon": "☢️", "tags": ["artillery", "missile"],
+		"mods": {"main_dmg_pct": 0.42, "sub_dmg_pct": 0.35, "flat_sp_bonus": -90.0},
+		"desc": "【诺亚禁忌改装】主炮伤害 +42%，副炮/SE伤害 +35%；代价：战车最大装甲 -90 SP！"
+	},
+	"curse_depleted_uranium": {
+		"id": "curse_depleted_uranium", "name": "☣️【诅咒】贫铀超重装甲", "rarity": 3, "cost": 72, "is_cursed": true,
+		"icon": "🧱", "tags": ["juggernaut"],
+		"mods": {"flat_sp_bonus": 180.0, "sp_per_ton_pct": 0.30, "move_speed_pct": -0.15},
+		"desc": "【诺亚禁忌改装】最大装甲 +180 SP，每吨转化SP +30%；代价：战车移速 -15%！"
+	},
+	"curse_berserk_fcs": {
+		"id": "curse_berserk_fcs", "name": "☣️【诅咒】狂战士神经火控", "rarity": 3, "cost": 78, "is_cursed": true,
+		"icon": "👁️", "tags": ["bullet_storm", "artillery"],
+		"mods": {"crit_chance": 0.22, "reload_speed_pct": 0.25, "dodge": -0.15},
+		"desc": "【诺亚禁忌改装】暴击率 +22%，装填速度 +25%；代价：战车闪避率 -15%！"
+	},
+	"curse_blood_engine": {
+		"id": "curse_blood_engine", "name": "☣️【诅咒】嗜血内燃机", "rarity": 3, "cost": 70, "is_cursed": true,
+		"icon": "🩸", "tags": ["lone_cub"],
+		"mods": {"move_speed_pct": 0.28, "boss_dmg_pct": 0.35, "flat_sp_regen": -6.0},
+		"desc": "【诺亚禁忌改装】战车极速 +28%，对首领伤害 +35%；代价：每秒流失 6 SP！"
+	},
+	"curse_greed_protocol": {
+		"id": "curse_greed_protocol", "name": "☣️【诅咒】黑市贪婪协议", "rarity": 3, "cost": 65, "is_cursed": true,
+		"icon": "💰", "tags": ["tycoon"],
+		"mods": {"gold_gain_pct": 0.50, "shop_price_pct": 0.15},
+		"desc": "【诺亚禁忌改装】战斗赏金获取 +50%；代价：商店军火价格上涨 15%！"
+	},
+	"curse_plague_reactor": {
+		"id": "curse_plague_reactor", "name": "☣️【诅咒】瘟疫同位素核心", "rarity": 3, "cost": 76, "is_cursed": true,
+		"icon": "☣️", "tags": ["bio"],
+		"mods": {"elemental_dmg_pct": 0.50, "flat_max_weight": -2.0},
+		"desc": "【诺亚禁忌改装】酸火雷元素伤害 +50%；代价：引擎最大载重 -2.0t！"
 	}
 }
 
@@ -1407,6 +1530,8 @@ const ACHIEVEMENTS: Array = [
 	{"id": "ach_feature_lock", "cat": "meta", "name": "🔒 商业战术", "desc": "在实验室解锁【军火库商品锁定器】局外特性", "metric": "feature_shop_lock", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 50 原核晶片"},
 	{"id": "ach_custom_paint", "cat": "meta", "name": "🎨 涂装大师", "desc": "在局外战车涂装工坊中成功保存 1 次自定义车体涂色", "metric": "custom_paint_saved", "target": 1, "rtype": "chips", "rid": "", "rname": "💎 50 原核晶片"},
 	{"id": "ach_toxic_20", "cat": "meta", "name": "🧪 毒抗淬炼", "desc": "在毒沼毒雾中承受累计 20 次接触腐蚀未阵亡", "metric": "toxic_survived", "target": 20, "rtype": "hunter_skin", "rid": "ma_alchemist", "rname": "解锁伊戈尔皮肤【鸟嘴炼金】"},
+	{"id": "ach_intercept_10", "cat": "tactics", "name": "🛡️ 铁幕守护", "desc": "使用战车迎击系统累计击落 10 枚敌方导弹或飞弹", "metric": "intercept_count", "target": 10, "rtype": "chips", "rid": "", "rname": "💎 40 原核晶片"},
+	{"id": "ach_intercept_50", "cat": "tactics", "name": "📡 绝对防御圈", "desc": "使用战车迎击系统累计击落 50 枚敌方导弹或飞弹", "metric": "intercept_count", "target": 50, "rtype": "chips", "rid": "", "rname": "💎 100 原核晶片"},
 ]
 
 func get_achievement(ach_id: String) -> Dictionary:

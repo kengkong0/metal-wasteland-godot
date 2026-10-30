@@ -9,6 +9,9 @@ var pulse_time: float = 0.0
 func setup(p_type: String, p_val: int, pos: Vector2) -> void:
 	drop_type = p_type
 	value = p_val
+	magnetized = false
+	visible = true
+	set_process(true)
 	global_position = pos
 	pulse_time = randf() * TAU
 
@@ -64,7 +67,10 @@ func _collect(bf: Node, player: Node2D) -> void:
 			else:
 				bf.fx_layer.spawn_text(global_position, "挖出埋藏箱 +%dG & 弹药!" % bonus_g, Color(1.0, 0.88, 0.2), 1.35)
 			SoundManager.play("upgrade", 0.04, 1.0)
-	queue_free()
+	if is_instance_valid(bf) and bf.has_method("recycle_drop"):
+		bf.recycle_drop(self)
+	else:
+		queue_free()
 
 func _draw() -> void:
 	var s: float = 1.0 + sin(pulse_time) * 0.12

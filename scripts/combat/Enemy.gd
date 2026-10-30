@@ -44,6 +44,15 @@ var is_stealthed: bool = false
 var train_segments_left: int = 4
 var segment_trail: Array = []
 var battleship_parts: Array = [] # 沙漠之舟三部位破坏
+var boss_parts: Array = [] # 通用赏金首部位破坏系统
+var elite_affixes: Array = [] # 精英怪随机词缀系统
+
+const ELITE_AFFIX_POOL: Array = [
+	{"id": "magnet", "prefix": "【磁暴牵引】"},
+	{"id": "thorns_armor", "prefix": "【反伤重甲】"},
+	{"id": "haste", "prefix": "【狂暴加速】"},
+	{"id": "death_blast", "prefix": "【亡语自爆】"}
+]
 
 func setup_regular(def: Dictionary, wave_num: int, pos: Vector2) -> void:
 	is_boss = false
@@ -69,6 +78,21 @@ func setup_regular(def: Dictionary, wave_num: int, pos: Vector2) -> void:
 	behavior = def["behavior"]
 	attack_timer = randf_range(0.6, 1.6)
 	skill_timer = randf_range(1.4, 2.6)
+	elite_affixes.clear()
+	if is_elite:
+		var pool_copy: Array = ELITE_AFFIX_POOL.duplicate()
+		pool_copy.shuffle()
+		var affix_count: int = 2 if (wave_num >= 8 and randf() < 0.35) else 1
+		var prefix_str: String = ""
+		for i in range(mini(affix_count, pool_copy.size())):
+			var af: Dictionary = pool_copy[i]
+			elite_affixes.append(af["id"])
+			prefix_str += af["prefix"]
+			if af["id"] == "thorns_armor":
+				armor += 18.0
+			elif af["id"] == "haste":
+				move_speed *= 1.30
+		enemy_name = prefix_str + def["name"]
 
 func setup_boss(boss_def: Dictionary, wave_num: int, pos: Vector2) -> void:
 	is_boss = true
@@ -91,17 +115,59 @@ func setup_boss(boss_def: Dictionary, wave_num: int, pos: Vector2) -> void:
 	xp_val = 25
 	gold_val = bounty_gold
 
-	if boss_mechanic == "multi_segment":
-		train_segments_left = 4
-		segment_trail.clear()
-		for i in range(4):
-			segment_trail.append(pos - Vector2(i * 46.0, 0))
-	elif boss_mechanic == "battleship_parts":
-		battleship_parts = [
-			{"name": "左舷副炮群", "offset": Vector2(-38, -28), "hp": max_hp * 0.25, "max_hp": max_hp * 0.25, "alive": true},
-			{"name": "右舷导弹舱", "offset": Vector2(-38, 28), "hp": max_hp * 0.25, "max_hp": max_hp * 0.25, "alive": true},
-			{"name": "中央300mm大和炮", "offset": Vector2(18, 0), "hp": max_hp * 0.32, "max_hp": max_hp * 0.32, "alive": true}
-		]
+	boss_parts.clear()
+	battleship_parts.clear()
+	match boss_mechanic:
+		"charge_plow":
+			boss_parts = [
+				{"id": "plow", "name": "前部合金推土铲", "offset": Vector2(28, 0), "hp": max_hp * 0.28, "max_hp": max_hp * 0.28, "alive": true, "radius": 28.0}
+			]
+		"bullet_ring":
+			boss_parts = [
+				{"id": "tentacle_l", "name": "左翼高压触须", "offset": Vector2(-16, -22), "hp": max_hp * 0.22, "max_hp": max_hp * 0.22, "alive": true, "radius": 22.0},
+				{"id": "tentacle_r", "name": "右翼高压触须", "offset": Vector2(-16, 22), "hp": max_hp * 0.22, "max_hp": max_hp * 0.22, "alive": true, "radius": 22.0}
+			]
+		"burrow_shark":
+			boss_parts = [
+				{"id": "dorsal_fin", "name": "背部声呐潜沙鳍", "offset": Vector2(-8, 0), "hp": max_hp * 0.26, "max_hp": max_hp * 0.26, "alive": true, "radius": 26.0}
+			]
+		"flame_circle":
+			boss_parts = [
+				{"id": "napalm_tank", "name": "尾端凝固汽油罐", "offset": Vector2(-22, 0), "hp": max_hp * 0.25, "max_hp": max_hp * 0.25, "alive": true, "radius": 24.0}
+			]
+		"multi_segment":
+			train_segments_left = 4
+			segment_trail.clear()
+			for i in range(4):
+				segment_trail.append(pos - Vector2(i * 46.0, 0))
+			boss_parts = [
+				{"id": "boiler", "name": "车头高压蒸汽炉", "offset": Vector2(20, 0), "hp": max_hp * 0.28, "max_hp": max_hp * 0.28, "alive": true, "radius": 26.0}
+			]
+		"emp_stealth":
+			boss_parts = [
+				{"id": "stealth_gen", "name": "光学迷彩发生器", "offset": Vector2(-14, 0), "hp": max_hp * 0.26, "max_hp": max_hp * 0.26, "alive": true, "radius": 26.0}
+			]
+		"regen_acid":
+			boss_parts = [
+				{"id": "regen_sac", "name": "背部再生酸液腺", "offset": Vector2(-14, 0), "hp": max_hp * 0.28, "max_hp": max_hp * 0.28, "alive": true, "radius": 26.0}
+			]
+		"battleship_parts":
+			battleship_parts = [
+				{"id": "left_gun", "name": "左舷副炮群", "offset": Vector2(-38, -28), "hp": max_hp * 0.25, "max_hp": max_hp * 0.25, "alive": true, "radius": 32.0},
+				{"id": "right_missile", "name": "右舷导弹舱", "offset": Vector2(-38, 28), "hp": max_hp * 0.25, "max_hp": max_hp * 0.25, "alive": true, "radius": 32.0},
+				{"id": "main_yamato", "name": "中央300mm大和炮", "offset": Vector2(18, 0), "hp": max_hp * 0.32, "max_hp": max_hp * 0.32, "alive": true, "radius": 32.0}
+			]
+			boss_parts = battleship_parts
+		"magnet_laser", "noah_core":
+			boss_parts = [
+				{"id": "gravity_prism", "name": "反重力棱镜核心", "offset": Vector2(0, 0), "hp": max_hp * 0.30, "max_hp": max_hp * 0.30, "alive": true, "radius": 30.0}
+			]
+
+func has_alive_part(part_id: String) -> bool:
+	for p in boss_parts:
+		if p.get("id", "") == part_id:
+			return bool(p.get("alive", false))
+	return true
 
 func _process(delta: float) -> void:
 	var bf: Node = get_parent().get_parent()
@@ -174,6 +240,11 @@ func _process_regular_ai(delta: float, bf: Node, _player: Node2D, target_pos: Ve
 	facing_angle = dir.angle()
 	attack_timer -= delta
 	skill_timer -= delta
+	if is_elite and not elite_affixes.is_empty():
+		if "haste" in elite_affixes:
+			attack_timer -= delta * 0.30
+		if "magnet" in elite_affixes and dist < 270.0 and is_instance_valid(_player):
+			_player.global_position += (global_position - target_pos).normalized() * 38.0 * delta
 
 	match behavior:
 		"leap_hound": # 狂暴生化猎犬：接近玩家时红眼加速扑咬冲刺
@@ -316,7 +387,8 @@ func _process_boss_ai(delta: float, bf: Node, player: Node2D, target_pos: Vector
 					skill_timer = 1.15
 					SoundManager.play("cannon_light", 0.15, 0.0)
 			elif is_charging:
-				global_position += charge_dir * (move_speed * 3.1) * delta
+				var c_mult: float = 3.1 if has_alive_part("plow") else 1.85
+				global_position += charge_dir * (move_speed * c_mult) * delta
 				if skill_timer <= 0.0:
 					is_charging = false
 					skill_timer = 3.2
@@ -333,12 +405,19 @@ func _process_boss_ai(delta: float, bf: Node, player: Node2D, target_pos: Vector
 			global_position += dir * move_speed * spd_mult * delta
 			if skill_timer <= 0.0:
 				skill_timer = 2.6
-				for i in range(10):
-					var ang: float = facing_angle + TAU * float(i) / 10.0
+				var ring_cnt: int = 10
+				if not has_alive_part("tentacle_l"):
+					ring_cnt -= 3
+				if not has_alive_part("tentacle_r"):
+					ring_cnt -= 3
+				for i in range(ring_cnt):
+					var ang: float = facing_angle + TAU * float(i) / float(ring_cnt)
 					bf.spawn_enemy_projectile(global_position, Vector2.from_angle(ang), 300.0, contact_dmg * 0.85, Color(0.3, 0.85, 1.0), 7.0)
 
 		"burrow_shark": # ★★ 沙漠之鲛·沙鲨
 			facing_angle = dir.angle()
+			if not has_alive_part("dorsal_fin"):
+				is_burrowed = false
 			if is_burrowed:
 				global_position += dir * (move_speed * 1.85) * delta
 				if skill_timer <= 0.0:
@@ -350,7 +429,7 @@ func _process_boss_ai(delta: float, bf: Node, player: Node2D, target_pos: Vector
 						bf.spawn_enemy_projectile(global_position, Vector2.from_angle(ang), 420.0, contact_dmg, Color(0.3, 0.65, 1.0), 8.5)
 			else:
 				global_position += dir * move_speed * spd_mult * delta
-				if skill_timer <= 0.0:
+				if skill_timer <= 0.0 and has_alive_part("dorsal_fin"):
 					is_burrowed = true
 					skill_timer = 2.2
 					bf.fx_layer.spawn_text(global_position, "沙鲨潜入沙底!", Color(0.95, 0.82, 0.45), 1.2)
@@ -361,12 +440,15 @@ func _process_boss_ai(delta: float, bf: Node, player: Node2D, target_pos: Vector
 			global_position += tangent.normalized() * move_speed * spd_mult * delta
 			if skill_timer <= 0.0:
 				skill_timer = 1.4
-				bf.fx_layer.spawn_puddle(global_position, 65.0, "fire", 4.0)
+				if has_alive_part("napalm_tank"):
+					bf.fx_layer.spawn_puddle(global_position, 65.0, "fire", 4.0)
 				bf.spawn_enemy_projectile(global_position, dir, 440.0, contact_dmg * 0.9, Color(1.0, 0.45, 0.1), 7.5)
 
 		"multi_segment": # ★★★ 百足装甲列车
 			facing_angle = lerp_angle(facing_angle, dir.angle(), 3.2 * delta)
 			var speed_boost: float = 1.0 + float(4 - train_segments_left) * 0.22
+			if not has_alive_part("boiler"):
+				speed_boost *= 0.68
 			global_position += Vector2.from_angle(facing_angle) * move_speed * speed_boost * spd_mult * delta
 			for i in range(segment_trail.size()):
 				var leader: Vector2 = global_position if i == 0 else segment_trail[i - 1]
@@ -380,8 +462,13 @@ func _process_boss_ai(delta: float, bf: Node, player: Node2D, target_pos: Vector
 		"emp_stealth": # ★★★ 荒原劫掠王·巴洛克
 			facing_angle = dir.angle()
 			global_position += dir * move_speed * spd_mult * delta
+			if not has_alive_part("stealth_gen"):
+				is_stealthed = false
 			if skill_timer <= 0.0:
-				is_stealthed = not is_stealthed
+				if has_alive_part("stealth_gen"):
+					is_stealthed = not is_stealthed
+				else:
+					is_stealthed = false
 				skill_timer = 2.8 if is_stealthed else 4.2
 				if not is_stealthed:
 					for i in range(-1, 2):
@@ -390,7 +477,7 @@ func _process_boss_ai(delta: float, bf: Node, player: Node2D, target_pos: Vector
 		"regen_acid": # ★★★★ 生化奇美拉
 			facing_angle = dir.angle()
 			global_position += dir * move_speed * spd_mult * delta
-			if burn_stacks <= 0 and armor > -10.0:
+			if burn_stacks <= 0 and armor > -10.0 and has_alive_part("regen_sac"):
 				hp = minf(max_hp, hp + max_hp * 0.018 * delta)
 			if skill_timer <= 0.0:
 				skill_timer = 2.0
@@ -420,8 +507,8 @@ func _process_boss_ai(delta: float, bf: Node, player: Node2D, target_pos: Vector
 		"magnet_laser", "noah_core": # ★★★★★ 重装帕鲁 & 终焉主脑·原核矩阵
 			facing_angle += delta * 1.4
 			global_position += dir * move_speed * spd_mult * delta
-			# 引力牵引玩家
-			if global_position.distance_to(target_pos) < 420.0:
+			# 引力牵引玩家 (反重力棱镜核心存活时生效)
+			if has_alive_part("gravity_prism") and global_position.distance_to(target_pos) < 420.0:
 				player.global_position += (global_position - target_pos).normalized() * 55.0 * delta
 			if skill_timer <= 0.0:
 				skill_timer = 1.8 if boss_mechanic == "noah_core" else 2.4
@@ -435,14 +522,16 @@ func take_damage(raw_dmg: float, is_crit: bool, effect: String, hit_pos: Vector2
 	if not bf:
 		return
 
-	# 1. 推土机正面铲刀减伤 65%
+	# 1. 推土机正面铲刀减伤 65% (破坏前部合金推土铲后失去格挡!)
 	var mult: float = 1.0
-	if is_boss and boss_mechanic == "charge_plow":
+	if is_boss and boss_mechanic == "charge_plow" and has_alive_part("plow"):
 		var hit_dir: Vector2 = (hit_pos - global_position).normalized()
 		var forward: Vector2 = Vector2.from_angle(facing_angle)
 		if hit_dir.dot(forward) > 0.35 and effect != "laser":
 			mult *= 0.35
 			bf.fx_layer.spawn_text(global_position, "正面铲刀格挡!", Color(0.75, 0.8, 0.85), 0.9)
+	elif is_elite and ("thorns_armor" in elite_affixes) and not is_main_cannon and not (effect in ["laser", "omega_laser", "sonic_wave"]):
+		mult *= 0.72
 
 	# 2. 沙鲨潜沙状态减伤 (声波与高爆主炮除外)
 	if is_boss and is_burrowed and effect != "sonic_wave" and not is_main_cannon:
@@ -510,19 +599,30 @@ func take_damage(raw_dmg: float, is_crit: bool, effect: String, hit_pos: Vector2
 			bf.fx_layer.spawn_text(global_position, "-%d 护盾" % int(s_dmg), Color(0.35, 0.85, 1.0), 0.9)
 			return
 
-	# 7. 沙漠之舟三部位破坏独立结算
-	if is_boss and boss_mechanic == "battleship_parts":
-		for p in battleship_parts:
-			if p["alive"]:
+	# 7. 赏金首通用部位破坏独立结算 (含沙漠之舟三部位与各Boss核心弱点)
+	if is_boss and not boss_parts.is_empty():
+		for p in boss_parts:
+			if p.get("alive", false):
 				var p_world: Vector2 = global_position + p["offset"].rotated(facing_angle)
-				if hit_pos.distance_to(p_world) <= 32.0:
+				var p_rad: float = float(p.get("radius", 32.0))
+				if hit_pos.distance_to(p_world) <= p_rad:
 					p["hp"] -= final_dmg
 					if p["hp"] <= 0.0:
 						p["alive"] = false
 						hp -= max_hp * 0.15
+						stun_timer = maxf(stun_timer, 1.2)
+						if p.get("id", "") == "dorsal_fin":
+							is_burrowed = false
+						elif p.get("id", "") == "stealth_gen":
+							is_stealthed = false
 						bf.fx_layer.spawn_explosion(p_world, 85.0, Color(1.0, 0.4, 0.1))
-						bf.fx_layer.spawn_text(p_world, "部位破坏：【%s】!" % p["name"], Color(1.0, 0.25, 0.2), 1.4)
+						if bf.fx_layer.has_method("spawn_metal_debris"):
+							bf.fx_layer.spawn_metal_debris(p_world, Color(1.0, 0.68, 0.22), 12)
+						if bf.has_method("trigger_hitstop"):
+							bf.trigger_hitstop(0.042, 0.05)
+						bf.fx_layer.spawn_text(p_world, "💥部位破坏：【%s】!" % p["name"], Color(1.0, 0.25, 0.2), 1.45)
 						SoundManager.play("explosion_large", 0.05, 2.0)
+						GameState.report_metric("boss_parts_broken", 1, true)
 					break
 
 	hp -= final_dmg
@@ -541,6 +641,9 @@ func take_damage(raw_dmg: float, is_crit: bool, effect: String, hit_pos: Vector2
 	var txt_col: Color = Color(1.0, 0.30, 0.22) if is_crit else Color(0.96, 0.96, 0.96)
 	var txt_str: String = "%d!" % int(final_dmg) if is_crit else "%d" % int(final_dmg)
 	bf.fx_layer.spawn_text(global_position, txt_str, txt_col, 1.28 if is_crit else 0.95)
+
+	if is_crit and is_main_cannon and bf.has_method("trigger_hitstop"):
+		bf.trigger_hitstop(0.025, 0.06)
 
 	if hp <= 0.0:
 		_die(bf, is_crit and is_main_cannon)
@@ -584,6 +687,10 @@ func _die(bf: Node, crit_main_kill: bool) -> void:
 		if GameState.bonus_stats.get("bio_devour", false) and randf() < 0.10:
 			bf.spawn_drop("bio_meat", 1, global_position + Vector2(-12, 0))
 
+	if is_elite and ("death_blast" in elite_affixes):
+		bf.fx_layer.spawn_mortar_strike(global_position, 88.0, contact_dmg * 1.30, 0.90)
+	if bf.fx_layer.has_method("spawn_metal_debris"):
+		bf.fx_layer.spawn_metal_debris(global_position, base_color, 10 if (is_boss or is_elite) else 5)
 	bf.fx_layer.spawn_explosion(global_position, radius * 1.8, base_color)
 	queue_free()
 
@@ -704,12 +811,13 @@ func _draw_boss(c: Color) -> void:
 		draw_circle(Vector2.ZERO, radius * 0.42, c.darkened(0.3))
 		draw_rect(Rect2(0, -6, radius * 1.25, 12), Color(0.85, 0.82, 0.78))
 
-	# 沙漠之舟三部位状态圈绘制
-	if boss_mechanic == "battleship_parts":
-		for p in battleship_parts:
-			var p_col: Color = Color(1.0, 0.35, 0.2, 0.45) if p["alive"] else Color(0.15, 0.15, 0.15, 0.75)
-			draw_circle(p["offset"], 16.0, p_col)
-			draw_arc(p["offset"], 16.0, 0.0, TAU, 16, Color(1.0, 0.85, 0.25) if p["alive"] else Color(0.4, 0.4, 0.4), 2.0)
+	# 赏金首通用可破坏弱点部位状态圈绘制
+	if not boss_parts.is_empty():
+		for p in boss_parts:
+			var alive_flag: bool = bool(p.get("alive", false))
+			var p_col: Color = Color(1.0, 0.35, 0.2, 0.42) if alive_flag else Color(0.15, 0.15, 0.15, 0.75)
+			draw_circle(p["offset"], 15.0, p_col)
+			draw_arc(p["offset"], 15.0, 0.0, TAU, 16, Color(1.0, 0.85, 0.25) if alive_flag else Color(0.4, 0.4, 0.4), 2.0)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# 赏金首头顶 WANTED 标识

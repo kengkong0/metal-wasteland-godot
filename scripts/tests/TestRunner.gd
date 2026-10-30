@@ -19,6 +19,7 @@ func _ready() -> void:
 	test_suite_8_all_wanted_bosses()
 	test_suite_9_swarm_and_crush_mechanics()
 	test_suite_10_achievements_skins_and_paint_workshop()
+	test_suite_11_v2_blueprint_optimizations()
 
 	print("\n========================================================")
 	print("📊 [TEST RESULTS] 测试统计汇总:")
@@ -583,3 +584,127 @@ func test_suite_10_achievements_skins_and_paint_workshop() -> void:
 	var body_col: Color = paint_after_load.get("body", Color.BLACK)
 	var is_color_match: bool = absf(body_col.r - 0.9) < 0.01 and absf(body_col.g - 0.2) < 0.01 and absf(body_col.b - 0.3) < 0.01
 	assert_true(is_color_match, "局外存档读档完整保留战车自定义涂装色值 (8-bit色域精确还原)")
+
+
+# ============================================================================
+# 11. v2.0 成熟商业化标杆对比与四阶段全面优化验证
+# ============================================================================
+func test_suite_11_v2_blueprint_optimizations() -> void:
+	print("\n--- [Suite 11] v2.0 商业化标杆四阶段优化全量验证 ---")
+
+	# 11.1 阶段一：6种C装置主动战术技能、实时迎击拦截网、动态音频闪避与碎片粒子
+	assert_true(GameData.C_UNITS.size() == 6, "C装置总数扩充至 6 款 (含神之右手迎击火控)")
+	for cu_id in GameData.C_UNITS.keys():
+		var cu: Dictionary = GameData.C_UNITS[cu_id]
+		assert_true(cu.has("skill_id") and cu.has("skill_name") and cu.has("skill_icon"), "C装置主动战技字段完整: %s -> %s" % [cu_id, cu.get("skill_name", "")])
+
+	assert_true(GameData.WEAPONS.has("sub_ciws_phalanx"), "新增副炮【密集阵CIWS近防迎击炮】存在")
+	SoundManager.trigger_ducking(-5.5, 0.15)
+	assert_true(SoundManager._duck_timer > 0.0, "SoundManager 动态侧链闪避 (Sidechain Ducking) 正常触发")
+
+	# 11.2 阶段二：车库智能加权商店、16款战车改装件/诺亚诅咒件、引擎折旧换购与属性溯源
+	assert_true(GameData.TANK_MODS.size() >= 16, "战车被动改装芯片与诺亚诅咒件不少于 16 款 (当前 %d 款)" % GameData.TANK_MODS.size())
+	var cursed_cnt: int = 0
+	for m_id in GameData.TANK_MODS.keys():
+		if bool(GameData.TANK_MODS[m_id].get("is_cursed", false)):
+			cursed_cnt += 1
+	assert_true(cursed_cnt >= 6, "包含不少于 6 款高风险高回报【诺亚失控诅咒改装件】 (当前 %d 款)" % cursed_cnt)
+
+	GameState.start_new_run("bounty_hunter", "mammoth", 0, "normal")
+	GameState.gold = 500
+	var w_slots_before: int = GameState.equipped_weapons.size()
+	var mod_ok: bool = GameState.buy_tank_mod("mod_autoloader", 45)
+	assert_true(mod_ok and GameState.equipped_tank_mods.get("mod_autoloader", 0) == 1, "成功购买并安装战车改装芯片【液压自动装填机】")
+	assert_true(GameState.equipped_weapons.size() == w_slots_before, "战车改装芯片独立叠加，绝不占用战车武器孔位")
+	assert_true(float(GameState.mod_bonus_stats.get("reload_speed_pct", 0.0)) >= 0.08, "改装件属性实时汇总至 mod_bonus_stats 并生效")
+
+	# 测试引擎与C装置 50% 折旧换购
+	GameState.equipped_engine_id = "eng_rwolf_turbo" # cost 140 -> trade-in 70
+	assert_true(GameState.get_engine_trade_in_value() == 70, "旧引擎【绯红特制涡轮引擎】折旧 50% 抵扣计算准确 (70G)")
+	GameState.equipped_c_unit_id = "cu_mirage" # cost 120 -> trade-in 60
+	assert_true(GameState.get_c_unit_trade_in_value() == 60, "旧C装置【幻影全息系统】折旧 50% 抵扣计算准确 (60G)")
+
+	# 测试智能加权商店刷新与属性溯源明细
+	var candidate_weapons: Array = ["cannon_45mm", "cannon_105mm", "mg_77mm", "se_atm"]
+	var rolled_wid: String = GameState.roll_weighted_weapon_id(candidate_weapons)
+	assert_true(rolled_wid in candidate_weapons, "车库三层智能加权算法成功抽出合法候选武器: %s" % rolled_wid)
+	var breakdown_sp: String = GameState.get_stat_breakdown("max_sp")
+	assert_true(breakdown_sp.contains("底盘基础装甲") and breakdown_sp.contains("最终总计"), "车库属性面板支持多源加成公式溯源 Tooltip")
+
+	# 11.3 阶段三 & 阶段四：战场实机验证 (迎击拦截、全Boss弱点破坏、精英词缀、动态事件、空间网格与对象池)
+	var bf_scene: PackedScene = load("res://scenes/Battlefield.tscn")
+	var bf_node: Node2D = bf_scene.instantiate()
+	add_child(bf_node)
+	bf_node.start_wave()
+	var pt: Node2D = bf_node.player_tank
+
+	# 验证金属碎片粒子与气浪环
+	bf_node.fx_layer.debris.clear()
+	bf_node.fx_layer.effects.clear()
+	bf_node.fx_layer.spawn_metal_debris(pt.global_position, Color.ORANGE, 6)
+	bf_node.fx_layer.spawn_shockwave(pt.global_position, 160.0, Color.CYAN)
+	assert_true(bf_node.fx_layer.debris.size() == 6 and bf_node.fx_layer.effects.size() == 1, "战场物理弹片飞溅与冲击波气浪环正常生成")
+
+	# 验证方向性弹簧震屏与顿帧
+	bf_node.trigger_screen_shake(12.0, 0.25, Vector2.LEFT)
+	assert_true(bf_node.shake_dir_impulse.x < -1.0, "主炮开火反冲方向性弹簧震屏冲量计算正确")
+	bf_node.trigger_hitstop(0.02, 0.05)
+	Engine.time_scale = 1.0
+	bf_node._hitstop_active = false
+
+	# 验证实时防空迎击系统 (CIWS / 宙斯盾 / 神之右手)
+	GameState.equipped_c_unit_id = "cu_interceptor_ai"
+	pt.sync_weapons_from_state()
+	pt.intercept_timers.clear()
+	var pre_intercept: float = float(GameState.achievement_progress.get("intercept_count", 0.0))
+	bf_node.spawn_enemy_projectile(pt.global_position + Vector2(80, 0), Vector2.LEFT, 300.0, 20.0)
+	assert_true(bf_node.projectiles_container.get_child_count() == 1, "敌方测试弹幕已生成")
+	pt._process_interception_system(0.016, bf_node)
+	assert_true(float(GameState.achievement_progress.get("intercept_count", 0.0)) == pre_intercept + 1.0, "迎击雷达成功在半空凌空击落敌方弹幕！")
+	assert_true(bf_node.projectiles_container.get_child_count() == 0, "被拦截的敌方弹幕已从战场安全回收至对象池")
+
+	# 验证 C 装置差异化主动战技释放
+	for test_cu in ["cu_mirage", "cu_valkyrie", "cu_interceptor_ai"]:
+		GameState.equipped_c_unit_id = test_cu
+		pt.all_out_timer = 0.0
+		pt._trigger_all_out_attack(bf_node)
+		assert_true(pt.all_out_timer > 0.0, "C装置【%s】专属主动战技成功释放并进入冷却" % GameData.C_UNITS[test_cu]["skill_name"])
+
+	# 验证全 10 名赏金首均具备可破坏弱点部位，且推土机铲刀破坏后解除正面减伤
+	bf_node._clear_entities()
+	bf_node._spawn_wanted_boss("boss_killdozer")
+	var bulldozer: Node2D = bf_node.enemies_container.get_child(0)
+	assert_true(bulldozer != null and bulldozer.boss_parts.size() >= 1, "杀人推土机拥有独立可破坏部位【前部合金推土铲】")
+	bulldozer.facing_angle = 0.0
+	var plow_world: Vector2 = bulldozer.global_position + Vector2(28, 0)
+	bulldozer.take_damage(2500.0, true, "", plow_world, true)
+	assert_true(not bulldozer.has_alive_part("plow"), "推土机前部合金推土铲被成功击碎破坏！")
+
+	# 验证重装精英随机词缀生成
+	bf_node._spawn_map_elite()
+	var spawned_elite: Node2D = null
+	for e in bf_node.enemies_container.get_children():
+		if is_instance_valid(e) and e.is_elite and not e.is_boss:
+			spawned_elite = e
+			break
+	assert_true(spawned_elite != null and spawned_elite.elite_affixes.size() >= 1, "重装精英成功挂载随机词缀: %s" % spawned_elite.enemy_name)
+
+	# 验证波次内动态随机事件触发与完成结算
+	bf_node.trigger_arena_event("airdrop_defense")
+	assert_true(bf_node.active_arena_event.get("type", "") == "airdrop_defense", "战场动态事件【军火空投信标防守】成功激活")
+	bf_node._complete_arena_event()
+	assert_true(bf_node.active_arena_event.is_empty(), "战场动态事件完成后正常清理并派发空投改装奖励")
+
+	# 验证 2D 空间哈希网格 O(1) 邻域检索与掉落物自动合并 (>75)
+	bf_node._clear_entities()
+	bf_node._do_spawn_enemy("bio_ant", Vector2(500, 500))
+	bf_node._do_spawn_enemy("bio_ant", Vector2(2200, 1500))
+	bf_node.rebuild_spatial_grid()
+	var near_list: Array = bf_node.get_enemies_in_radius(Vector2(510, 510), 80.0)
+	assert_true(near_list.size() == 1, "2D 空间哈希网格精准检索邻域敌怪 (命中 1，过滤远端敌怪)")
+
+	for i in range(85):
+		bf_node.spawn_drop("scrap", 1, Vector2(600 + (i % 5) * 4, 600))
+	assert_true(bf_node.drops_container.get_child_count() <= 75, "同屏掉落物超过 75 个时触发自动合并压缩，防止节点爆炸 (当前节点数 %d)" % bf_node.drops_container.get_child_count())
+
+	bf_node.queue_free()

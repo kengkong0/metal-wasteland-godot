@@ -21,6 +21,12 @@ var weapon_id: String = ""
 
 func setup_player_proj(pos: Vector2, dir: Vector2, p_spd: float, p_dmg: float, p_splash: float, p_effect: String, p_crit: bool, p_main: bool = false, p_pierce: int = 1, p_wid: String = "") -> void:
 	is_enemy = false
+	age = 0.0
+	lifetime = 2.8
+	hit_targets.clear()
+	homing_target = null
+	visible = true
+	set_process(true)
 	global_position = pos
 	speed = p_spd
 	velocity = dir.normalized() * speed
@@ -55,6 +61,11 @@ func setup_player_proj(pos: Vector2, dir: Vector2, p_spd: float, p_dmg: float, p
 
 func setup_enemy_proj(pos: Vector2, dir: Vector2, p_spd: float, p_dmg: float, p_col: Color = Color(1.0, 0.25, 0.35), p_rad: float = 8.5, p_eff: String = "") -> void:
 	is_enemy = true
+	age = 0.0
+	hit_targets.clear()
+	homing_target = null
+	visible = true
+	set_process(true)
 	global_position = pos
 	speed = p_spd
 	velocity = dir.normalized() * speed
@@ -75,7 +86,7 @@ func _process(delta: float) -> void:
 
 	age += delta
 	if age >= lifetime:
-		queue_free()
+		_recycle_self(bf)
 		return
 
 	# 追踪导弹自动制导转向
@@ -92,10 +103,10 @@ func _process(delta: float) -> void:
 	# 边界检测
 	var rect: Rect2 = bf.arena_rect.grow(80.0)
 	if not rect.has_point(global_position):
-		queue_free()
+		_recycle_self(bf)
 		return
 
-	# 碰撞检测
+	# 碰撞检测 (使用 2D 空间哈希网格 O(1) 邻域检索)
 	if is_enemy:
 		var pt: Node2D = bf.player_tank
 		if is_instance_valid(pt):
@@ -106,9 +117,10 @@ func _process(delta: float) -> void:
 					pt.apply_emp_slow(2.2)
 				pt.take_damage(damage, global_position)
 				bf.fx_layer.spawn_explosion(global_position, 22.0, color)
-				queue_free()
+				_recycle_self(bf)
 	else:
-		for e in bf.enemies_container.get_children():
+		var nearby_enemies: Array = bf.get_enemies_in_radius(global_position, radius) if bf.has_method("get_enemies_in_radius") else bf.enemies_container.get_children()
+		for e in nearby_enemies:
 			if not is_instance_valid(e) or e in hit_targets:
 				continue
 			var hit_dist: float = radius + float(e.radius)
@@ -177,6 +189,12 @@ func _on_hit_enemy(bf: Node, target: Node2D) -> void:
 				jumps -= 1
 
 	if pierce_left <= 0:
+		_recycle_self(bf)
+
+func _recycle_self(bf: Node = null) -> void:
+	if is_instance_valid(bf) and bf.has_method("recycle_projectile"):
+		bf.recycle_projectile(self)
+	else:
 		queue_free()
 
 func _draw() -> void:

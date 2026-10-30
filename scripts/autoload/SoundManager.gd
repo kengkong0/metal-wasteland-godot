@@ -17,6 +17,8 @@ var _streams: Dictionary = {}
 var _bgm_player: AudioStreamPlayer
 var _bgm_streams: Dictionary = {}
 var _current_bgm: String = ""
+var _duck_timer: float = 0.0
+var _duck_amount_db: float = 0.0
 
 func set_master_volume(v: float) -> void:
 	master_volume = clampf(v, 0.0, 1.0)
@@ -29,12 +31,24 @@ func set_bgm_volume(v: float) -> void:
 func set_sfx_volume(v: float) -> void:
 	sfx_volume = clampf(v, 0.0, 1.0)
 
+func trigger_ducking(reduction_db: float = -4.5, duration: float = 0.22) -> void:
+	_duck_amount_db = reduction_db
+	_duck_timer = duration
+	_update_bgm_volume()
+
+func _process(delta: float) -> void:
+	if _duck_timer > 0.0:
+		_duck_timer -= delta
+		if _duck_timer <= 0.0:
+			_duck_amount_db = 0.0
+			_update_bgm_volume()
+
 func _update_bgm_volume() -> void:
 	if is_instance_valid(_bgm_player):
 		if muted or (master_volume * bgm_volume) <= 0.001:
 			_bgm_player.volume_db = -80.0
 		else:
-			_bgm_player.volume_db = linear_to_db(master_volume * bgm_volume) - 6.5
+			_bgm_player.volume_db = linear_to_db(master_volume * bgm_volume) - 6.5 + _duck_amount_db
 
 func _ready() -> void:
 	for i in range(POOL_SIZE):
@@ -124,6 +138,10 @@ func _generate_all_streams() -> void:
 	_streams["coin"] = _synth_chime(987.77, 1318.51, 0.20)
 	_streams["upgrade"] = _synth_chime(587.33, 1174.66, 0.32)
 	_streams["eject_alarm"] = _synth_chime(880.0, 440.0, 0.35)
+	_streams["cannon_thump"] = _synth_cannon(0.60, 80.0, 16.0)
+	_streams["interception_chirp"] = _synth_chime(1760.0, 2349.3, 0.16)
+	_streams["c_unit_skill"] = _synth_chime(523.25, 1567.98, 0.35)
+	_streams["ram_metal_crush"] = _synth_explosion(0.40, 0.85)
 
 func play(sound_name: String, pitch_variance: float = 0.08, volume_offset_db: float = 0.0) -> void:
 	if muted or not _streams.has(sound_name) or (master_volume * sfx_volume) <= 0.001:
@@ -149,10 +167,18 @@ func play(sound_name: String, pitch_variance: float = 0.08, volume_offset_db: fl
 			vibrate(0.65, 0.80, 0.35)
 		"mince_revive":
 			vibrate(0.80, 0.95, 0.40)
+		"cannon_thump", "ram_metal_crush":
+			vibrate(0.65, 0.90, 0.22)
+		"interception_chirp":
+			vibrate(0.40, 0.25, 0.10)
+		"c_unit_skill":
+			vibrate(0.60, 0.80, 0.28)
 
 func play_cannon_by_caliber(weight: float) -> void:
 	if weight >= 7.0:
+		trigger_ducking(-4.5, 0.24)
 		play("cannon_heavy", 0.06, 2.0)
+		play("cannon_thump", 0.04, 1.5)
 	else:
 		play("cannon_light", 0.08, 0.0)
 

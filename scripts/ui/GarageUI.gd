@@ -308,6 +308,17 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		return
+	if event.is_action_pressed("ui_cancel"):
+		if is_instance_valid(drill_modal) and drill_modal.visible:
+			get_viewport().set_input_as_handled()
+			drill_modal.visible = false
+			refresh_all()
+			return
+		if is_instance_valid(chassis_modal) and chassis_modal.visible:
+			get_viewport().set_input_as_handled()
+			chassis_modal.visible = false
+			refresh_all()
+			return
 	if event.is_action_pressed("gamepad_start"):
 		get_viewport().set_input_as_handled()
 		_on_launch_pressed()
@@ -342,6 +353,9 @@ func _on_drill_button_pressed() -> void:
 		return
 	drill_modal.visible = true
 	_update_drill_modal_text()
+	var first_btn: Button = drill_modal.find_child("*Button*", true, false) as Button
+	if is_instance_valid(first_btn):
+		first_btn.call_deferred("grab_focus")
 
 func _update_drill_modal_text() -> void:
 	var cost: int = GameState.get_drill_slot_cost()
@@ -643,24 +657,52 @@ func _roll_shop_items() -> void:
 	if valid_c_units.is_empty():
 		valid_c_units.append("cu_type66")
 
+	var valid_mods: Array = []
+	for mk in GameData.TANK_MODS.keys():
+		var m_def: Dictionary = GameData.TANK_MODS[mk]
+		if m_def.get("is_cursed", false) and GameState.current_wave < 3:
+			continue
+		if int(m_def.get("rarity", 1)) <= maxi(2, max_part_r):
+			valid_mods.append(String(mk))
+	if valid_mods.is_empty():
+		valid_mods.append("mod_autoloader")
+
 	while shop_items.size() < total_slots:
-		var is_last_slot: bool = (shop_items.size() == total_slots - 1)
-		if not is_last_slot:
-			var w_id: String = valid_w[randi() % valid_w.size()]
+		var slot_idx: int = shop_items.size()
+		var is_last_slot: bool = (slot_idx == total_slots - 1)
+		var is_mod_slot: bool = (slot_idx == total_slots - 2)
+		if is_mod_slot:
+			var m_id: String = valid_mods[randi() % valid_mods.size()]
+			var m_def: Dictionary = GameData.TANK_MODS[m_id]
+			var m_rar: int = int(m_def.get("rarity", 1))
+			var m_price: int = int(float(m_def.get("cost", 50)) * (1.0 + GameState.current_wave * 0.06) * (1.0 + GameState.bonus_stats.get("shop_price_pct", 0.0)))
+			shop_items.append({"kind": "tank_mod", "id": m_id, "rarity": m_rar, "price": m_price, "bought": false, "locked": false})
+		elif not is_last_slot:
+			var w_id: String = GameState.roll_weighted_weapon_id(valid_w)
 			var min_r: int = int(GameData.WEAPONS[w_id].get("min_rarity", 0))
 			var rar: int = _roll_brotato_shop_rarity(GameState.current_wave, min_r, max_allowed_r)
 			var base_c: int = int(GameData.WEAPONS[w_id].get("cost", 55))
 			var price: int = int(base_c * pow(1.55, rar - min_r) * (1.0 + GameState.current_wave * 0.08) * (1.0 + GameState.bonus_stats.get("shop_price_pct", 0.0)))
 			shop_items.append({"kind": "weapon", "id": w_id, "rarity": rar, "price": price, "bought": false, "locked": false})
 		else:
-			if randf() < 0.55:
+			var r_pick: float = randf()
+			if r_pick < 0.45:
 				var e_id: String = valid_engines[randi() % valid_engines.size()]
-				var price: int = int(GameData.ENGINES[e_id]["cost"] * (1.0 + GameState.current_wave * 0.06))
-				shop_items.append({"kind": "engine", "id": e_id, "price": price, "bought": false, "locked": false})
-			else:
+				var trade_in: int = GameState.get_engine_trade_in_value()
+				var raw_p: int = int(GameData.ENGINES[e_id]["cost"] * (1.0 + GameState.current_wave * 0.06))
+				var price: int = maxi(15, raw_p - trade_in)
+				shop_items.append({"kind": "engine", "id": e_id, "price": price, "trade_in": trade_in, "bought": false, "locked": false})
+			elif r_pick < 0.88:
 				var c_id: String = valid_c_units[randi() % valid_c_units.size()]
-				var price: int = int(GameData.C_UNITS[c_id]["cost"] * (1.0 + GameState.current_wave * 0.06))
-				shop_items.append({"kind": "c_unit", "id": c_id, "price": price, "bought": false, "locked": false})
+				var trade_in: int = GameState.get_c_unit_trade_in_value()
+				var raw_p: int = int(GameData.C_UNITS[c_id]["cost"] * (1.0 + GameState.current_wave * 0.06))
+				var price: int = maxi(15, raw_p - trade_in)
+				shop_items.append({"kind": "c_unit", "id": c_id, "price": price, "trade_in": trade_in, "bought": false, "locked": false})
+			else:
+				var m_id2: String = valid_mods[randi() % valid_mods.size()]
+				var m_def2: Dictionary = GameData.TANK_MODS[m_id2]
+				var m_price2: int = int(float(m_def2.get("cost", 50)) * (1.0 + GameState.current_wave * 0.06))
+				shop_items.append({"kind": "tank_mod", "id": m_id2, "rarity": int(m_def2.get("rarity", 2)), "price": m_price2, "bought": false, "locked": false})
 
 # --- 左上：土豆兄弟风格 4~5 张立式商店商品卡 ---
 func _refresh_shop_cards() -> void:
@@ -689,6 +731,9 @@ func _refresh_shop_cards() -> void:
 			border_col = Color(0.35, 0.90, 1.0)
 		elif item["kind"] == "c_unit":
 			border_col = Color(0.90, 0.50, 1.0)
+		elif item["kind"] == "tank_mod":
+			var m_def_b: Dictionary = GameData.TANK_MODS.get(item["id"], {})
+			border_col = Color(1.0, 0.22, 0.38) if m_def_b.get("is_cursed", false) else Color(0.42, 0.96, 0.68)
 
 		var card := _make_styled_panel(Color(0.17, 0.16, 0.19), border_col, 8)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -795,6 +840,8 @@ func _refresh_shop_cards() -> void:
 			var sv := VBoxContainer.new()
 			stat_box.add_child(sv)
 			_add_mini_stat_row(sv, "⚖️ 最大载重", "%.1f t" % float(e_def["max_weight"]), Color(0.40, 1.0, 0.55))
+			if int(item.get("trade_in", 0)) > 0:
+				_add_mini_stat_row(sv, "♻️ 旧件折抵", "-%d G" % int(item["trade_in"]), Color(1.0, 0.88, 0.30))
 
 			var desc_lbl := _make_outlined_label(e_def["desc"], 12, Color(0.85, 0.90, 0.95))
 			desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -830,6 +877,8 @@ func _refresh_shop_cards() -> void:
 			stat_box.add_child(sv)
 			_add_mini_stat_row(sv, "🚀 全弹CD", "%.1f s" % float(c_def["all_out_cd"]), Color(0.95, 0.65, 1.0))
 			_add_mini_stat_row(sv, "⚖️ 自重", "%.1f t" % float(c_def["weight"]), Color(0.95, 0.85, 0.40))
+			if int(item.get("trade_in", 0)) > 0:
+				_add_mini_stat_row(sv, "♻️ 旧件折抵", "-%d G" % int(item["trade_in"]), Color(1.0, 0.88, 0.30))
 
 			var desc_lbl := _make_outlined_label(c_def["desc"], 12, Color(0.92, 0.85, 0.96))
 			desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -844,7 +893,51 @@ func _refresh_shop_cards() -> void:
 				GameState.equipped_c_unit_id = item["id"]
 				item["bought"] = true
 				SoundManager.play("upgrade", 0.05, 1.0)
-				lbl_event_toast.text = "💻 已安装火控电脑【%s】！" % c_def["name"]
+				lbl_event_toast.text = "💻 已安装火控电脑【%s】（含旧件折抵）！" % c_def["name"]
+				refresh_all()
+			)
+
+		elif item["kind"] == "tank_mod":
+			var m_id: String = item["id"]
+			var m_def: Dictionary = GameData.TANK_MODS[m_id]
+			var is_cursed: bool = bool(m_def.get("is_cursed", false))
+			var cur_stacks: int = int(GameState.equipped_tank_mods.get(m_id, 0))
+			var badge_str: String = "☣️ 诺亚禁忌诅咒件" if is_cursed else "🔩 战术改装挂件 (不占孔)"
+			var top_tag := _make_outlined_label(badge_str, 12, border_col)
+			top_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cv.add_child(top_tag)
+
+			var name_lbl := _make_outlined_label("%s %s" % [m_def.get("icon", "🔩"), m_def["name"]], 15, border_col)
+			name_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			name_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			cv.add_child(name_lbl)
+
+			if cur_stacks > 0:
+				var st_lbl := _make_outlined_label("📦 当前已装备: ×%d (可无限叠加)" % cur_stacks, 12, Color(1.0, 0.88, 0.32))
+				st_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				cv.add_child(st_lbl)
+
+			var syn_names: Array = []
+			for t in m_def.get("tags", []):
+				if GameData.SYNERGIES.has(t):
+					syn_names.append(GameData.SYNERGIES[t]["name"])
+			if not syn_names.is_empty():
+				var s_lbl := _make_outlined_label("🏷️ " + " / ".join(syn_names), 12, Color(0.75, 0.88, 1.0))
+				s_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+				cv.add_child(s_lbl)
+
+			var desc_lbl := _make_outlined_label(m_def["desc"], 12, Color(1.0, 0.78, 0.82) if is_cursed else Color(0.88, 0.94, 0.90))
+			desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			cv.add_child(desc_lbl)
+
+			_add_shop_card_buttons(cv, item, func():
+				if not GameState.buy_tank_mod(m_id, int(item["price"])):
+					lbl_event_toast.text = "❌ 赏金 G 不足！"
+					return
+				item["bought"] = true
+				SoundManager.play("upgrade", 0.05, 1.5)
+				lbl_event_toast.text = "🔩 已加装【%s】！流派标签与属性永久生效！" % m_def["name"]
 				refresh_all()
 			)
 
@@ -1072,12 +1165,27 @@ func _refresh_right_stats_and_wanted() -> void:
 	var hc_lbl := _make_outlined_label("%s (Lv.%d)\n%s" % [hunter["name"].split(" ")[0], GameState.level, ch["name"].split(" ")[0]], 12, Color(0.95, 0.90, 0.78))
 	icon_row.add_child(hc_lbl)
 
-	_add_mini_stat_row(stats_list_vbox, "⚙️ 当前引擎", eng["name"].substr(0, 9), Color(0.45, 0.92, 1.0))
-	_add_mini_stat_row(stats_list_vbox, "💻 火控C装置", cu["name"].substr(0, 9), Color(0.92, 0.60, 1.0))
-	_add_mini_stat_row(stats_list_vbox, "💥 暴击几率", "%d%%" % int(GameState.crit_chance * 100.0), Color(0.40, 1.0, 0.55))
-	_add_mini_stat_row(stats_list_vbox, "💨 闪避几率", "%d%%" % int(GameState.dodge_chance * 100.0), Color(0.45, 0.92, 1.0))
-	_add_mini_stat_row(stats_list_vbox, "⚡ 装填加速", "+%d%%" % int(GameState.bonus_stats.get("reload_speed_pct", 0.0) * 100.0), Color(1.0, 0.85, 0.32))
-	_add_mini_stat_row(stats_list_vbox, "🚜 战车移速", "%.0f" % GameState.move_speed, Color.WHITE)
+	bar_garage_sp.tooltip_text = GameState.get_stat_breakdown("max_sp")
+	bar_garage_weight.tooltip_text = GameState.get_stat_breakdown("max_weight")
+
+	_add_mini_stat_row(stats_list_vbox, "⚙️ 当前引擎", eng["name"].substr(0, 9), Color(0.45, 0.92, 1.0), GameState.get_stat_breakdown("max_weight"))
+	_add_mini_stat_row(stats_list_vbox, "💻 火控C装置", "%s [%s]" % [cu["name"].substr(0, 6), cu.get("skill_name", "全弹")], Color(0.92, 0.60, 1.0), cu.get("desc", ""))
+	_add_mini_stat_row(stats_list_vbox, "🔴 主炮增伤", "%+d%%" % int((GameState.bonus_stats.get("main_dmg_pct", 0.0) + float(eng.get("all_dmg_bonus", 0.0)) + float(eng.get("main_dmg_bonus", 0.0))) * 100.0), Color(1.0, 0.58, 0.32), GameState.get_stat_breakdown("main_dmg"))
+	_add_mini_stat_row(stats_list_vbox, "🟡 副武增伤", "%+d%%" % int((GameState.bonus_stats.get("sub_dmg_pct", 0.0) + float(eng.get("all_dmg_bonus", 0.0))) * 100.0), Color(1.0, 0.88, 0.38), GameState.get_stat_breakdown("sub_dmg"))
+	_add_mini_stat_row(stats_list_vbox, "💥 暴击几率", "%d%%" % int(GameState.crit_chance * 100.0), Color(0.40, 1.0, 0.55), GameState.get_stat_breakdown("crit_chance"))
+	_add_mini_stat_row(stats_list_vbox, "💨 闪避几率", "%d%%" % int(GameState.dodge_chance * 100.0), Color(0.45, 0.92, 1.0), GameState.get_stat_breakdown("dodge"))
+	_add_mini_stat_row(stats_list_vbox, "⚡ 装填加速", "%+d%%" % int(GameState.bonus_stats.get("reload_speed_pct", 0.0) * 100.0), Color(1.0, 0.85, 0.32), GameState.get_stat_breakdown("reload_spd"))
+	_add_mini_stat_row(stats_list_vbox, "🚜 战车移速", "%.0f" % GameState.move_speed, Color.WHITE, GameState.get_stat_breakdown("move_speed"))
+
+	if not GameState.equipped_tank_mods.is_empty():
+		var mod_summary: Array = []
+		var mod_tips: Array = ["【已加装战术挂件与诅咒芯片】"]
+		for mid in GameState.equipped_tank_mods.keys():
+			var cnt: int = int(GameState.equipped_tank_mods[mid])
+			var mdef: Dictionary = GameData.TANK_MODS.get(mid, {})
+			mod_summary.append("%s×%d" % [mdef.get("icon", "🔩"), cnt])
+			mod_tips.append("• %s ×%d: %s" % [mdef.get("name", mid), cnt, mdef.get("desc", "")])
+		_add_mini_stat_row(stats_list_vbox, "🔩 改装挂件", " ".join(mod_summary), Color(0.45, 0.98, 0.72), "\n".join(mod_tips))
 
 	# 3. 刷新猎人办事处悬赏通缉令紧凑卡
 	for c in wanted_box_vbox.get_children():
@@ -1255,8 +1363,10 @@ func _create_bar(min_sz: Vector2, fill_col: Color, font_sz: int) -> Dictionary:
 
 	return {"container": container, "bar": bar, "fill_style": fill_style, "label": lbl}
 
-func _add_mini_stat_row(parent: VBoxContainer, k_txt: String, v_txt: String, v_col: Color) -> void:
+func _add_mini_stat_row(parent: VBoxContainer, k_txt: String, v_txt: String, v_col: Color, tip_txt: String = "") -> void:
 	var row := HBoxContainer.new()
+	if tip_txt != "":
+		row.tooltip_text = tip_txt
 	parent.add_child(row)
 	var kl := _make_outlined_label(k_txt, 12, Color(0.78, 0.80, 0.84))
 	kl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
