@@ -227,7 +227,7 @@ func _process_human_mode(delta: float, bf: Node, move_input: Vector2) -> void:
 			var h_dmg: float = (28.0 + GameState.level * 6.0) * float(GameState.bonus_stats.get("human_hp_mult", 1.0))
 			var is_crit: bool = randf() < (GameState.crit_chance + 0.15)
 			for i in range(-1, 2):
-				bf.spawn_player_projectile(human_pos, aim.rotated(i * 0.12), 680.0, h_dmg, 0.0, "", is_crit, false, 1)
+				bf.spawn_player_projectile(human_pos, aim.rotated(i * 0.12), 680.0, h_dmg, 0.0, "", is_crit, false, 1, "human_handgun")
 			SoundManager.play("subgun_mg", 0.15, -4.0)
 
 	# 战地抢修战车判定 (靠近战车残骸读条修复)
@@ -341,7 +341,7 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 		for v in range(total_volleys):
 			for b in range(burst):
 				var spread: float = (float(b) - float(burst - 1) * 0.5) * 0.08 + v * 0.05
-				bf.spawn_player_projectile(global_position + aim_dir * 26.0, aim_dir.rotated(spread), p_spd, dmg, splash, effect, is_crit, true, pierce)
+				bf.spawn_player_projectile(global_position + aim_dir * 26.0, aim_dir.rotated(spread), p_spd, dmg, splash, effect, is_crit, true, pierce, w_id)
 
 		if effect == "laser":
 			SoundManager.play("laser", 0.06, 0.0)
@@ -362,7 +362,7 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 
 		for p in range(pellets):
 			var spread: float = randf_range(-0.18, 0.18) if pellets > 1 else randf_range(-0.04, 0.04)
-			bf.spawn_player_projectile(global_position + aim_dir * 18.0, aim_dir.rotated(spread), p_spd, dmg, 0.0, effect, is_crit, false, pierce)
+			bf.spawn_player_projectile(global_position + aim_dir * 18.0, aim_dir.rotated(spread), p_spd, dmg, 0.0, effect, is_crit, false, pierce, w_id)
 
 		if effect == "electric":
 			SoundManager.play("subgun_electric", 0.1, -6.0)
@@ -381,7 +381,7 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 				salvo += 2
 			for s in range(salvo):
 				var ang: float = chassis_angle + (float(s) - float(salvo) * 0.5) * 0.25 + randf_range(-0.1, 0.1)
-				bf.spawn_player_projectile(global_position, Vector2.from_angle(ang), 540.0, dmg, 42.0, "homing", is_crit, false, 1)
+				bf.spawn_player_projectile(global_position, Vector2.from_angle(ang), 540.0, dmg, 42.0, "homing", is_crit, false, 1, w_id)
 			SoundManager.play("se_missile", 0.08, -2.0)
 			return true
 
@@ -401,6 +401,7 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 			if is_instance_valid(t):
 				bf.fx_layer.spawn_laser_beam(drone_pos, t.global_position, Color(0.4, 0.95, 1.0), 2.5)
 				t.take_damage(dmg, is_crit, "laser", drone_pos, false)
+				GameState.record_weapon_damage(w_id, dmg)
 				return true
 			return false
 
@@ -412,6 +413,7 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 			for e in bf.enemies_container.get_children():
 				if is_instance_valid(e) and global_position.distance_to(e.global_position) <= 220.0 + e.radius:
 					e.take_damage(dmg, is_crit, "sonic_wave", global_position, false)
+					GameState.record_weapon_damage(w_id, dmg)
 			return true
 
 	return false
@@ -433,9 +435,11 @@ func _trigger_all_out_attack(bf: Node) -> void:
 	if GameState.synergy_counts.get("missile", 0) >= 6:
 		for e in bf.enemies_container.get_children():
 			if is_instance_valid(e) and randf() < 0.55:
+				var sat_dmg: float = 260.0 + GameState.level * 25.0
 				bf.fx_layer.spawn_laser_beam(e.global_position + Vector2(0, -400), e.global_position, Color(0.4, 0.95, 1.0), 9.0)
 				bf.fx_layer.spawn_explosion(e.global_position, 85.0, Color(0.35, 0.9, 1.0))
-				e.take_damage(260.0 + GameState.level * 25.0, true, "laser", e.global_position, true)
+				e.take_damage(sat_dmg, true, "laser", e.global_position, true)
+				GameState.record_weapon_damage("cu_all_out", sat_dmg)
 
 func _process_spike_balls(bf: Node, w_id: String, rarity: int, is_evo_star: bool = false) -> void:
 	var ball_cnt: int = 4 if is_evo_star else 2
@@ -459,6 +463,7 @@ func _process_spike_balls(bf: Node, w_id: String, rarity: int, is_evo_star: bool
 				if not ram_cooldowns.has(key):
 					ram_cooldowns[key] = 0.25 if is_evo_star else 0.32
 					e.take_damage(ball_dmg, is_evo_star, "electric" if is_evo_star else "", b_pos, false)
+					GameState.record_weapon_damage(w_id, ball_dmg)
 					if is_evo_star:
 						heal_sp(5.0)
 
@@ -480,12 +485,15 @@ func on_enemy_collision(enemy: Node2D, _delta: float) -> void:
 			ram_dmg += current_sp * 0.15
 			bf.fx_layer.spawn_explosion(enemy.global_position, 80.0, Color(0.95, 0.75, 0.25))
 		enemy.take_damage(ram_dmg, false, "", global_position, false)
+		GameState.record_weapon_damage("chassis_ram", ram_dmg)
 		if not enemy.is_boss:
 			enemy.global_position += (enemy.global_position - global_position).normalized() * 34.0
 
 	# 钢铁碾压 (4) 荆棘反伤
 	if not is_human_mode and GameState.synergy_counts.get("juggernaut", 0) >= 4:
-		enemy.take_damage(GameState.used_weight * 5.0, false, "", global_position, false)
+		var thorn_dmg: float = GameState.used_weight * 5.0
+		enemy.take_damage(thorn_dmg, false, "", global_position, false)
+		GameState.record_weapon_damage("chassis_ram", thorn_dmg)
 
 	var incoming: float = enemy.contact_dmg
 	if not is_human_mode and GameState.selected_chassis_id == "abrams":

@@ -17,8 +17,9 @@ var is_crit: bool = false
 var is_main_cannon: bool = false
 var hit_targets: Array = []
 var homing_target: Node2D = null
+var weapon_id: String = ""
 
-func setup_player_proj(pos: Vector2, dir: Vector2, p_spd: float, p_dmg: float, p_splash: float, p_effect: String, p_crit: bool, p_main: bool = false, p_pierce: int = 1) -> void:
+func setup_player_proj(pos: Vector2, dir: Vector2, p_spd: float, p_dmg: float, p_splash: float, p_effect: String, p_crit: bool, p_main: bool = false, p_pierce: int = 1, p_wid: String = "") -> void:
 	is_enemy = false
 	global_position = pos
 	speed = p_spd
@@ -30,6 +31,7 @@ func setup_player_proj(pos: Vector2, dir: Vector2, p_spd: float, p_dmg: float, p
 	is_crit = p_crit
 	is_main_cannon = p_main
 	pierce_left = p_pierce
+	weapon_id = p_wid
 
 	if is_main_cannon:
 		radius = 12.0
@@ -131,8 +133,12 @@ func _on_hit_enemy(bf: Node, target: Node2D) -> void:
 		for e in bf.enemies_container.get_children():
 			if is_instance_valid(e) and global_position.distance_to(e.global_position) <= actual_splash + e.radius:
 				e.take_damage(damage, is_crit, effect_type, global_position, is_main_cannon)
+				if not weapon_id.is_empty():
+					GameState.record_weapon_damage(weapon_id, damage)
 	else:
 		target.take_damage(damage, is_crit, effect_type, global_position, is_main_cannon)
+		if not weapon_id.is_empty():
+			GameState.record_weapon_damage(weapon_id, damage)
 
 	# 2. 水泥弹泥潭 / 盖亚石化核弹效果
 	if effect_type == "cement" or effect_type == "gaia_nuke":
@@ -148,7 +154,10 @@ func _on_hit_enemy(bf: Node, target: Node2D) -> void:
 			bf.fx_layer.spawn_explosion(sub_pos, 60.0, Color(1.0, 0.75, 0.2))
 			for e in bf.enemies_container.get_children():
 				if is_instance_valid(e) and sub_pos.distance_to(e.global_position) <= 62.0 + e.radius:
-					e.take_damage(damage * 0.42, false, "cement" if effect_type == "gaia_nuke" else "cluster_sub", sub_pos, false)
+					var sub_dmg: float = damage * 0.42
+					e.take_damage(sub_dmg, false, "cement" if effect_type == "gaia_nuke" else "cluster_sub", sub_pos, false)
+					if not weapon_id.is_empty():
+						GameState.record_weapon_damage(weapon_id, sub_dmg)
 
 	# 4. 特斯拉电弧 / Ω诺亚天谴轨道炮 连锁闪电
 	if effect_type == "electric" or effect_type == "omega_laser":
@@ -160,7 +169,10 @@ func _on_hit_enemy(bf: Node, target: Node2D) -> void:
 				break
 			if is_instance_valid(e) and e != target and last_pos.distance_to(e.global_position) <= max_dist:
 				bf.fx_layer.spawn_laser_beam(last_pos, e.global_position, Color(1.0, 0.85, 0.25) if effect_type == "omega_laser" else Color(0.4, 0.9, 1.0), 4.5)
-				e.take_damage(damage * 0.80, is_crit, "electric", last_pos, false)
+				var arc_dmg: float = damage * 0.80
+				e.take_damage(arc_dmg, is_crit, "electric", last_pos, false)
+				if not weapon_id.is_empty():
+					GameState.record_weapon_damage(weapon_id, arc_dmg)
 				last_pos = e.global_position
 				jumps -= 1
 

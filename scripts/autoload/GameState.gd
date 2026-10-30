@@ -97,6 +97,8 @@ var pickup_range: float = 140.0
 
 var bonus_stats: Dictionary = {}
 var synergy_counts: Dictionary = {}
+var weapon_damage_stats: Dictionary = {} # {"cannon_105mm": 15420.0, "mg_77mm": 8900.0, ...}
+
 
 func _ready() -> void:
 	_init_default_meta()
@@ -397,6 +399,7 @@ func start_new_run(hunter_id: String, chassis_id: String, map_idx: int = -1, dif
 	defeated_wanted_ids.clear()
 	wanted_poster_offset = 0
 	run_already_settled = false
+	weapon_damage_stats.clear()
 
 	# 注入局外永久科技树加成 (META_UPGRADES)
 	var lv_weight: int = get_meta_level("meta_weight")
@@ -754,3 +757,60 @@ func get_available_wanted_posters() -> Array:
 	for i in range(2):
 		list.append(candidates[(wanted_poster_offset + i) % candidates.size()])
 	return list
+
+# --- 土豆兄弟 / 吸血鬼幸存者风格：武器输出统计与 DPS 排行榜 ---
+func record_weapon_damage(w_id: String, dmg: float) -> void:
+	if w_id.is_empty() or dmg <= 0.0:
+		return
+	weapon_damage_stats[w_id] = weapon_damage_stats.get(w_id, 0.0) + dmg
+
+func get_total_weapon_damage() -> float:
+	var total: float = 0.0
+	for d in weapon_damage_stats.values():
+		total += float(d)
+	return total
+
+func get_sorted_weapon_damage() -> Array:
+	var list: Array = []
+	var total: float = get_total_weapon_damage()
+	for wid in weapon_damage_stats.keys():
+		var d: float = float(weapon_damage_stats[wid])
+		var w_name: String = wid
+		var slot_badge: String = "🔫"
+		var w_color: Color = Color(0.85, 0.85, 0.85)
+
+		if GameData.WEAPONS.has(wid):
+			var wdef: Dictionary = GameData.WEAPONS[wid]
+			w_name = wdef.get("name", wid)
+			var slot: String = wdef.get("slot", "SUB")
+			slot_badge = "🔴主炮" if slot == "MAIN" else ("🟡副炮" if slot == "SUB" else "🔵S-E")
+			w_color = Color(1.0, 0.55, 0.25) if slot == "MAIN" else (Color(1.0, 0.88, 0.35) if slot == "SUB" else Color(0.35, 0.85, 1.0))
+		elif wid == "se_spike_ball":
+			w_name = "旋转链锯刺球"
+			slot_badge = "⚙️撞角"
+			w_color = Color(0.85, 0.75, 0.35)
+		elif wid == "chassis_ram":
+			w_name = "战车冲撞碾压"
+			slot_badge = "🚜车体"
+			w_color = Color(0.95, 0.65, 0.30)
+		elif wid == "cu_all_out":
+			w_name = "全弹发射/轨道卫星"
+			slot_badge = "🚀C装置"
+			w_color = Color(1.0, 0.85, 0.20)
+		elif wid == "human_handgun":
+			w_name = "猎人自卫枪械"
+			slot_badge = "👤步兵"
+			w_color = Color(0.45, 0.95, 0.55)
+
+		var pct: float = (d / total * 100.0) if total > 0.0 else 0.0
+		list.append({
+			"id": wid,
+			"name": w_name,
+			"slot_badge": slot_badge,
+			"damage": d,
+			"pct": pct,
+			"color": w_color
+		})
+	list.sort_custom(func(a, b): return a["damage"] > b["damage"])
+	return list
+

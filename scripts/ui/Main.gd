@@ -1940,6 +1940,22 @@ func _populate_mince_rows(is_victory: bool, rewards: Dictionary) -> void:
 	mince_stats_vbox.add_child(HSeparator.new())
 	_add_settle_row("🎉 本局合计获得 (总持有 %d 💎)" % GameState.noah_chips, "+%d 💎" % int(rewards["total"]), Color(0.40, 1.0, 0.55))
 
+	# 土豆兄弟 / 吸血鬼幸存者风格：战后武装伤害统计与输出排行 (DPS Meter)
+	var sorted_dmg: Array = GameState.get_sorted_weapon_damage()
+	if not sorted_dmg.is_empty():
+		mince_stats_vbox.add_child(HSeparator.new())
+		var dps_header := _make_outlined_label("🏆 本局武装伤害排行 (DPS Meter)", 15, Color(1.0, 0.85, 0.25))
+		mince_stats_vbox.add_child(dps_header)
+
+		for item in sorted_dmg:
+			var r := HBoxContainer.new()
+			mince_stats_vbox.add_child(r)
+			var nl := _make_outlined_label("%s %s" % [item["slot_badge"], item["name"]], 13, item["color"])
+			nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			r.add_child(nl)
+			var dl := _make_outlined_label("%.0f 伤害 (%.1f%%)" % [item["damage"], item["pct"]], 13, Color(0.92, 0.92, 0.95))
+			r.add_child(dl)
+
 func _add_settle_row(k_str: String, v_str: String, v_col: Color) -> void:
 	var r := HBoxContainer.new()
 	mince_stats_vbox.add_child(r)

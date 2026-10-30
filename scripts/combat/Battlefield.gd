@@ -78,8 +78,14 @@ var lbl_level_up_sub: Label
 var pause_modal: Control
 var pause_stats_vbox: VBoxContainer
 var pause_weapons_vbox: VBoxContainer
+var pause_dps_vbox: VBoxContainer
 var btn_pause_resume: Button
 var btn_pause_mute: Button
+
+# --- 边缘重要目标指示器、低血量暗角警报与升级刷新 ---
+var offscreen_indicators_ctrl: Control
+var vignette_ctrl: Control
+var btn_reroll_level_cards: Button
 
 func _ready() -> void:
 	GameState.level_up_triggered.connect(_on_battlefield_level_up)
@@ -156,6 +162,20 @@ func _build_hud() -> void:
 	hud_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hud_root.mouse_filter = Control.MOUSE_FILTER_PASS
 	hud_layer.add_child(hud_root)
+
+	# 全屏呼吸暗角警报层 (低SP / 步兵模式)
+	vignette_ctrl = Control.new()
+	vignette_ctrl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	vignette_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vignette_ctrl.draw.connect(_draw_danger_vignette)
+	hud_root.add_child(vignette_ctrl)
+
+	# 屏幕边缘重要目标追踪指示器 (Boss / 精英 / 宝箱)
+	offscreen_indicators_ctrl = Control.new()
+	offscreen_indicators_ctrl.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	offscreen_indicators_ctrl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	offscreen_indicators_ctrl.draw.connect(_draw_offscreen_indicators)
+	hud_root.add_child(offscreen_indicators_ctrl)
 
 	# =========================================================================
 	# 1. 左上角：土豆兄弟风格状态条组 (血条 + 经验条 + 载重/全弹CD条 + 金币弹药图标)
@@ -417,6 +437,17 @@ func _build_hud() -> void:
 	level_up_cards_hbox.add_theme_constant_override("separation", 16)
 	lu_vbox.add_child(level_up_cards_hbox)
 
+	var lu_bot_hbox := HBoxContainer.new()
+	lu_bot_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	lu_vbox.add_child(lu_bot_hbox)
+
+	btn_reroll_level_cards = Button.new()
+	btn_reroll_level_cards.custom_minimum_size = Vector2(360, 42)
+	btn_reroll_level_cards.text = "🎲 刷新升级选项 (消耗 15G)"
+	btn_reroll_level_cards.add_theme_font_size_override("font_size", 15)
+	btn_reroll_level_cards.pressed.connect(_on_reroll_level_cards_pressed)
+	lu_bot_hbox.add_child(btn_reroll_level_cards)
+
 	_build_pause_modal()
 
 func _build_pause_modal() -> void:
@@ -435,16 +466,16 @@ func _build_pause_modal() -> void:
 	pause_modal.add_child(p_center)
 
 	var p_panel := PanelContainer.new()
-	p_panel.custom_minimum_size = Vector2(760, 450)
+	p_panel.custom_minimum_size = Vector2(980, 480)
 	var p_style := StyleBoxFlat.new()
 	p_style.bg_color = Color(0.13, 0.13, 0.15, 0.98)
 	p_style.border_color = Color(0.95, 0.72, 0.25)
 	p_style.set_border_width_all(3)
 	p_style.set_corner_radius_all(12)
-	p_style.content_margin_left = 22
-	p_style.content_margin_right = 22
-	p_style.content_margin_top = 18
-	p_style.content_margin_bottom = 18
+	p_style.content_margin_left = 20
+	p_style.content_margin_right = 20
+	p_style.content_margin_top = 16
+	p_style.content_margin_bottom = 16
 	p_panel.add_theme_stylebox_override("panel", p_style)
 	p_center.add_child(p_panel)
 
@@ -452,13 +483,13 @@ func _build_pause_modal() -> void:
 	p_vbox.add_theme_constant_override("separation", 12)
 	p_panel.add_child(p_vbox)
 
-	var p_title := _make_outlined_label("⏸️ 战术暂停 — 属性与武装总览", 22, Color(1.0, 0.88, 0.30))
+	var p_title := _make_outlined_label("⏸️ 战术暂停 — 属性、武装与伤害统计", 22, Color(1.0, 0.88, 0.30))
 	p_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	p_vbox.add_child(p_title)
 
 	var mid_hbox := HBoxContainer.new()
 	mid_hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	mid_hbox.add_theme_constant_override("separation", 16)
+	mid_hbox.add_theme_constant_override("separation", 14)
 	p_vbox.add_child(mid_hbox)
 
 	# 左栏：土豆兄弟式属性列表
@@ -469,13 +500,21 @@ func _build_pause_modal() -> void:
 	pause_stats_vbox.add_theme_constant_override("separation", 6)
 	left_box.add_child(pause_stats_vbox)
 
-	# 右栏：已装武器徽章列表
-	var right_box := _make_card_box(Color(0.17, 0.17, 0.20), Color(0.85, 0.65, 0.25))
-	right_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	mid_hbox.add_child(right_box)
+	# 中栏：已装武器与流派羁绊
+	var mid_box := _make_card_box(Color(0.17, 0.17, 0.20), Color(0.85, 0.65, 0.25))
+	mid_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mid_hbox.add_child(mid_box)
 	pause_weapons_vbox = VBoxContainer.new()
 	pause_weapons_vbox.add_theme_constant_override("separation", 6)
-	right_box.add_child(pause_weapons_vbox)
+	mid_box.add_child(pause_weapons_vbox)
+
+	# 右栏：吸血鬼幸存者/土豆兄弟式武器伤害输出排行榜 (DPS Meter)
+	var right_box := _make_card_box(Color(0.17, 0.17, 0.20), Color(1.0, 0.45, 0.25))
+	right_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mid_hbox.add_child(right_box)
+	pause_dps_vbox = VBoxContainer.new()
+	pause_dps_vbox.add_theme_constant_override("separation", 6)
+	right_box.add_child(pause_dps_vbox)
 
 	var btns_hbox := HBoxContainer.new()
 	btns_hbox.add_theme_constant_override("separation", 12)
@@ -547,7 +586,10 @@ func _toggle_pause_modal() -> void:
 			c.queue_free()
 		for c in pause_weapons_vbox.get_children():
 			c.queue_free()
+		for c in pause_dps_vbox.get_children():
+			c.queue_free()
 
+		# 1. 战车与猎人属性
 		var st_title := _make_outlined_label("📊 战车与猎人属性", 16, Color(0.55, 0.85, 1.0))
 		pause_stats_vbox.add_child(st_title)
 		_add_stat_row(pause_stats_vbox, "🗺️ 当前战区", "%s [%s]" % [GameState.get_current_map_def()["name"].substr(0, 7), GameState.get_current_difficulty_def()["name"].substr(0, 4)], Color(1.0, 0.88, 0.35))
@@ -558,6 +600,7 @@ func _toggle_pause_modal() -> void:
 		_add_stat_row(pause_stats_vbox, "💨 闪避率", "%d%%" % int(GameState.dodge_chance * 100.0), Color(0.45, 0.92, 1.0))
 		_add_stat_row(pause_stats_vbox, "⚡ 装填加速", "+%d%%" % int(GameState.bonus_stats.get("reload_speed_pct", 0.0) * 100.0), Color(0.85, 0.65, 1.0))
 
+		# 2. 已装武器与流派羁绊
 		var wp_title := _make_outlined_label("🔫 已装备武装 (%d/%d)" % [GameState.equipped_weapons.size(), GameState.chassis_slots.size()], 16, Color(1.0, 0.85, 0.30))
 		pause_weapons_vbox.add_child(wp_title)
 		for ew in GameState.equipped_weapons:
@@ -565,6 +608,59 @@ func _toggle_pause_modal() -> void:
 			var rar: int = int(ew.get("rarity", 0))
 			var eff_dmg: float = GameState.get_weapon_effective_damage(ew["id"], rar)
 			_add_stat_row(pause_weapons_vbox, "[%s] %s" % [wd["slot"], wd["name"]], "%s | 💥%.0f" % [GameData.RARITY_NAMES[rar], eff_dmg], GameData.RARITY_COLORS[rar])
+
+		var syn_active_header := _make_outlined_label("🏷️ 激活羁绊", 14, Color(0.45, 0.95, 0.75))
+		pause_weapons_vbox.add_child(syn_active_header)
+		var has_syn: bool = false
+		for tag in GameData.SYNERGIES.keys():
+			var cnt: int = GameState.synergy_counts.get(tag, 0)
+			if cnt >= 2:
+				has_syn = true
+				var s_def: Dictionary = GameData.SYNERGIES[tag]
+				_add_stat_row(pause_weapons_vbox, "%s (%d/6)" % [s_def["name"], cnt], s_def["desc"].substr(0, 18) + "...", s_def["color"])
+		if not has_syn:
+			var no_syn_lbl := _make_outlined_label("尚无满2件激活羁绊", 12, Color(0.6, 0.6, 0.65))
+			pause_weapons_vbox.add_child(no_syn_lbl)
+
+		# 3. 武器输出统计与 DPS 排行榜 (土豆兄弟 / 吸血鬼幸存者风格)
+		var total_dmg: float = GameState.get_total_weapon_damage()
+		var dps_title := _make_outlined_label("🏆 武器输出排行 (累计 %.0f)" % total_dmg, 16, Color(1.0, 0.85, 0.25))
+		pause_dps_vbox.add_child(dps_title)
+
+		var sorted_dmg: Array = GameState.get_sorted_weapon_damage()
+		if sorted_dmg.is_empty():
+			var empty_lbl := _make_outlined_label("暂无武器开火伤害记录", 13, Color(0.65, 0.65, 0.7))
+			pause_dps_vbox.add_child(empty_lbl)
+		else:
+			for item in sorted_dmg:
+				var row := VBoxContainer.new()
+				row.add_theme_constant_override("separation", 2)
+				pause_dps_vbox.add_child(row)
+
+				var top_r := HBoxContainer.new()
+				row.add_child(top_r)
+
+				var n_lbl := _make_outlined_label("%s %s" % [item["slot_badge"], item["name"]], 13, item["color"])
+				n_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+				top_r.add_child(n_lbl)
+
+				var d_lbl := _make_outlined_label("%.0f (%.1f%%)" % [item["damage"], item["pct"]], 13, Color(0.95, 0.95, 0.95))
+				top_r.add_child(d_lbl)
+
+				var bar := ProgressBar.new()
+				bar.custom_minimum_size = Vector2(0, 7)
+				bar.max_value = 100.0
+				bar.value = item["pct"]
+				bar.show_percentage = false
+				var b_fill := StyleBoxFlat.new()
+				b_fill.bg_color = item["color"]
+				b_fill.set_corner_radius_all(3)
+				var b_bg := StyleBoxFlat.new()
+				b_bg.bg_color = Color(0.12, 0.12, 0.15)
+				b_bg.set_corner_radius_all(3)
+				bar.add_theme_stylebox_override("fill", b_fill)
+				bar.add_theme_stylebox_override("background", b_bg)
+				row.add_child(bar)
 
 		btn_pause_mute.text = ("🔇 已静音 (点击恢复)" if SoundManager.muted else "🔊 静音切换 [M]")
 		btn_pause_resume.call_deferred("grab_focus")
@@ -881,6 +977,19 @@ func _populate_battlefield_level_cards() -> void:
 		var disp_num: int = int(roundf(final_val * 100.0)) if p.get("is_pct", true) else int(roundf(final_val))
 		var desc_txt: String = String(p["desc"]) % disp_num
 
+		var stat_compare: String = ""
+		if p.get("is_pct", true):
+			var cur_val: float = float(GameState.bonus_stats.get(p["stat"], 0.0))
+			if p["stat"] == "crit_chance":
+				cur_val = GameState.crit_chance
+			var cur_disp: int = int(roundf(cur_val * 100.0))
+			var next_disp: int = cur_disp + disp_num
+			stat_compare = "📊 (当前 %d%% ➔ %d%%)" % [cur_disp, next_disp]
+		else:
+			var cur_disp: int = int(roundf(GameState.sp_regen_per_sec))
+			var next_disp: int = cur_disp + disp_num
+			stat_compare = "📊 (当前 %d/s ➔ %d/s)" % [cur_disp, next_disp]
+
 		var card := _make_card_box(Color(0.16, 0.17, 0.21), t_col)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -901,7 +1010,7 @@ func _populate_battlefield_level_cards() -> void:
 		var sep := HSeparator.new()
 		cv.add_child(sep)
 
-		var desc_lbl := _make_outlined_label("✅ %s\n💚 战地应急抢修 +6%% SP" % desc_txt, 15, Color(0.92, 0.96, 0.92))
+		var desc_lbl := _make_outlined_label("✅ %s\n%s\n💚 战地应急抢修 +6%% SP" % [desc_txt, stat_compare], 14, Color(0.92, 0.96, 0.92))
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -923,6 +1032,8 @@ func _populate_battlefield_level_cards() -> void:
 		cv.add_child(btn)
 		if i == 0:
 			btn.call_deferred("grab_focus")
+
+	_update_reroll_button_state()
 
 	if not offer_airdrop_on_3rd:
 		return
@@ -1014,6 +1125,25 @@ func _pick_smart_airdrop_weapon() -> String:
 		return "mg_77mm"
 	return candidates[randi() % candidates.size()]
 
+func _update_reroll_button_state() -> void:
+	if not is_instance_valid(btn_reroll_level_cards):
+		return
+	var reroll_cost: int = 15 + GameState.level * 2
+	if GameState.gold >= reroll_cost:
+		btn_reroll_level_cards.text = "🎲 消耗 %d G 刷新升级专精 (当前持有 %d G)" % [reroll_cost, GameState.gold]
+		btn_reroll_level_cards.disabled = false
+	else:
+		btn_reroll_level_cards.text = "🎲 刷新需 %d G (持有 %d G - 赏金不足)" % [reroll_cost, GameState.gold]
+		btn_reroll_level_cards.disabled = true
+
+func _on_reroll_level_cards_pressed() -> void:
+	var reroll_cost: int = 15 + GameState.level * 2
+	if GameState.gold < reroll_cost:
+		return
+	GameState.gold -= reroll_cost
+	SoundManager.play("upgrade", 0.04, 1.2)
+	_populate_battlefield_level_cards()
+
 func _close_or_next_level_modal() -> void:
 	if GameState.pending_level_ups > 0:
 		_populate_battlefield_level_cards()
@@ -1052,11 +1182,11 @@ func on_player_total_defeat() -> void:
 	wave_active = false
 	emit_signal("player_defeated")
 
-func spawn_player_projectile(pos: Vector2, dir: Vector2, spd: float, dmg: float, splash: float, effect: String, is_crit: bool, is_main: bool, pierce: int) -> void:
+func spawn_player_projectile(pos: Vector2, dir: Vector2, spd: float, dmg: float, splash: float, effect: String, is_crit: bool, is_main: bool, pierce: int, weapon_id: String = "") -> void:
 	var p := Node2D.new()
 	p.set_script(ProjectileScript)
 	projectiles_container.add_child(p)
-	p.setup_player_proj(pos, dir, spd, dmg, splash, effect, is_crit, is_main, pierce)
+	p.setup_player_proj(pos, dir, spd, dmg, splash, effect, is_crit, is_main, pierce, weapon_id)
 
 func spawn_enemy_projectile(pos: Vector2, dir: Vector2, spd: float, dmg: float, col: Color = Color(1.0, 0.25, 0.35), rad: float = 6.5, eff: String = "") -> void:
 	var p := Node2D.new()
@@ -1183,6 +1313,12 @@ func _update_hud() -> void:
 		if radar_p.visible:
 			minimap_ctrl.queue_redraw()
 
+	# 8. 更新屏幕边缘目标追踪指示器与全屏濒死暗角 (土豆兄弟 / 吸血鬼幸存者风格)
+	if is_instance_valid(offscreen_indicators_ctrl):
+		offscreen_indicators_ctrl.queue_redraw()
+	if is_instance_valid(vignette_ctrl):
+		vignette_ctrl.queue_redraw()
+
 func _draw_minimap() -> void:
 	if not is_instance_valid(minimap_ctrl):
 		return
@@ -1235,6 +1371,162 @@ func _draw_minimap() -> void:
 	# 6. 雷达标签与外框
 	minimap_ctrl.draw_rect(Rect2(Vector2.ZERO, m_sz), Color(0.35, 0.75, 0.55), false, 1.5)
 	minimap_ctrl.draw_string(ThemeDB.fallback_font, Vector2(5, 12), "📡 战术雷达", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.55, 0.95, 0.75, 0.90))
+
+# --- 土豆兄弟 / 吸血鬼幸存者风格：低血量/大破全屏呼吸暗角警报 ---
+func _draw_danger_vignette() -> void:
+	if not is_instance_valid(vignette_ctrl) or not wave_active or not is_instance_valid(player_tank):
+		return
+	var vp_sz: Vector2 = vignette_ctrl.get_viewport_rect().size
+	if vp_sz.x <= 10.0 or vp_sz.y <= 10.0:
+		return
+
+	var is_human: bool = player_tank.is_human_mode
+	var sp_ratio: float = player_tank.current_sp / maxf(1.0, GameState.max_sp)
+
+	if not is_human and sp_ratio >= 0.30:
+		return
+
+	var t: float = float(Time.get_ticks_msec()) * 0.005
+	var pulse: float = 0.55 + 0.45 * sin(t)
+
+	var base_col: Color
+	var border_depth: float = 52.0
+	var alert_text: String = ""
+
+	if is_human:
+		base_col = Color(0.95, 0.22, 0.08, 0.45 * pulse)
+		border_depth = 64.0
+		alert_text = "🚨 战车大破！猎人肉身脱出，快靠近残骸抢修！"
+	else:
+		var danger_mult: float = 1.0 - (sp_ratio / 0.30)
+		base_col = Color(0.85, 0.06, 0.06, (0.28 + 0.35 * danger_mult) * pulse)
+		border_depth = 44.0 + 26.0 * danger_mult
+		alert_text = "⚠️ 警告：战车装甲濒临大破 (SP < 30%)！"
+
+	# 绘制四周边框暗角阶梯渐变
+	vignette_ctrl.draw_rect(Rect2(0, 0, vp_sz.x, border_depth * 0.5), base_col)
+	vignette_ctrl.draw_rect(Rect2(0, border_depth * 0.5, vp_sz.x, border_depth * 0.5), Color(base_col.r, base_col.g, base_col.b, base_col.a * 0.45))
+	vignette_ctrl.draw_rect(Rect2(0, vp_sz.y - border_depth * 0.5, vp_sz.x, border_depth * 0.5), base_col)
+	vignette_ctrl.draw_rect(Rect2(0, vp_sz.y - border_depth, vp_sz.x, border_depth * 0.5), Color(base_col.r, base_col.g, base_col.b, base_col.a * 0.45))
+	vignette_ctrl.draw_rect(Rect2(0, 0, border_depth * 0.5, vp_sz.y), base_col)
+	vignette_ctrl.draw_rect(Rect2(border_depth * 0.5, 0, border_depth * 0.5, vp_sz.y), Color(base_col.r, base_col.g, base_col.b, base_col.a * 0.45))
+	vignette_ctrl.draw_rect(Rect2(vp_sz.x - border_depth * 0.5, 0, border_depth * 0.5, vp_sz.y), base_col)
+	vignette_ctrl.draw_rect(Rect2(vp_sz.x - border_depth, 0, border_depth * 0.5, vp_sz.y), Color(base_col.r, base_col.g, base_col.b, base_col.a * 0.45))
+
+	if alert_text != "":
+		var font: Font = ThemeDB.fallback_font
+		var f_size: int = 14
+		var str_sz: Vector2 = font.get_string_size(alert_text, HORIZONTAL_ALIGNMENT_CENTER, -1, f_size)
+		var center_x: float = vp_sz.x * 0.5
+		var bg_rect := Rect2(center_x - str_sz.x * 0.5 - 16.0, 78.0, str_sz.x + 32.0, 26.0)
+		vignette_ctrl.draw_rect(bg_rect, Color(0.12, 0.02, 0.02, 0.90 * pulse))
+		vignette_ctrl.draw_rect(bg_rect, Color(1.0, 0.35, 0.25, 0.95 * pulse), false, 1.5)
+		vignette_ctrl.draw_string(font, Vector2(center_x - str_sz.x * 0.5, 96.0), alert_text, HORIZONTAL_ALIGNMENT_CENTER, -1, f_size, Color(1.0, 0.95, 0.40))
+
+# --- 土豆兄弟 / 吸血鬼幸存者风格：屏幕边缘重要目标追踪指示器 ---
+func _draw_offscreen_indicators() -> void:
+	if not is_instance_valid(offscreen_indicators_ctrl) or not wave_active:
+		return
+	if not is_instance_valid(battle_cam) or not is_instance_valid(player_tank):
+		return
+
+	var vp_sz: Vector2 = offscreen_indicators_ctrl.get_viewport_rect().size
+	if vp_sz.x <= 100.0 or vp_sz.y <= 100.0:
+		return
+
+	var cam_center: Vector2 = battle_cam.get_screen_center_position()
+	var zoom: Vector2 = battle_cam.zoom
+	var screen_center: Vector2 = vp_sz * 0.5
+	var player_pos: Vector2 = player_tank.get_active_position()
+
+	var targets: Array = []
+
+	# 1. 赏金首 BOSS
+	for e in enemies_container.get_children():
+		if is_instance_valid(e) and e.get("is_boss") == true:
+			targets.append({
+				"pos": e.global_position,
+				"icon": "💀",
+				"color": Color(1.0, 0.25, 0.25),
+				"border_col": Color(1.0, 0.85, 0.20)
+			})
+
+	# 2. 重装精英怪
+	for e in enemies_container.get_children():
+		if is_instance_valid(e) and e.get("is_elite") == true and e.get("is_boss") != true:
+			targets.append({
+				"pos": e.global_position,
+				"icon": "⚡",
+				"color": Color(1.0, 0.75, 0.15),
+				"border_col": Color(1.0, 0.95, 0.35)
+			})
+
+	# 3. 埋藏宝箱
+	for d in drops_container.get_children():
+		if is_instance_valid(d) and d.get("drop_type") == "buried_chest":
+			targets.append({
+				"pos": d.global_position,
+				"icon": "💎",
+				"color": Color(0.25, 0.85, 1.0),
+				"border_col": Color(0.65, 0.95, 1.0)
+			})
+
+	var margin: float = 46.0
+	var min_bound := Vector2(margin, margin + 46.0)
+	var max_bound := Vector2(vp_sz.x - margin, vp_sz.y - margin - 24.0)
+
+	var font: Font = ThemeDB.fallback_font
+	var f_size: int = 12
+
+	for t in targets:
+		var w_pos: Vector2 = t["pos"]
+		var scr_pos: Vector2 = (w_pos - cam_center) * zoom + screen_center
+
+		# 屏幕内目标无需边缘指针
+		if scr_pos.x >= min_bound.x and scr_pos.x <= max_bound.x and scr_pos.y >= min_bound.y and scr_pos.y <= max_bound.y:
+			continue
+
+		var ray: Vector2 = scr_pos - screen_center
+		if ray.length_squared() < 0.001:
+			continue
+		var dir: Vector2 = ray.normalized()
+
+		var t_candidate: float = 1e6
+		if dir.x > 0.001:
+			t_candidate = minf(t_candidate, (max_bound.x - screen_center.x) / dir.x)
+		elif dir.x < -0.001:
+			t_candidate = minf(t_candidate, (min_bound.x - screen_center.x) / dir.x)
+
+		if dir.y > 0.001:
+			t_candidate = minf(t_candidate, (max_bound.y - screen_center.y) / dir.y)
+		elif dir.y < -0.001:
+			t_candidate = minf(t_candidate, (min_bound.y - screen_center.y) / dir.y)
+
+		var edge_pos: Vector2 = screen_center + dir * t_candidate
+		edge_pos.x = clampf(edge_pos.x, min_bound.x, max_bound.x)
+		edge_pos.y = clampf(edge_pos.y, min_bound.y, max_bound.y)
+
+		var dist_m: int = int(roundf(w_pos.distance_to(player_pos) / 25.0))
+		var badge_str: String = "%s %dm" % [t["icon"], dist_m]
+		var str_sz: Vector2 = font.get_string_size(badge_str, HORIZONTAL_ALIGNMENT_CENTER, -1, f_size)
+
+		# 绘制边缘指向箭头 (三角形)
+		var arrow_len: float = 14.0
+		var arrow_tip: Vector2 = edge_pos + dir * 6.0
+		var arrow_left: Vector2 = edge_pos - dir * arrow_len + dir.orthogonal() * 7.0
+		var arrow_right: Vector2 = edge_pos - dir * arrow_len - dir.orthogonal() * 7.0
+		var arrow_pts: PackedVector2Array = [arrow_tip, arrow_left, arrow_right]
+		offscreen_indicators_ctrl.draw_colored_polygon(arrow_pts, t["color"])
+		offscreen_indicators_ctrl.draw_polyline(PackedVector2Array([arrow_tip, arrow_left, arrow_right, arrow_tip]), t["border_col"], 1.5)
+
+		# 绘制距离与图标小卡片
+		var box_pos: Vector2 = edge_pos - dir * (arrow_len + 16.0)
+		var box_w: float = str_sz.x + 14.0
+		var box_h: float = str_sz.y + 6.0
+		var badge_rect := Rect2(box_pos.x - box_w * 0.5, box_pos.y - box_h * 0.5, box_w, box_h)
+		offscreen_indicators_ctrl.draw_rect(badge_rect, Color(0.08, 0.09, 0.12, 0.90))
+		offscreen_indicators_ctrl.draw_rect(badge_rect, t["border_col"], false, 1.2)
+		offscreen_indicators_ctrl.draw_string(font, Vector2(badge_rect.position.x + 7.0, badge_rect.position.y + str_sz.y), badge_str, HORIZONTAL_ALIGNMENT_LEFT, -1, f_size, Color.WHITE)
 
 func _draw() -> void:
 	var m_def: Dictionary = GameState.get_current_map_def()

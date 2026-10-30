@@ -678,15 +678,32 @@ func _refresh_slots_and_weapons_grid() -> void:
 		GameState.equipped_weapons.size(), GameState.chassis_slots.size(), mod_str
 	]
 
-	# 流派羁绊彩色胶囊徽章
+	# 流派羁绊彩色胶囊徽章 (含吸血鬼幸存者/土豆兄弟阶段激活提示与悬浮详情)
 	if GameState.should_show_build_hints():
 		for tag in GameData.SYNERGIES.keys():
 			var cnt: int = GameState.synergy_counts.get(tag, 0)
 			if cnt > 0:
 				var s_def: Dictionary = GameData.SYNERGIES[tag]
-				var pill := _make_styled_panel(Color(0.18, 0.18, 0.22), s_def["color"] if cnt >= 2 else Color(0.45, 0.45, 0.50), 4)
-				var pl := _make_outlined_label("%s %d/6" % [s_def["name"], cnt], 12, s_def["color"] if cnt >= 2 else Color(0.8, 0.8, 0.8))
+				var is_active: bool = cnt >= 2
+				var pill := _make_styled_panel(Color(0.18, 0.18, 0.22), s_def["color"] if is_active else Color(0.45, 0.45, 0.50), 4)
+
+				var active_star: String = "★ " if is_active else ""
+				var pl := _make_outlined_label("%s%s %d/6" % [active_star, s_def["name"], cnt], 12, s_def["color"] if is_active else Color(0.8, 0.8, 0.8))
 				pill.add_child(pl)
+
+				# 格式化羁绊各阶段激活状态
+				var tip: String = "【%s 羁绊 (%d/6)】\n" % [s_def["name"], cnt]
+				var parts: PackedStringArray = String(s_def["desc"]).split("  ")
+				for part in parts:
+					if part.begins_with("(2)"):
+						tip += ("✅ [已激活] " if cnt >= 2 else "⚪ [未激活] ") + part + "\n"
+					elif part.begins_with("(4)"):
+						tip += ("✅ [已激活] " if cnt >= 4 else "⚪ [未激活] ") + part + "\n"
+					elif part.begins_with("(6)"):
+						tip += ("✅ [已激活] " if cnt >= 6 else "⚪ [未激活] ") + part + "\n"
+					else:
+						tip += part + "\n"
+				pill.tooltip_text = tip.strip_edges()
 				synergy_pills_hbox.add_child(pill)
 	else:
 		var blind_lbl := _make_outlined_label("🔴 地狱盲配模式 (提示已隐藏)", 12, Color(1.0, 0.38, 0.35))
