@@ -224,13 +224,19 @@ func _process(delta: float) -> void:
 	else:
 		_process_regular_ai(delta, bf, player, target_pos, dir, dist, spd_mult)
 
+	# 1. 怪物间软体体积互斥与分流（防止小怪叠成一个点）
+	_apply_enemy_separation(delta, bf)
+
+	# 2. 玩家战车/步兵实体刚性体积阻挡（怪物无法穿透进入战车中心，在车身外围形成合围环）
+	_apply_player_body_collision(player, target_pos)
+
 	# 保持在竞技场边界内
 	global_position.x = clampf(global_position.x, bf.arena_rect.position.x + radius, bf.arena_rect.end.x - radius)
 	global_position.y = clampf(global_position.y, bf.arena_rect.position.y + radius, bf.arena_rect.end.y - radius)
 
 	# 近身接触伤害与战车碾压判定
 	var hit_dist: float = radius + (22.0 if player.is_human_mode else 40.0)
-	if global_position.distance_to(target_pos) <= hit_dist:
+	if global_position.distance_to(target_pos) <= hit_dist + 3.0:
 		player.on_enemy_collision(self, delta)
 
 	queue_redraw()
@@ -851,3 +857,77 @@ func _draw_boss(c: Color) -> void:
 	# 赏金首头顶 WANTED 标识
 	draw_string_outline(ThemeDB.fallback_font, Vector2(-60, -radius - 22), "★ WANTED: %s" % enemy_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 3, Color.BLACK)
 	draw_string(ThemeDB.fallback_font, Vector2(-60, -radius - 22), "★ WANTED: %s" % enemy_name, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(1.0, 0.85, 0.2))
+
+func _apply_enemy_separation(delta: float, bf: Node) -> void:
+	if not bf or not is_instance_valid(bf.get("enemies_container")):
+		return
+	if bf.spatial_grid.is_empty() and bf.enemies_container.get_child_count() > 1:
+		bf.rebuild_spatial_grid()
+	if bf.spatial_grid.is_empty():
+		return
+
+	var cx: int = int(floor(global_position.x / bf.SPATIAL_CELL_SIZE))
+	var cy: int = int(floor(global_position.y / bf.SPATIAL_CELL_SIZE))
+	var push_vec: Vector2 = Vector2.ZERO
+	var overlap_count: int = 0
+
+	for nx in range(cx - 1, cx + 2):
+		for ny in range(cy - 1, cy + 2):
+			var cell_key := Vector2i(nx, ny)
+			if not bf.spatial_grid.has(cell_key):
+				continue
+			var cell_list: Array = bf.spatial_grid[cell_key]
+			for other in cell_list:
+				if other == self or not is_instance_valid(other) or other.is_queued_for_deletion():
+					continue
+				var delta_pos: Vector2 = global_position - other.global_position
+				var dist: float = delta_pos.length()
+				var min_dist: float = radius + float(other.radius)
+				if dist < min_dist:
+					var overlap: float = min_dist - dist
+					var away_dir: Vector2
+					if dist < 0.001:
+						var angle_seed: float = float((get_instance_id() * 37 + other.get_instance_id() * 73) % 628) * 0.01
+						away_dir = Vector2.from_angle(angle_seed)
+					else:
+						away_dir = delta_pos / dist
+
+					var weight: float = 1.0
+					if is_boss:
+						# 自体是巨型Boss，几乎不被普通怪推动
+						weight = 0.08 if not other.is_boss else 1.0
+					elif other.is_boss:
+						# 对方是巨型Boss，自体(普通/精英)被强力弹开
+						weight = 2.4
+					elif other.is_elite and not is_elite:
+						weight = 1.6
+
+					push_vec += away_dir * (overlap * 0.5 * weight)
+					overlap_count += 1
+					if overlap_count >= 10:
+						break
+			if overlap_count >= 10:
+				break
+
+	if overlap_count > 0:
+		var push_disp: Vector2 = (push_vec / float(overlap_count)) * 1.8
+		var max_disp: float = maxf(18.0, move_speed * 1.8 * delta)
+		if push_disp.length() > max_disp:
+			push_disp = push_disp.normalized() * max_disp
+		global_position += push_disp
+
+func _apply_player_body_collision(player: Node2D, target_pos: Vector2) -> void:
+	if not is_instance_valid(player):
+		return
+	var p_radius: float = 22.0 if player.is_human_mode else 40.0
+	var min_dist: float = p_radius + radius
+	var to_self: Vector2 = global_position - target_pos
+	var cur_dist: float = to_self.length()
+	if cur_dist < min_dist:
+		var push_dir: Vector2
+		if cur_dist < 0.001:
+			var rand_ang: float = float((get_instance_id() * 41) % 628) * 0.01
+			push_dir = Vector2.from_angle(rand_ang)
+		else:
+			push_dir = to_self / cur_dist
+		global_position = target_pos + push_dir * min_dist

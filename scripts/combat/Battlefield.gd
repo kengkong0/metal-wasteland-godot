@@ -135,19 +135,23 @@ func _ready() -> void:
 
 	enemies_container = Node2D.new()
 	enemies_container.name = "EnemiesContainer"
+	enemies_container.z_index = 1
 	add_child(enemies_container)
 
 	player_tank = Node2D.new()
 	player_tank.name = "PlayerTank"
+	player_tank.z_index = 10
 	player_tank.set_script(PlayerTankScript)
 	add_child(player_tank)
 
 	projectiles_container = Node2D.new()
 	projectiles_container.name = "ProjectilesContainer"
+	projectiles_container.z_index = 15
 	add_child(projectiles_container)
 
 	fx_layer = Node2D.new()
 	fx_layer.name = "FXLayer"
+	fx_layer.z_index = 20
 	fx_layer.set_script(FloatingTextScript)
 	add_child(fx_layer)
 
@@ -1182,11 +1186,12 @@ func _queue_ring_spawn(count: int = 12) -> void:
 		var ang: float = base_ang + TAU * float(i) / float(count)
 		_queue_enemy_spawn(true, ang)
 
-func _do_spawn_enemy(e_id: String, pos: Vector2) -> void:
+func _do_spawn_enemy(e_id: String, pos: Vector2) -> Node2D:
 	var e := Node2D.new()
 	e.set_script(EnemyScript)
 	enemies_container.add_child(e)
 	e.setup_regular(GameData.ENEMIES[e_id], GameState.current_wave, pos)
+	return e
 
 func _spawn_map_elite() -> void:
 	var e_pool: Array = GameState.get_current_map_def().get("elite_pool", ["auto_tank"])
@@ -1201,14 +1206,14 @@ func _spawn_map_elite() -> void:
 	_do_spawn_enemy(chosen_id, pos)
 	fx_layer.spawn_text(pos + Vector2(0, -24), "⚡ 重装精英：%s !" % GameData.ENEMIES[chosen_id]["name"], Color(1.0, 0.85, 0.20), 1.25)
 
-func _spawn_wanted_boss(boss_id: String) -> void:
+func _spawn_wanted_boss(boss_id: String) -> Node2D:
 	var boss_def: Dictionary = {}
 	for b in GameData.WANTED_BOSSES:
 		if b["id"] == boss_id:
 			boss_def = b
 			break
 	if boss_def.is_empty():
-		return
+		return null
 
 	var p_pos: Vector2 = player_tank.get_active_position()
 	var ang: float = randf() * TAU
@@ -1224,6 +1229,7 @@ func _spawn_wanted_boss(boss_id: String) -> void:
 	SoundManager.play_bgm("bgm_wanted_boss", -5.5)
 	trigger_screen_shake(10.0, 0.45)
 	banner_wanted.visible = true
+	return boss
 	banner_timer = 4.5
 	lbl_wanted_banner.text = "⚠️ 赏金首乱入：【%s】 (💰%dG) ⚠️" % [boss_def["name"], int(boss_def["bounty"])]
 

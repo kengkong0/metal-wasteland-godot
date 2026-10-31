@@ -24,6 +24,7 @@ func _ready() -> void:
 	test_suite_13_weapon_vfx_and_seamless_map()
 	test_suite_14_wasteland_town_and_pacing_system()
 	test_suite_15_human_revamp_and_ejection_system()
+	test_suite_16_enemy_volume_separation_and_player_visibility()
 
 	print("\n========================================================")
 	print("📊 [TEST RESULTS] 测试统计汇总:")
@@ -1083,5 +1084,72 @@ func test_suite_15_human_revamp_and_ejection_system() -> void:
 	assert_true(bf.projectiles_container.get_child_count() == 0, "安全区休战停火协议生效：安全区内禁止开火，彻底杜绝站圈内无敌打人")
 	bf._process(8.2)
 	assert_true(not bf.town_available, "安全区超时逗留满 8s 不进镇，力场护盾耗尽并自动移防关闭")
+
+	bf.queue_free()
+
+
+# ============================================================================
+# 16. 怪物实体体积互斥碰撞与角色遮蔽高亮系统验证
+# ============================================================================
+func test_suite_16_enemy_volume_separation_and_player_visibility() -> void:
+	print("\n--- [Suite 16] 怪物实体体积碰撞互斥与高亮防遮蔽全量验证 ---")
+
+	var bf_scene: PackedScene = load("res://scenes/Battlefield.tscn")
+	var bf: Node2D = bf_scene.instantiate()
+	add_child(bf)
+	bf.start_wave()
+
+	var p: Node2D = bf.player_tank
+	assert_true(is_instance_valid(p), "战场及玩家战车已初始化")
+
+	# 1. 验证渲染层级 Z-Index：战车 foreground 绝对高于怪物
+	assert_true(p.z_index == 10, "玩家战车/步兵置于前景核心层 (z_index = 10)")
+	assert_true(bf.enemies_container.z_index == 1, "敌人群落置于普通实体层 (z_index = 1)")
+	assert_true(p.z_index > bf.enemies_container.z_index, "玩家层级严格高于怪物，杜绝任何怪物贴图浮动遮盖玩家")
+
+	# 2. 验证两只同点重叠小怪自动执行软体体积互斥分离
+	var e1: Node2D = bf._do_spawn_enemy("bio_ant", Vector2(700, 700))
+	var e2: Node2D = bf._do_spawn_enemy("bio_ant", Vector2(700, 700))
+	assert_true(is_instance_valid(e1) and is_instance_valid(e2), "生成测试群聚小怪成功")
+	assert_true(e1.global_position.distance_to(e2.global_position) < 0.1, "生成初始点完全重合 (距离 0px)")
+
+	bf.rebuild_spatial_grid()
+	e1._process(0.05)
+	e2._process(0.05)
+	var sep_dist: float = e1.global_position.distance_to(e2.global_position)
+	assert_true(sep_dist > 5.0, "软体体积斥力生效：1帧内两只完全重合的小怪已被迅速推开分离 (当前距离: %.1f px)" % sep_dist)
+
+	# 3. 验证战车刚性体积阻挡：小怪无法穿透进入战车内部中心
+	p.global_position = Vector2(1000, 1000)
+	p.is_human_mode = false
+	var e3: Node2D = bf._do_spawn_enemy("bio_ant", Vector2(1010, 1000)) # 距离战车中心仅 10px (远小于 40+14=54px)
+	bf.rebuild_spatial_grid()
+	e3._process(0.05)
+	var p_dist: float = e3.global_position.distance_to(p.global_position)
+	var min_allowed_dist: float = 40.0 + float(e3.get("radius"))
+	assert_true(p_dist >= min_allowed_dist - 0.5, "战车实体刚性体积生效：小怪被阻挡在外围合围圈，禁止穿透车身内部 (车怪间距: %.1f px >= 门限: %.1f px)" % [p_dist, min_allowed_dist])
+
+	# 4. 验证步兵模式下刚性体积阻挡
+	p.is_human_mode = true
+	p.human_pos = Vector2(1200, 1200)
+	var e4: Node2D = bf._do_spawn_enemy("bio_ant", Vector2(1205, 1200))
+	bf.rebuild_spatial_grid()
+	e4._process(0.05)
+	var h_dist: float = e4.global_position.distance_to(p.human_pos)
+	var min_h_allowed: float = 22.0 + float(e4.get("radius"))
+	assert_true(h_dist >= min_h_allowed - 0.5, "步兵模式下实体刚性体积生效：小怪被阻隔在步兵身侧外围 (人怪间距: %.1f px >= 门限: %.1f px)" % [h_dist, min_h_allowed])
+
+	# 5. 验证 Boss 霸体质量与普通小怪互斥权重
+	var boss: Node2D = bf._spawn_wanted_boss("boss_killdozer")
+	assert_true(is_instance_valid(boss), "测试赏金首 Boss 生成成功")
+	boss.global_position = Vector2(1500, 1500)
+	var mob: Node2D = bf._do_spawn_enemy("mutant_sludge", Vector2(1510, 1500))
+	var boss_old_pos: Vector2 = boss.global_position
+	bf.rebuild_spatial_grid()
+	mob._process(0.05)
+	boss._process(0.05)
+	var mob_displaced: float = mob.global_position.distance_to(Vector2(1510, 1500))
+	var boss_displaced: float = boss.global_position.distance_to(boss_old_pos)
+	assert_true(mob_displaced > boss_displaced, "Boss 具备超高霸体质量惯性：小怪被弹开距离 (%.1f px) 远超 Boss 受迫位移 (%.1f px)" % [mob_displaced, boss_displaced])
 
 	bf.queue_free()

@@ -40,7 +40,11 @@ var chassis_special_timer: float = 0.0
 var tread_timer: float = 0.0
 var turret_kick_dist: float = 0.0 # 主炮/重炮开火后坐力炮管后缩
 
+func _ready() -> void:
+	z_index = 10
+
 func init_for_wave(spawn_pos: Vector2) -> void:
+	z_index = 10
 	global_position = spawn_pos
 	human_pos = spawn_pos
 	is_human_mode = false
@@ -961,6 +965,31 @@ func _draw() -> void:
 	if is_human_mode and not is_voluntary_unboard:
 		hull_col = hull_col.darkened(0.55) # 大破残骸变暗冒烟
 
+	# 0. 战车/步兵高亮战术地面光环与脚下辨识标 (怪群中高对比度保底可见)
+	var pulse_t: float = float(Time.get_ticks_msec()) * 0.005
+	var pulse_val: float = 0.5 + 0.5 * sin(pulse_t)
+	if not is_human_mode:
+		var g_col: Color = Color(0.20, 0.88, 1.0, 0.12 + 0.08 * pulse_val)
+		var ring_col: Color = Color(0.25, 0.92, 1.0, 0.70 + 0.25 * pulse_val)
+		draw_circle(Vector2.ZERO, 48.0, g_col)
+		draw_arc(Vector2.ZERO, 48.0, 0.0, TAU, 36, ring_col, 2.5)
+		for i in range(4):
+			var a: float = i * (PI * 0.5) + pulse_t * 0.4
+			var p1: Vector2 = Vector2.from_angle(a) * 44.0
+			var p2: Vector2 = Vector2.from_angle(a) * 53.0
+			draw_line(p1, p2, ring_col, 2.5)
+	else:
+		var rel_h_ground: Vector2 = human_pos - global_position
+		var g_col_h: Color = Color(0.35, 1.0, 0.50, 0.15 + 0.10 * pulse_val)
+		var ring_col_h: Color = Color(0.40, 1.0, 0.60, 0.75 + 0.25 * pulse_val)
+		draw_circle(rel_h_ground, 28.0, g_col_h)
+		draw_arc(rel_h_ground, 28.0, 0.0, TAU, 28, ring_col_h, 2.5)
+		for i in range(4):
+			var a: float = i * (PI * 0.5) + pulse_t * 0.5
+			var p1: Vector2 = rel_h_ground + Vector2.from_angle(a) * 25.0
+			var p2: Vector2 = rel_h_ground + Vector2.from_angle(a) * 33.0
+			draw_line(p1, p2, ring_col_h, 2.5)
+
 	# 1. 救护车生化毒雾光环
 	if not is_human_mode and GameState.selected_chassis_id == "ambulance":
 		draw_circle(Vector2.ZERO, 155.0, Color(0.4, 0.95, 0.3, 0.12))
@@ -1092,3 +1121,45 @@ func _draw() -> void:
 		var h_ratio: float = clampf(human_hp / maxf(1.0, GameState.max_human_hp), 0.0, 1.0)
 		draw_rect(Rect2(rel_h.x - h_bw * 0.5 - 1.5, h_by - 1.5, h_bw + 3.0, h_bh + 3.0), Color(0.05, 0.05, 0.05, 0.94))
 		draw_rect(Rect2(rel_h.x - h_bw * 0.5, h_by, h_bw * h_ratio, h_bh), Color(1.0, 0.28, 0.25))
+
+	# 8. 战车/猎人头顶全透光霓虹浮标 [▼ 1P] (厚黑描边 + 悬浮跳动，怪潮完全遮蔽阻绝)
+	var hover_offset: float = sin(float(Time.get_ticks_msec()) * 0.007) * 4.0
+	if not is_human_mode:
+		var marker_anchor := Vector2(0, -68.0 + hover_offset)
+		var border_pts := PackedVector2Array([
+			marker_anchor + Vector2(-11, -12),
+			marker_anchor + Vector2(11, -12),
+			marker_anchor + Vector2(0, 3)
+		])
+		var tri_pts := PackedVector2Array([
+			marker_anchor + Vector2(-8, -9),
+			marker_anchor + Vector2(8, -9),
+			marker_anchor + Vector2(0, 0)
+		])
+		draw_colored_polygon(border_pts, Color(0.05, 0.05, 0.05, 0.95))
+		draw_colored_polygon(tri_pts, Color(1.0, 0.88, 0.22))
+		var badge_rect := Rect2(marker_anchor.x - 22, marker_anchor.y - 25, 44, 15)
+		draw_rect(badge_rect, Color(0.08, 0.08, 0.08, 0.92))
+		draw_rect(badge_rect, Color(1.0, 0.88, 0.22), false, 1.8)
+		draw_string_outline(ThemeDB.fallback_font, marker_anchor + Vector2(-18, -13), "▼ 1P", HORIZONTAL_ALIGNMENT_CENTER, 36, 12, 3, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, marker_anchor + Vector2(-18, -13), "▼ 1P", HORIZONTAL_ALIGNMENT_CENTER, 36, 12, Color(1.0, 0.92, 0.35))
+	else:
+		var rel_h_ind: Vector2 = human_pos - global_position
+		var marker_anchor_h := rel_h_ind + Vector2(0, -48.0 + hover_offset)
+		var border_pts_h := PackedVector2Array([
+			marker_anchor_h + Vector2(-10, -11),
+			marker_anchor_h + Vector2(10, -11),
+			marker_anchor_h + Vector2(0, 3)
+		])
+		var tri_pts_h := PackedVector2Array([
+			marker_anchor_h + Vector2(-7, -8),
+			marker_anchor_h + Vector2(7, -8),
+			marker_anchor_h + Vector2(0, 0)
+		])
+		draw_colored_polygon(border_pts_h, Color(0.05, 0.05, 0.05, 0.95))
+		draw_colored_polygon(tri_pts_h, Color(0.35, 1.0, 0.55))
+		var badge_rect_h := Rect2(marker_anchor_h.x - 20, marker_anchor_h.y - 23, 40, 14)
+		draw_rect(badge_rect_h, Color(0.08, 0.08, 0.08, 0.92))
+		draw_rect(badge_rect_h, Color(0.35, 1.0, 0.55), false, 1.8)
+		draw_string_outline(ThemeDB.fallback_font, marker_anchor_h + Vector2(-16, -12), "▼ 1P", HORIZONTAL_ALIGNMENT_CENTER, 32, 11, 3, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, marker_anchor_h + Vector2(-16, -12), "▼ 1P", HORIZONTAL_ALIGNMENT_CENTER, 32, 11, Color(0.40, 1.0, 0.65))
