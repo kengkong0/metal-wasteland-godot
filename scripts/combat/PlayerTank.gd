@@ -798,12 +798,12 @@ func on_enemy_collision(enemy: Node2D, _delta: float) -> void:
 			ram_mult += 2.5
 		elif GameState.selected_chassis_id == "tyrannos":
 			ram_mult += 1.8
-		var speed_factor: float = clampf(current_velocity.length() / 150.0, 0.8, 2.5)
-		var ram_dmg: float = (GameState.used_weight * 6.0 + 45.0) * ram_mult * speed_factor
+		var speed_factor: float = clampf(current_velocity.length() / 160.0, 0.75, 1.8)
+		var ram_dmg: float = (GameState.used_weight * 1.8 + 24.0) * ram_mult * speed_factor
 
 		# 钢铁碾压 (6) 羁绊追加装甲反震爆破
 		if GameState.synergy_counts.get("juggernaut", 0) >= 6:
-			ram_dmg += current_sp * 0.20
+			ram_dmg += current_sp * 0.18
 			bf.fx_layer.spawn_explosion(enemy.global_position, 85.0, Color(0.95, 0.75, 0.25))
 
 		# 判定是否致死直接碾碎
@@ -822,25 +822,31 @@ func on_enemy_collision(enemy: Node2D, _delta: float) -> void:
 		else:
 			enemy.take_damage(ram_dmg, false, "ram", global_position, false)
 			GameState.record_weapon_damage("chassis_ram", ram_dmg)
-			enemy.global_position += (enemy.global_position - global_position).normalized() * 45.0
+			enemy.global_position += (enemy.global_position - global_position).normalized() * 55.0
 
 	# 2. 钢铁碾压 (4) 荆棘反伤
 	if not is_human_mode and GameState.synergy_counts.get("juggernaut", 0) >= 4:
-		var thorn_dmg: float = GameState.used_weight * 5.0
+		var thorn_dmg: float = GameState.used_weight * 3.5
 		enemy.take_damage(thorn_dmg, false, "", global_position, false)
 		GameState.record_weapon_damage("chassis_ram", thorn_dmg)
 
-	# 3. 若成功碾碎小怪，战车毫发无损！仅受微小阻力
+	# 3. 撞击物理阻尼与装甲磨损反馈
 	if crushed_enemy:
-		current_velocity *= 0.95
+		# 撞击怪物消耗物理动量，撞击多个目标会迅速失速，杜绝无脑长驱直入
+		current_velocity *= 0.72
+		# 猛犸超重坦或有护盾/无敌时免收反震损伤；普通底盘硬撞依然承受微幅反震磨损
+		if GameState.selected_chassis_id != "mammoth" and iron_dome_timer <= 0.0 and invuln_timer <= 0.0:
+			var ram_recoil: float = clampf(enemy.contact_dmg * 0.16, 2.0, 10.0)
+			take_damage(ram_recoil, enemy.global_position)
 		return
 
-	# 4. 未能碾碎（强敌/精英/低速撞击），承受接触伤害（冲撞时获得撞角动量保护减伤）
+	# 4. 未能碾碎（强敌/精英/低速撞击），承受显著接触伤害并发生急剧失速
+	current_velocity *= 0.50
 	var incoming: float = enemy.contact_dmg
 	if is_tank_moving_fast:
-		incoming *= 0.40 # 高速冲撞撞角保护大幅削减
+		incoming *= 0.65 # 高速冲撞撞角保护部分削减
 	if not is_human_mode and GameState.selected_chassis_id == "abrams":
-		incoming *= 0.70
+		incoming *= 0.75
 	take_damage(incoming, enemy.global_position)
 
 func take_damage(amount: float, _source_pos: Vector2 = Vector2.ZERO) -> void:

@@ -588,7 +588,7 @@ func take_damage(raw_dmg: float, is_crit: bool, effect: String, hit_pos: Vector2
 	elif is_main_cannon and eff_armor > 0.0:
 		eff_armor *= 0.65 # 主炮自带35%穿甲
 
-	var armor_mitigation: float = eff_armor / (absf(eff_armor) + 50.0)
+	var armor_mitigation: float = eff_armor / (absf(eff_armor) + 65.0)
 	var final_dmg: float = maxf(1.0, raw_dmg * mult * (1.0 - armor_mitigation))
 
 	# 6.5 电磁护盾卫士独立护盾条结算 (电击/激光造成 300% 破盾伤害!)
@@ -633,6 +633,22 @@ func take_damage(raw_dmg: float, is_crit: bool, effect: String, hit_pos: Vector2
 
 	hp -= final_dmg
 	hit_flash_timer = 0.08
+
+	# 子弹与炮火物理击退反馈（根据武器类型赋予受击硬直与压制力）
+	if not is_boss and hit_pos != Vector2.ZERO:
+		var hit_dir: Vector2 = (global_position - hit_pos).normalized()
+		var kb: float = 0.0
+		if is_main_cannon:
+			kb = 42.0 + (25.0 if is_crit else 0.0)
+		elif effect in ["laser", "omega_laser"]:
+			kb = 8.0
+		elif effect in ["acid", "burn"]:
+			kb = 6.0
+		else: # 机枪、普通副炮、导弹等
+			kb = 16.0
+		if "thorns_armor" in elite_affixes:
+			kb *= 0.5
+		global_position += hit_dir * kb
 
 	# 8. 百足装甲列车车厢脱落爆宝箱机制
 	if is_boss and boss_mechanic == "multi_segment" and train_segments_left > 0:

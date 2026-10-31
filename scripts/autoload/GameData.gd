@@ -375,43 +375,43 @@ const WEAPONS: Dictionary = {
 	# --- 主炮系列 (MAIN) ---
 	"cannon_45mm": {
 		"id": "cannon_45mm", "name": "45mm 速射机关炮", "slot": "MAIN", "min_rarity": 0,
-		"weight": 1.8, "base_dmg": 38.0, "cooldown": 1.1, "ammo": 30, "cost": 45,
+		"weight": 1.8, "base_dmg": 58.0, "cooldown": 1.1, "ammo": 30, "cost": 45,
 		"proj_speed": 720.0, "splash": 32.0, "burst": 3, "tags": ["artillery"],
 		"desc": "三连发高速穿甲机炮，轻便省重，几乎不挤占SP装甲。"
 	},
 	"cannon_105mm": {
 		"id": "cannon_105mm", "name": "105mm 皇家加农", "slot": "MAIN", "min_rarity": 0,
-		"weight": 4.5, "base_dmg": 115.0, "cooldown": 2.0, "ammo": 18, "cost": 70,
+		"weight": 4.5, "base_dmg": 175.0, "cooldown": 2.0, "ammo": 18, "cost": 70,
 		"proj_speed": 650.0, "splash": 85.0, "burst": 1, "tags": ["artillery"],
 		"desc": "标准主力加农炮，命中后引发半径85m高爆冲击波。"
 	},
 	"cannon_cement": {
 		"id": "cannon_cement", "name": "水泥弹发射器", "slot": "MAIN", "min_rarity": 1,
-		"weight": 3.5, "base_dmg": 70.0, "cooldown": 2.3, "ammo": 16, "cost": 80,
+		"weight": 3.5, "base_dmg": 105.0, "cooldown": 2.3, "ammo": 16, "cost": 80,
 		"proj_speed": 560.0, "splash": 110.0, "burst": 1, "effect": "cement", "tags": ["artillery", "bio"],
 		"desc": "废土经典控场神器！命中使范围敌人减速60%并削减25点护甲。"
 	},
 	"cannon_195mm": {
 		"id": "cannon_195mm", "name": "195mm 爆裂巨炮", "slot": "MAIN", "min_rarity": 2,
-		"weight": 8.0, "base_dmg": 245.0, "cooldown": 3.0, "ammo": 12, "cost": 125,
+		"weight": 8.0, "base_dmg": 340.0, "cooldown": 3.0, "ammo": 12, "cost": 125,
 		"proj_speed": 600.0, "splash": 125.0, "burst": 1, "effect": "cluster", "tags": ["artillery"],
 		"desc": "重型火炮，爆炸时向四周分裂出 5 颗子母高爆弹二次轰炸。"
 	},
 	"cannon_205_peony": {
 		"id": "cannon_205_peony", "name": "205mm 绯红牡丹", "slot": "MAIN", "min_rarity": 3,
-		"weight": 10.5, "base_dmg": 390.0, "cooldown": 3.5, "ammo": 10, "cost": 175,
+		"weight": 10.5, "base_dmg": 520.0, "cooldown": 3.5, "ammo": 10, "cost": 175,
 		"proj_speed": 680.0, "splash": 135.0, "burst": 1, "crit_bonus": 0.35, "tags": ["artillery"],
 		"desc": "名炮【绯红牡丹】！极高暴击倍率(2.5x)，对半血以下目标必定暴击。"
 	},
 	"cannon_cosmic_laser": {
 		"id": "cannon_cosmic_laser", "name": "SE-宇宙激光主炮", "slot": "MAIN", "min_rarity": 3,
-		"weight": 7.0, "base_dmg": 210.0, "cooldown": 2.5, "ammo": 999, "cost": 165,
+		"weight": 7.0, "base_dmg": 300.0, "cooldown": 2.5, "ammo": 999, "cost": 165,
 		"proj_speed": 1400.0, "splash": 45.0, "burst": 1, "pierce": 8, "effect": "laser", "tags": ["artillery", "bio"],
 		"desc": "发射贯穿全屏的炽热激光束，无限弹药且无视敌方实弹护甲。"
 	},
 	"cannon_220_gaia": {
 		"id": "cannon_220_gaia", "name": "220mm 盖亚之怒", "slot": "MAIN", "min_rarity": 4,
-		"weight": 16.0, "base_dmg": 780.0, "cooldown": 4.4, "ammo": 8, "cost": 260,
+		"weight": 16.0, "base_dmg": 1050.0, "cooldown": 4.4, "ammo": 8, "cost": 260,
 		"proj_speed": 620.0, "splash": 210.0, "burst": 1, "effect": "cluster", "tags": ["artillery", "juggernaut"],
 		"desc": "【传奇红武】重达16吨的毁灭巨炮，一发轰平半个屏幕！"
 	},
@@ -419,44 +419,44 @@ const WEAPONS: Dictionary = {
 	# --- 副炮系列 (SUB) ---
 	"mg_77mm": {
 		"id": "mg_77mm", "name": "7.7mm 轻机枪", "slot": "SUB", "min_rarity": 0,
-		"weight": 0.5, "base_dmg": 10.0, "cooldown": 0.20, "cost": 30,
+		"weight": 0.5, "base_dmg": 18.0, "cooldown": 0.20, "cost": 30,
 		"proj_speed": 780.0, "range": 420.0, "tags": ["tycoon"],
 		"desc": "仅重0.5吨的超轻机枪，自动点射最近敌人。"
 	},
 	"mg_vulcan": {
 		"id": "mg_vulcan", "name": "火神六管加特林", "slot": "SUB", "min_rarity": 1,
-		"weight": 2.2, "base_dmg": 15.0, "cooldown": 0.10, "cost": 65,
+		"weight": 2.2, "base_dmg": 26.0, "cooldown": 0.10, "cost": 65,
 		"proj_speed": 820.0, "range": 440.0, "tags": ["artillery"],
 		"desc": "每秒10发高密度金属风暴，压制贴脸机械虫群。"
 	},
 	"sub_flame": {
 		"id": "sub_flame", "name": "地狱火焰喷射器", "slot": "SUB", "min_rarity": 1,
-		"weight": 1.8, "base_dmg": 14.0, "cooldown": 0.16, "cost": 60,
+		"weight": 1.8, "base_dmg": 22.0, "cooldown": 0.16, "cost": 60,
 		"proj_speed": 420.0, "range": 280.0, "pierce": 4, "effect": "burn", "tags": ["bio"],
 		"desc": "扇形贯穿火海，为敌人叠加【灼烧】持续百分比掉血。"
 	},
 	"sub_acid": {
 		"id": "sub_acid", "name": "强酸腐蚀喷雾器", "slot": "SUB", "min_rarity": 1,
-		"weight": 1.6, "base_dmg": 16.0, "cooldown": 0.28, "cost": 70,
+		"weight": 1.6, "base_dmg": 26.0, "cooldown": 0.28, "cost": 70,
 		"proj_speed": 520.0, "range": 380.0, "effect": "acid", "tags": ["bio"],
 		"desc": "每次命中永久腐蚀目标 6 点护甲(可减为负数使全队对其增伤)！"
 	},
 	"sub_tesla": {
 		"id": "sub_tesla", "name": "特斯拉连锁电弧", "slot": "SUB", "min_rarity": 2,
-		"weight": 2.0, "base_dmg": 28.0, "cooldown": 0.38, "cost": 90,
+		"weight": 2.0, "base_dmg": 42.0, "cooldown": 0.38, "cost": 90,
 		"proj_speed": 900.0, "range": 420.0, "chain": 4, "effect": "electric", "tags": ["bio", "missile"],
 		"desc": "发射高压闪电在4个目标间弹跳，并克制护盾与水母类赏金首。"
 	},
 	"sub_shotgun": {
 		"id": "sub_shotgun", "name": "废铁霰弹轰击炮", "slot": "SUB", "min_rarity": 1,
-		"weight": 2.5, "base_dmg": 19.0, "cooldown": 0.65, "cost": 65,
+		"weight": 2.5, "base_dmg": 28.0, "cooldown": 0.65, "cost": 65,
 		"proj_speed": 640.0, "range": 320.0, "pellets": 6, "tags": ["tycoon", "juggernaut"],
 		"desc": "近距离一次轰出6颗废铁弹丸并击退敌人。"
 	},
 
 	"sub_ciws_phalanx": {
 		"id": "sub_ciws_phalanx", "name": "密集阵CIWS近防炮", "slot": "SUB", "min_rarity": 1,
-		"weight": 1.8, "base_dmg": 22.0, "cooldown": 0.16, "cost": 72,
+		"weight": 1.8, "base_dmg": 34.0, "cooldown": 0.16, "cost": 72,
 		"range": 420.0, "pellets": 1, "pierce": 1, "proj_speed": 840.0,
 		"effect": "ciws_intercept", "intercept_range": 195.0, "intercept_cd": 0.28,
 		"tags": ["bullet_storm", "juggernaut"],
@@ -466,13 +466,13 @@ const WEAPONS: Dictionary = {
 	# --- S-E 特殊装备系列 (SE) ---
 	"se_atm": {
 		"id": "se_atm", "name": "ATM 追踪导弹箱", "slot": "SE", "min_rarity": 0,
-		"weight": 2.0, "base_dmg": 48.0, "cooldown": 3.4, "cost": 55,
+		"weight": 2.0, "base_dmg": 72.0, "cooldown": 3.4, "cost": 55,
 		"salvo": 4, "effect": "homing", "tags": ["missile"],
 		"desc": "每轮齐射 4 枚自动追踪全场高威胁目标的穿甲导弹。"
 	},
 	"se_tornado": {
 		"id": "se_tornado", "name": "龙卷风12联装火箭", "slot": "SE", "min_rarity": 2,
-		"weight": 5.2, "base_dmg": 42.0, "cooldown": 5.2, "cost": 120,
+		"weight": 5.2, "base_dmg": 58.0, "cooldown": 5.2, "cost": 120,
 		"salvo": 12, "effect": "homing", "tags": ["missile"],
 		"desc": "一次性倾泻 12 枚追踪导弹洗地！配合【全弹发射】瞬间清屏。"
 	},
@@ -484,19 +484,19 @@ const WEAPONS: Dictionary = {
 	},
 	"se_spike_ball": {
 		"id": "se_spike_ball", "name": "旋转刺球撞角", "slot": "SE", "min_rarity": 1,
-		"weight": 4.0, "base_dmg": 65.0, "cooldown": 0.5, "cost": 70,
+		"weight": 4.0, "base_dmg": 85.0, "cooldown": 0.5, "cost": 70,
 		"effect": "orbit_ball", "tags": ["juggernaut", "lone_cub"],
 		"desc": "两颗重型尖刺铁球环绕战车高速旋转，伤害享受战车总吨位加成！"
 	},
 	"se_drone": {
 		"id": "se_drone", "name": "浮游维修无人机", "slot": "SE", "min_rarity": 2,
-		"weight": 1.2, "base_dmg": 24.0, "cooldown": 0.45, "cost": 85,
+		"weight": 1.2, "base_dmg": 36.0, "cooldown": 0.45, "cost": 85,
 		"effect": "repair_drone", "tags": ["lone_cub", "tycoon"],
 		"desc": "环绕战车自动发射脉冲激光，并每秒为战车修复 18 SP。"
 	},
 	"se_sonic": {
 		"id": "se_sonic", "name": "立体声震荡音波炮", "slot": "SE", "min_rarity": 2,
-		"weight": 2.8, "base_dmg": 95.0, "cooldown": 4.0, "cost": 95,
+		"weight": 2.8, "base_dmg": 140.0, "cooldown": 4.0, "cost": 95,
 		"effect": "sonic_wave", "tags": ["bio", "juggernaut"],
 		"desc": "释放穿透一切护甲与潜沙状态的环形音波，震退并眩晕周围敌人。"
 	},
@@ -504,13 +504,13 @@ const WEAPONS: Dictionary = {
 	# --- 赏金首专属掉落红武 (BOSS DROPS) ---
 	"boss_shark_torpedo": {
 		"id": "boss_shark_torpedo", "name": "【赏金红武】沙鲨钻地鱼雷", "slot": "MAIN", "min_rarity": 4,
-		"weight": 6.5, "base_dmg": 340.0, "cooldown": 2.4, "ammo": 20, "cost": 220,
+		"weight": 6.5, "base_dmg": 440.0, "cooldown": 2.4, "ammo": 20, "cost": 220,
 		"proj_speed": 640.0, "splash": 140.0, "burst": 2, "effect": "acid", "tags": ["artillery", "missile"],
 		"desc": "击败【沙漠之鲛】战利品！一次连射2枚钻地追踪重型鱼雷。"
 	},
 	"boss_yamato_cannon": {
 		"id": "boss_yamato_cannon", "name": "【赏金红武】沙漠之舟·大和炮", "slot": "MAIN", "min_rarity": 4,
-		"weight": 13.0, "base_dmg": 460.0, "cooldown": 3.4, "ammo": 15, "cost": 300,
+		"weight": 13.0, "base_dmg": 600.0, "cooldown": 3.4, "ammo": 15, "cost": 300,
 		"proj_speed": 720.0, "splash": 160.0, "burst": 3, "effect": "cluster", "tags": ["artillery", "juggernaut"],
 		"desc": "击败【沙漠之舟】战利品！恐怖的三联装300mm主炮齐射。"
 	},
