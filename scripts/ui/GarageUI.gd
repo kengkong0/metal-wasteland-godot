@@ -42,6 +42,10 @@ var lbl_garage_weight: Label
 var stats_list_vbox: VBoxContainer
 var wanted_box_vbox: VBoxContainer
 var btn_launch: Button
+var btn_tune_engine: Button
+var left_vbox: VBoxContainer
+var right_vbox: VBoxContainer
+var slots_scroll: ScrollContainer
 
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -101,19 +105,22 @@ func _build_ui() -> void:
 
 	# 奇遇快捷胶囊按钮
 	var btn_soda := Button.new()
-	btn_soda.text = "🥤冷饮(15G)"
+	btn_soda.text = "🥤冷饮(20G)"
+	btn_soda.tooltip_text = "【🥤 战地自动售货机】\n消耗: 20G 投币\n• 战车装甲永久 +12 SP\n• 25% 几率触发大奖：额外返还 25G、+3% 暴击率！"
 	btn_soda.custom_minimum_size = Vector2(96, 36)
 	btn_soda.pressed.connect(_on_vending_machine)
 	top_hbox.add_child(btn_soda)
 
 	var btn_dig := Button.new()
 	btn_dig.text = "📡挖宝(35G)"
+	btn_dig.tooltip_text = "【📡 金属探测器】\n消耗: 35G 扫描地脉\n• 55% 几率掘出金条 (+40~75G)\n• 45% 几率掘出超导轴承 (引擎载重永久 +6%)"
 	btn_dig.custom_minimum_size = Vector2(96, 36)
 	btn_dig.pressed.connect(_on_metal_detector)
 	top_hbox.add_child(btn_dig)
 
 	var btn_wax := Button.new()
-	btn_wax.text = "✨打蜡(25G)"
+	btn_wax.text = "✨打蜡(30G)"
+	btn_wax.tooltip_text = "【✨ 战车纳米防弹打蜡】\n消耗: 30G 改装保养\n• 闪避几率 +3%\n• 战车装甲永久 +20 SP"
 	btn_wax.custom_minimum_size = Vector2(96, 36)
 	btn_wax.pressed.connect(_on_wax_tank)
 	top_hbox.add_child(btn_wax)
@@ -143,7 +150,7 @@ func _build_ui() -> void:
 	root_vbox.add_child(body_hbox)
 
 	# --- 左侧主区 (商店卡片 + 武器与孔位网格) ---
-	var left_vbox := VBoxContainer.new()
+	left_vbox = VBoxContainer.new()
 	left_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	left_vbox.size_flags_stretch_ratio = 2.45
@@ -169,41 +176,50 @@ func _build_ui() -> void:
 	inv_vbox.add_theme_constant_override("separation", 6)
 	inv_panel.add_child(inv_vbox)
 
+	# 1. 槽位操作栏 (标题 + 打孔 + 换底盘 + 引擎扩载)
 	var inv_top_row := HBoxContainer.new()
-	inv_top_row.add_theme_constant_override("separation", 10)
+	inv_top_row.add_theme_constant_override("separation", 8)
 	inv_vbox.add_child(inv_top_row)
 
-	lbl_slots_header = _make_outlined_label("🔧 战车武装与底盘孔位 (0/4)", 16, Color(0.55, 0.88, 1.0))
+	lbl_slots_header = _make_outlined_label("🔧 战车武装槽位 (0/4)", 15, Color(0.55, 0.88, 1.0))
+	lbl_slots_header.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	inv_top_row.add_child(lbl_slots_header)
 
 	var btn_drill := Button.new()
 	btn_drill.text = "🔧激光打孔"
-	btn_drill.custom_minimum_size = Vector2(86, 28)
+	btn_drill.custom_minimum_size = Vector2(80, 28)
 	btn_drill.add_theme_font_size_override("font_size", 12)
 	btn_drill.pressed.connect(_on_drill_button_pressed)
 	inv_top_row.add_child(btn_drill)
 
 	var btn_switch_ch := Button.new()
 	btn_switch_ch.text = "🚜换乘底盘"
-	btn_switch_ch.custom_minimum_size = Vector2(86, 28)
+	btn_switch_ch.custom_minimum_size = Vector2(80, 28)
 	btn_switch_ch.add_theme_font_size_override("font_size", 12)
 	btn_switch_ch.pressed.connect(_open_chassis_modal)
 	inv_top_row.add_child(btn_switch_ch)
 
-	var btn_tune := Button.new()
-	btn_tune.text = "⚡引擎出力+2.5t (45G)"
-	btn_tune.custom_minimum_size = Vector2(136, 28)
-	btn_tune.add_theme_font_size_override("font_size", 12)
-	btn_tune.pressed.connect(_on_tune_engine_pressed)
-	inv_top_row.add_child(btn_tune)
+	btn_tune_engine = Button.new()
+	btn_tune_engine.text = "⚡引擎扩载+2.5t (45G)"
+	btn_tune_engine.custom_minimum_size = Vector2(150, 28)
+	btn_tune_engine.add_theme_font_size_override("font_size", 12)
+	btn_tune_engine.pressed.connect(_on_tune_engine_pressed)
+	inv_top_row.add_child(btn_tune_engine)
+
+	# 2. 独立套装羁绊行 (避免多套装时把右侧面板挤出屏幕)
+	var syn_row := HBoxContainer.new()
+	syn_row.add_theme_constant_override("separation", 6)
+	inv_vbox.add_child(syn_row)
+
+	var syn_title := _make_outlined_label("🏷️ 激活套装:", 12, Color(0.70, 0.82, 0.95))
+	syn_row.add_child(syn_title)
 
 	synergy_pills_hbox = HBoxContainer.new()
 	synergy_pills_hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	synergy_pills_hbox.alignment = BoxContainer.ALIGNMENT_END
 	synergy_pills_hbox.add_theme_constant_override("separation", 6)
-	inv_top_row.add_child(synergy_pills_hbox)
+	syn_row.add_child(synergy_pills_hbox)
 
-	var slots_scroll := ScrollContainer.new()
+	slots_scroll = ScrollContainer.new()
 	slots_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slots_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	slots_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -215,8 +231,12 @@ func _build_ui() -> void:
 	slots_cards_hbox.add_theme_constant_override("separation", 8)
 	slots_scroll.add_child(slots_cards_hbox)
 
-	# --- 右侧边栏 (属性进度条 + 土豆兄弟式双列属性表 + 通缉令海报 + 出击按钮) ---
-	var right_vbox := VBoxContainer.new()
+	left_vbox.clip_contents = true
+	slots_scroll.clip_contents = true
+
+	# --- 右侧边栏 (锁定最小宽度 350px 绝不被左侧挤出屏幕) ---
+	right_vbox = VBoxContainer.new()
+	right_vbox.custom_minimum_size = Vector2(350, 0)
 	right_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_vbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	right_vbox.size_flags_stretch_ratio = 1.0
@@ -233,7 +253,7 @@ func _build_ui() -> void:
 	st_outer.add_theme_constant_override("separation", 6)
 	stats_panel.add_child(st_outer)
 
-	var st_header := _make_outlined_label("📊 战车装甲与属性 (载重=SP)", 16, Color(0.45, 0.95, 0.62))
+	var st_header := _make_outlined_label("📊 战车属性与血量 (余重=装甲)", 16, Color(0.45, 0.95, 0.62))
 	st_outer.add_child(st_header)
 
 	# 战车 SP 装甲可视化进度条
@@ -430,6 +450,12 @@ func _open_chassis_modal() -> void:
 		trait_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		trait_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		cv.add_child(trait_lbl)
+
+		if not is_current and is_unlocked:
+			var ch_prev: Dictionary = GameState.preview_chassis_switch(c_id)
+			var sp_col: Color = Color(0.40, 1.0, 0.55) if ch_prev["sp_delta"] >= 0 else Color(0.95, 0.45, 0.35)
+			var prev_lbl := _make_outlined_label("🛡️血量: %d➔%d (%+d)\n🚜车速: %.0f➔%.0f" % [int(ch_prev["cur_sp"]), int(ch_prev["new_sp"]), int(ch_prev["sp_delta"]), ch_prev["cur_speed"], ch_prev["new_speed"]], 11, sp_col)
+			cv.add_child(prev_lbl)
 
 		var btn := Button.new()
 		btn.custom_minimum_size = Vector2(0, 32)
@@ -785,16 +811,27 @@ func _refresh_shop_cards() -> void:
 					s_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 					cv.add_child(s_lbl)
 
-			# 核心三项图形化数值框
+			# 核心图形化数值框 (前置模拟 A ➔ B 对比，降低理解难度)
 			var stat_box := _make_styled_panel(Color(0.11, 0.11, 0.13), Color(0.30, 0.30, 0.35), 4)
 			cv.add_child(stat_box)
 			var sv := VBoxContainer.new()
 			sv.add_theme_constant_override("separation", 2)
 			stat_box.add_child(sv)
-			var dmg_val: float = float(w_def["base_dmg"]) * pow(1.32, rar)
-			_add_mini_stat_row(sv, "💥 伤害", "%.0f" % dmg_val, Color(1.0, 0.55, 0.32))
-			_add_mini_stat_row(sv, "⚖️ 重量", "%.1f t" % float(w_def["weight"]), Color(0.95, 0.85, 0.40))
-			_add_mini_stat_row(sv, "⏱️ 冷却", "%.1f s" % float(w_def["cooldown"]), Color(0.55, 0.90, 1.0))
+
+			var prev: Dictionary = GameState.preview_weapon_purchase(w_id, rar)
+			if can_merge and prev["is_merge"]:
+				_add_mini_stat_row(sv, "💥 实际伤害", "%.0f ➔ %.0f (%+d)" % [prev["cur_dmg"], prev["new_dmg"], int(prev["dmg_delta"])], Color(0.40, 1.0, 0.55))
+				_add_mini_stat_row(sv, "⚖️ 武器重量", "%.1ft ➔ %.1ft (%+.1ft)" % [prev["cur_w"], prev["new_w"], prev["w_delta"]], Color(0.95, 0.85, 0.40))
+				_add_mini_stat_row(sv, "⏱️ 冷却间隔", "%.1f s" % float(w_def["cooldown"]), Color(0.55, 0.90, 1.0))
+				var sp_c: Color = Color(0.40, 1.0, 0.55) if prev["sp_delta"] >= 0 else Color(0.95, 0.65, 0.35)
+				_add_mini_stat_row(sv, "🛡️ 合成后血量", "%d ➔ %d (%+d)" % [int(prev["cur_sp"]), int(prev["new_sp"]), int(prev["sp_delta"])], sp_c)
+			else:
+				_add_mini_stat_row(sv, "💥 实际伤害", "%.0f" % prev["cur_dmg"], Color(1.0, 0.55, 0.32), "已计入当前猎人与引擎加成")
+				_add_mini_stat_row(sv, "⚖️ 武器重量", "%.1f t" % prev["cur_w"], Color(0.95, 0.85, 0.40))
+				_add_mini_stat_row(sv, "⏱️ 冷却间隔", "%.1f s" % float(w_def["cooldown"]), Color(0.55, 0.90, 1.0))
+				var sp_c: Color = Color(0.40, 1.0, 0.55) if prev["sp_delta"] >= 0 else Color(0.95, 0.65, 0.35)
+				_add_mini_stat_row(sv, "🛡️ 上车后血量", "%d ➔ %d (%+d)" % [int(prev["cur_sp"]), int(prev["new_sp"]), int(prev["sp_delta"])], sp_c)
+				_add_mini_stat_row(sv, "⚖️ 上车后负重", "%.1ft ➔ %.1ft" % [prev["cur_used_w"], prev["new_used_w"]], Color(0.85, 0.85, 0.85))
 
 			var desc_lbl := _make_outlined_label(w_def["desc"], 12, Color(0.82, 0.82, 0.85))
 			desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -838,8 +875,21 @@ func _refresh_shop_cards() -> void:
 			var stat_box := _make_styled_panel(Color(0.11, 0.11, 0.13), Color(0.30, 0.30, 0.35), 4)
 			cv.add_child(stat_box)
 			var sv := VBoxContainer.new()
+			sv.add_theme_constant_override("separation", 2)
 			stat_box.add_child(sv)
-			_add_mini_stat_row(sv, "⚖️ 最大载重", "%.1f t" % float(e_def["max_weight"]), Color(0.40, 1.0, 0.55))
+
+			var eng_prev: Dictionary = GameState.preview_engine_switch(item["id"])
+			var mw_col: Color = Color(0.40, 1.0, 0.55) if eng_prev["max_w_delta"] >= 0 else Color(0.95, 0.35, 0.35)
+			_add_mini_stat_row(sv, "🏋️ 最大载重", "%.1ft ➔ %.1ft (%+.1ft)" % [eng_prev["cur_max_w"], eng_prev["new_max_w"], eng_prev["max_w_delta"]], mw_col)
+			var esp_col: Color = Color(0.40, 1.0, 0.55) if eng_prev["sp_delta"] >= 0 else Color(0.95, 0.35, 0.35)
+			_add_mini_stat_row(sv, "🛡️ 战车血量", "%d ➔ %d (%+d)" % [int(eng_prev["cur_sp"]), int(eng_prev["new_sp"]), int(eng_prev["sp_delta"])], esp_col)
+			if absf(eng_prev["speed_delta"]) > 0.1:
+				var spd_col: Color = Color(0.40, 1.0, 0.55) if eng_prev["speed_delta"] > 0 else Color(0.95, 0.45, 0.35)
+				_add_mini_stat_row(sv, "💨 战车移速", "%.0f ➔ %.0f (%+.0f)" % [eng_prev["cur_speed"], eng_prev["new_speed"], eng_prev["speed_delta"]], spd_col)
+			if eng_prev["new_all_dmg"] > 0.0 or eng_prev["cur_all_dmg"] > 0.0:
+				_add_mini_stat_row(sv, "💥 全局增伤", "%+d%% ➔ %+d%%" % [int(eng_prev["cur_all_dmg"] * 100.0), int(eng_prev["new_all_dmg"] * 100.0)], Color(1.0, 0.75, 0.35))
+			if eng_prev["new_main_dmg"] > 0.0 or eng_prev["cur_main_dmg"] > 0.0:
+				_add_mini_stat_row(sv, "🔴 主炮增伤", "%+d%% ➔ %+d%%" % [int(eng_prev["cur_main_dmg"] * 100.0), int(eng_prev["new_main_dmg"] * 100.0)], Color(1.0, 0.60, 0.35))
 			if int(item.get("trade_in", 0)) > 0:
 				_add_mini_stat_row(sv, "♻️ 旧件折抵", "-%d G" % int(item["trade_in"]), Color(1.0, 0.88, 0.30))
 
@@ -874,9 +924,20 @@ func _refresh_shop_cards() -> void:
 			var stat_box := _make_styled_panel(Color(0.11, 0.11, 0.13), Color(0.30, 0.30, 0.35), 4)
 			cv.add_child(stat_box)
 			var sv := VBoxContainer.new()
+			sv.add_theme_constant_override("separation", 2)
 			stat_box.add_child(sv)
-			_add_mini_stat_row(sv, "🚀 全弹CD", "%.1f s" % float(c_def["all_out_cd"]), Color(0.95, 0.65, 1.0))
-			_add_mini_stat_row(sv, "⚖️ 自重", "%.1f t" % float(c_def["weight"]), Color(0.95, 0.85, 0.40))
+
+			var cu_prev: Dictionary = GameState.preview_c_unit_switch(item["id"])
+			var cd_col: Color = Color(0.40, 1.0, 0.55) if cu_prev["cd_delta"] <= 0 else Color(0.95, 0.45, 0.35)
+			_add_mini_stat_row(sv, "🚀 大招冷却", "%.1fs ➔ %.1fs (%+.1fs)" % [cu_prev["cur_cd"], cu_prev["new_cd"], cu_prev["cd_delta"]], cd_col)
+			if absf(cu_prev["crit_delta"]) > 0.001:
+				var cr_col: Color = Color(0.40, 1.0, 0.55) if cu_prev["crit_delta"] >= 0 else Color(0.95, 0.45, 0.35)
+				_add_mini_stat_row(sv, "⚡ 暴击几率", "%d%% ➔ %d%% (%+d%%)" % [int(roundf(cu_prev["cur_crit"] * 100.0)), int(roundf(cu_prev["new_crit"] * 100.0)), int(roundf(cu_prev["crit_delta"] * 100.0))], cr_col)
+			if absf(cu_prev["dodge_delta"]) > 0.001:
+				var dg_col: Color = Color(0.40, 1.0, 0.55) if cu_prev["dodge_delta"] >= 0 else Color(0.95, 0.45, 0.35)
+				_add_mini_stat_row(sv, "💨 闪避几率", "%d%% ➔ %d%% (%+d%%)" % [int(roundf(cu_prev["cur_dodge"] * 100.0)), int(roundf(cu_prev["new_dodge"] * 100.0)), int(roundf(cu_prev["dodge_delta"] * 100.0))], dg_col)
+			var cu_sp_col: Color = Color(0.40, 1.0, 0.55) if cu_prev["sp_delta"] >= 0 else Color(0.95, 0.70, 0.35)
+			_add_mini_stat_row(sv, "🛡️ 战车血量", "%d ➔ %d (%+d)" % [int(cu_prev["cur_sp"]), int(cu_prev["new_sp"]), int(cu_prev["sp_delta"])], cu_sp_col)
 			if int(item.get("trade_in", 0)) > 0:
 				_add_mini_stat_row(sv, "♻️ 旧件折抵", "-%d G" % int(item["trade_in"]), Color(1.0, 0.88, 0.30))
 
@@ -902,7 +963,7 @@ func _refresh_shop_cards() -> void:
 			var m_def: Dictionary = GameData.TANK_MODS[m_id]
 			var is_cursed: bool = bool(m_def.get("is_cursed", false))
 			var cur_stacks: int = int(GameState.equipped_tank_mods.get(m_id, 0))
-			var badge_str: String = "☣️ 诺亚禁忌诅咒件" if is_cursed else "🔩 战术改装挂件 (不占孔)"
+			var badge_str: String = "☣️ 诺亚禁忌诅咒件" if is_cursed else "🔩 战术挂件(不占槽位)"
 			var top_tag := _make_outlined_label(badge_str, 12, border_col)
 			top_tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			cv.add_child(top_tag)
@@ -925,6 +986,19 @@ func _refresh_shop_cards() -> void:
 				var s_lbl := _make_outlined_label("🏷️ " + " / ".join(syn_names), 12, Color(0.75, 0.88, 1.0))
 				s_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 				cv.add_child(s_lbl)
+
+			var mod_stat_box := _make_styled_panel(Color(0.11, 0.11, 0.13), Color(0.30, 0.30, 0.35), 4)
+			cv.add_child(mod_stat_box)
+			var msv := VBoxContainer.new()
+			msv.add_theme_constant_override("separation", 2)
+			mod_stat_box.add_child(msv)
+
+			var mod_prev: Dictionary = GameState.preview_tank_mod_purchase(m_id)
+			for dt in mod_prev["stat_deltas"]:
+				_add_mini_stat_row(msv, "✨ 属性变动", dt, Color(0.40, 1.0, 0.65))
+			if mod_prev["sp_delta"] != 0:
+				var m_sp_c: Color = Color(0.40, 1.0, 0.55) if mod_prev["sp_delta"] > 0 else Color(0.95, 0.45, 0.35)
+				_add_mini_stat_row(msv, "🛡️ 战车血量", "%d ➔ %d (%+d)" % [int(mod_prev["cur_sp"]), int(mod_prev["new_sp"]), int(mod_prev["sp_delta"])], m_sp_c)
 
 			var desc_lbl := _make_outlined_label(m_def["desc"], 12, Color(1.0, 0.78, 0.82) if is_cursed else Color(0.88, 0.94, 0.90))
 			desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -973,9 +1047,15 @@ func _refresh_slots_and_weapons_grid() -> void:
 
 	var mod_cost: int = 0 if GameState.bonus_stats.get("free_slot_mod", false) else 25
 	var mod_str: String = "免费改孔" if mod_cost == 0 else "改孔 %dG" % mod_cost
-	lbl_slots_header.text = "🔧 战车槽位与武装 (%d / %d)  [%s]" % [
+	lbl_slots_header.text = "🔧 战车武器槽位 (%d / %d)  [%s]" % [
 		GameState.equipped_weapons.size(), GameState.chassis_slots.size(), mod_str
 	]
+	if is_instance_valid(btn_tune_engine):
+		var tune_prev: Dictionary = GameState.preview_tune_engine(2.5)
+		btn_tune_engine.text = "⚡引擎扩载+2.5t (45G)"
+		btn_tune_engine.tooltip_text = "【⚡ 引擎出力扩载 (+2.5t)】\n消耗: 45G 赏金\n• 最大载重: %.1ft ➔ %.1ft (+2.5t)\n• 战车装甲血量: %d ➔ %d (+%d SP)\n💡 战车空余载重越多，转化成的战车血量越多！" % [
+			tune_prev["cur_max_w"], tune_prev["new_max_w"], int(tune_prev["cur_sp"]), int(tune_prev["new_sp"]), int(tune_prev["sp_delta"])
+		]
 
 	# 流派羁绊彩色胶囊徽章 (含吸血鬼幸存者/土豆兄弟阶段激活提示与悬浮详情)
 	if GameState.should_show_build_hints():
@@ -1023,7 +1103,7 @@ func _refresh_slots_and_weapons_grid() -> void:
 			var r_col: Color = GameData.RARITY_COLORS[clampi(rar, 0, 5)]
 
 			var w_card := _make_styled_panel(Color(0.18, 0.18, 0.22), r_col, 6)
-			w_card.custom_minimum_size = Vector2(142, 0)
+			w_card.custom_minimum_size = Vector2(116, 0)
 			w_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			w_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			slots_cards_hbox.add_child(w_card)
@@ -1067,7 +1147,12 @@ func _refresh_slots_and_weapons_grid() -> void:
 			sell_btn.custom_minimum_size = Vector2(0, 26)
 			sell_btn.add_theme_font_size_override("font_size", 11)
 			var refund: int = int(w_def.get("cost", 50) * pow(1.6, rar) * 0.6)
+			var sell_prev: Dictionary = GameState.preview_sell_weapon(i)
+			var sp_diff: int = int(sell_prev.get("sp_delta", 0))
 			sell_btn.text = "卖+%dG" % refund
+			sell_btn.tooltip_text = "【拆卸回收】\n获得 +%dG 赏金\n• 卸下自重: %.1ft\n• 释放载重自动转为血量: %d ➔ %d (+%d SP)" % [
+				refund, float(sell_prev.get("freed_w", 0.0)), int(sell_prev.get("cur_sp", 0)), int(sell_prev.get("new_sp", 0)), sp_diff
+			]
 			sell_btn.pressed.connect(func():
 				GameState.sell_weapon_at(i)
 				SoundManager.play("coin", 0.1, -2.0)
@@ -1076,7 +1161,7 @@ func _refresh_slots_and_weapons_grid() -> void:
 			b_row.add_child(sell_btn)
 		else:
 			var empty_card := _make_styled_panel(Color(0.11, 0.11, 0.14), Color(0.32, 0.35, 0.42), 6)
-			empty_card.custom_minimum_size = Vector2(132, 0)
+			empty_card.custom_minimum_size = Vector2(116, 0)
 			empty_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			empty_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 			slots_cards_hbox.add_child(empty_card)
@@ -1100,7 +1185,7 @@ func _refresh_slots_and_weapons_grid() -> void:
 	# 激光打孔扩充新槽位卡片 (上限6孔)
 	if GameState.chassis_slots.size() < 6:
 		var drill_card := _make_styled_panel(Color(0.12, 0.15, 0.20), Color(0.35, 0.85, 1.0), 6)
-		drill_card.custom_minimum_size = Vector2(136, 0)
+		drill_card.custom_minimum_size = Vector2(116, 0)
 		drill_card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		drill_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		slots_cards_hbox.add_child(drill_card)
@@ -1136,16 +1221,16 @@ func _refresh_right_stats_and_wanted() -> void:
 	# 1. 更新 SP 装甲进度条 & 引擎载重进度条
 	bar_garage_sp.max_value = maxf(1.0, GameState.max_sp)
 	bar_garage_sp.value = bar_garage_sp.max_value
-	lbl_garage_sp.text = "🛡️ 战车装甲: %d SP  (+%.0f/秒)" % [int(GameState.max_sp), GameState.sp_regen_per_sec]
+	lbl_garage_sp.text = "🛡️ 战车血量(装甲): %d SP  (+%.0f/秒)" % [int(GameState.max_sp), GameState.sp_regen_per_sec]
 
 	bar_garage_weight.max_value = maxf(1.0, GameState.max_weight)
 	bar_garage_weight.value = clampf(GameState.used_weight, 0.0, bar_garage_weight.max_value)
 	if GameState.overweight_tons > 0.0:
 		style_weight_fill.bg_color = Color(0.95, 0.25, 0.22)
-		lbl_garage_weight.text = "⚠️ 超载 %.1ft! (%.1f / %.1ft)" % [GameState.overweight_tons, GameState.used_weight, GameState.max_weight]
+		lbl_garage_weight.text = "⚠️ 战车超载 %.1ft! (%.1f / %.1ft) 移速大跌!" % [GameState.overweight_tons, GameState.used_weight, GameState.max_weight]
 	else:
 		style_weight_fill.bg_color = Color(0.88, 0.58, 0.18)
-		lbl_garage_weight.text = "⚖️ 载重: %.1f / %.1ft (余 %.1ft ➔ SP)" % [GameState.used_weight, GameState.max_weight, GameState.free_weight]
+		lbl_garage_weight.text = "⚖️ 负重: %.1f / %.1ft (余 %.1ft ➔ +%d血量)" % [GameState.used_weight, GameState.max_weight, GameState.free_weight, int(GameState.free_weight * GameData.CHASSIS.get(GameState.selected_chassis_id, {}).get("sp_per_ton", 20.0))] # % [GameState.used_weight, GameState.max_weight, GameState.free_weight]
 
 	# 2. 更新土豆兄弟式双列属性表
 	for c in stats_list_vbox.get_children():
@@ -1169,7 +1254,7 @@ func _refresh_right_stats_and_wanted() -> void:
 	bar_garage_weight.tooltip_text = GameState.get_stat_breakdown("max_weight")
 
 	_add_mini_stat_row(stats_list_vbox, "⚙️ 当前引擎", eng["name"].substr(0, 9), Color(0.45, 0.92, 1.0), GameState.get_stat_breakdown("max_weight"))
-	_add_mini_stat_row(stats_list_vbox, "💻 火控C装置", "%s [%s]" % [cu["name"].substr(0, 6), cu.get("skill_name", "全弹")], Color(0.92, 0.60, 1.0), cu.get("desc", ""))
+	_add_mini_stat_row(stats_list_vbox, "💻 战术电脑", "%s [%s]" % [cu["name"].substr(0, 6), cu.get("skill_name", "全弹")], Color(0.92, 0.60, 1.0), cu.get("desc", ""))
 	_add_mini_stat_row(stats_list_vbox, "🔴 主炮增伤", "%+d%%" % int((GameState.bonus_stats.get("main_dmg_pct", 0.0) + float(eng.get("all_dmg_bonus", 0.0)) + float(eng.get("main_dmg_bonus", 0.0))) * 100.0), Color(1.0, 0.58, 0.32), GameState.get_stat_breakdown("main_dmg"))
 	_add_mini_stat_row(stats_list_vbox, "🟡 副武增伤", "%+d%%" % int((GameState.bonus_stats.get("sub_dmg_pct", 0.0) + float(eng.get("all_dmg_bonus", 0.0))) * 100.0), Color(1.0, 0.88, 0.38), GameState.get_stat_breakdown("sub_dmg"))
 	_add_mini_stat_row(stats_list_vbox, "💥 暴击几率", "%d%%" % int(GameState.crit_chance * 100.0), Color(0.40, 1.0, 0.55), GameState.get_stat_breakdown("crit_chance"))

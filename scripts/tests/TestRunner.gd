@@ -20,6 +20,7 @@ func _ready() -> void:
 	test_suite_9_swarm_and_crush_mechanics()
 	test_suite_10_achievements_skins_and_paint_workshop()
 	test_suite_11_v2_blueprint_optimizations()
+	test_suite_12_stat_previews_and_layout_constraints()
 
 	print("\n========================================================")
 	print("📊 [TEST RESULTS] 测试统计汇总:")
@@ -708,3 +709,99 @@ func test_suite_11_v2_blueprint_optimizations() -> void:
 	assert_true(bf_node.drops_container.get_child_count() <= 75, "同屏掉落物超过 75 个时触发自动合并压缩，防止节点爆炸 (当前节点数 %d)" % bf_node.drops_container.get_child_count())
 
 	bf_node.queue_free()
+
+
+# ============================================================================
+# 12. 数值对比预览系统 (A ➔ B) 与满孔位防挤压 UI 约束测试
+# ============================================================================
+func test_suite_12_stat_previews_and_layout_constraints() -> void:
+	print("--- [Suite 12] 数值对比预览系统 (A ➔ B) 与满孔位防挤压 UI 约束测试 ---")
+
+	GameState.start_new_run("bounty_hunter", "buggy")
+
+	# 1. 验证基础 simulate_stats 完整性
+	var sim: Dictionary = GameState.simulate_stats()
+	assert_true(sim.has("max_weight") and sim.has("used_weight") and sim.has("max_sp") and sim.has("move_speed"), "simulate_stats 包含核心载重与装甲字段")
+	assert_true(sim["max_sp"] > 100.0, "模拟初始装甲血量正常大于 100 SP")
+
+	# 2. 验证武器买入与二合一升星预览 (A ➔ B)
+	# 2.1 新购入未装备武器
+	var prev_new: Dictionary = GameState.preview_weapon_purchase("sub_acid", 0)
+	assert_true(not prev_new["is_merge"], "新武器未装备时 preview_weapon_purchase 判定为非合成")
+	assert_true(prev_new["cur_dmg"] > 0.0, "新武器伤害预览有效计入当前加成")
+	assert_true(prev_new["new_used_w"] > prev_new["cur_used_w"], "新武器装车后已用负重正确增加")
+
+	# 2.2 二合一合成升星预览
+	var starter_w: String = GameState.equipped_weapons[0]["id"]
+	var starter_rar: int = int(GameState.equipped_weapons[0].get("rarity", 0))
+	var prev_merge: Dictionary = GameState.preview_weapon_purchase(starter_w, starter_rar)
+	assert_true(prev_merge["is_merge"], "同名同星级武器 preview_weapon_purchase 判定为二合一合成")
+	assert_true(prev_merge["next_rarity"] == starter_rar + 1, "合成后星级正确 +1")
+	assert_true(prev_merge["new_dmg"] > prev_merge["cur_dmg"], "合成后伤害显著提升 (A ➔ B 伤害正向增长)")
+	assert_true(prev_merge["dmg_delta"] > 0.0, "伤害增量 dmg_delta 为正值")
+
+	# 3. 验证引擎换装对比预览
+	var eng_prev: Dictionary = GameState.preview_engine_switch("eng_dozer")
+	assert_true(eng_prev["max_w_delta"] > 0.0, "重型推土机引擎载重增量为正 (最大载重提升)")
+	assert_true(eng_prev["sp_delta"] > 0.0, "重型推土机引擎带来正向战车装甲血量提升")
+	assert_true(eng_prev["cur_max_w"] > 0.0 and eng_prev["new_max_w"] > eng_prev["cur_max_w"], "引擎换装 A ➔ B 最大载重准确")
+
+	# 4. 验证火控电脑/C装置换装对比预览
+	var cu_prev: Dictionary = GameState.preview_c_unit_switch("cu_type99")
+	assert_true(cu_prev.has("cd_delta") and cu_prev.has("crit_delta") and cu_prev.has("sp_delta"), "C装置预览包含大招CD、暴击率与装甲血量变动")
+	assert_true(cu_prev["crit_delta"] >= 0.0, "99式火控提供正向暴击率增幅")
+
+	# 5. 验证引擎扩载快捷改装预览 (+2.5t)
+	var tune_prev: Dictionary = GameState.preview_tune_engine(2.5)
+	assert_true(tune_prev["max_w_delta"] >= 2.5, "引擎出力扩载 preview_tune_engine 最大载重增加 >= 2.5t")
+	assert_true(tune_prev["sp_delta"] > 0.0, "引擎载重扩充后自动转化为战车装甲血量提升")
+
+	# 6. 验证改装挂件 (Tank Mod) 叠加预览
+	var mod_prev: Dictionary = GameState.preview_tank_mod_purchase("mod_autoloader")
+	assert_true(mod_prev.has("stat_deltas") and not mod_prev["stat_deltas"].is_empty(), "改装挂件预览成功生成大白话属性变动列表")
+
+	# 7. 验证底盘换乘预览
+	var ch_prev: Dictionary = GameState.preview_chassis_switch("mammoth")
+	assert_true(ch_prev.has("cur_sp") and ch_prev.has("new_sp") and ch_prev.has("cur_speed"), "换乘底盘预览提供装甲血量与车速完整对比")
+
+	# 8. 验证武器出售回收预览
+	var sell_prev: Dictionary = GameState.preview_sell_weapon(0)
+	assert_true(sell_prev["refund"] > 0, "出售武器获得大于0的赏金回收")
+	assert_true(sell_prev["sp_delta"] >= 0.0, "卸下武器释放负重后战车装甲血量正向恢复")
+	assert_true(sell_prev["freed_w"] > 0.0, "卸下武器成功释放战车负重吨位")
+
+	# 9. 验证 GarageUI 满孔位与防挤出 UI 布局约束
+	var garage_script: Script = load("res://scripts/ui/GarageUI.gd")
+	var garage_ui: Control = garage_script.new()
+	assert_true(garage_ui != null, "GarageUI 成功实例化")
+
+	# 将孔位开满至 6 孔并安装 6 把武器
+	GameState.gold = 5000
+	while GameState.chassis_slots.size() < 6:
+		GameState.drill_new_chassis_slot("SUB")
+	assert_true(GameState.chassis_slots.size() == 6, "战车武器孔位成功开满 6/6")
+
+	var test_w_list: Array = ["sub_acid", "sub_shotgun", "se_atm", "se_spike_ball", "cannon_105mm", "sub_gatling"]
+	for wid in test_w_list:
+		if GameState.equipped_weapons.size() < 6 and GameData.WEAPONS.has(wid):
+			GameState.equipped_weapons.append({"id": wid, "rarity": 0})
+	GameState.recalculate_stats()
+	assert_true(GameState.equipped_weapons.size() == 6, "战车武装成功装满 6/6")
+
+	# 模拟添加 6 种不同流派挂件以激活全部流派胶囊
+	for t in GameData.SYNERGIES.keys():
+		GameState.synergy_counts[t] = 2
+
+	# 挂载到根节点测试其布局约束
+	add_child(garage_ui)
+	garage_ui._build_ui()
+	garage_ui.refresh_all()
+
+	# 检查布局防挤压防御措施
+	assert_true(garage_ui.left_vbox.clip_contents, "左侧主面板已启用 clip_contents 防止内容撑大外框")
+	assert_true(garage_ui.slots_scroll.clip_contents, "武器槽位滚动容器已启用 clip_contents")
+	assert_true(garage_ui.right_vbox.custom_minimum_size.x >= 340.0, "右侧战车属性栏锁定 >= 340px 最小保护宽度，100% 杜绝被挤出屏幕")
+	assert_true(garage_ui.btn_tune_engine != null, "引擎扩载按钮引用有效挂载")
+	assert_true(garage_ui.btn_tune_engine.tooltip_text.contains("最大载重"), "引擎扩载按钮提供详细 A ➔ B 悬停对比预览")
+
+	garage_ui.queue_free()

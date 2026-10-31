@@ -1857,6 +1857,29 @@ func _refresh_meta_view() -> void:
 		dl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		info_v.add_child(dl)
 
+		var preview_str: String = ""
+		match u_id:
+			"meta_weight":
+				preview_str = "📊 效果预览: 最大载重加成 +%d%% ➔ +%d%%" % [lv * 5, (lv + 1) * 5] if not is_max else "📊 已达极限效果 (+%d%% 最大载重)" % (lv * 5)
+			"meta_sp":
+				preview_str = "📊 效果预览: 战车基础装甲 +%d SP ➔ +%d SP" % [lv * 25, (lv + 1) * 25] if not is_max else "📊 已达极限效果 (+%d SP 基础装甲)" % (lv * 25)
+			"meta_dmg":
+				preview_str = "📊 效果预览: 全武器伤害 +%d%% ➔ +%d%%" % [lv * 6, (lv + 1) * 6] if not is_max else "📊 已达极限效果 (+%d%% 全局增伤)" % (lv * 6)
+			"meta_start_gold":
+				preview_str = "📊 效果预览: 开局初始津贴 +%d G ➔ +%d G" % [lv * 20, (lv + 1) * 20] if not is_max else "📊 已达极限效果 (+%d G 初始津贴)" % (lv * 20)
+			"meta_reload":
+				preview_str = "📊 效果预览: 装填与射速 +%d%% ➔ +%d%%" % [lv * 4, (lv + 1) * 4] if not is_max else "📊 已达极限效果 (+%d%% 装填射速)" % (lv * 4)
+			"meta_crit_dodge":
+				preview_str = "📊 效果预览: 暴击 +%.1f%% ➔ +%.1f%% | 闪避 +%d%% ➔ +%d%%" % [lv * 2.5, (lv + 1) * 2.5, lv * 2, (lv + 1) * 2] if not is_max else "📊 已达极限效果 (暴击+%.1f%%, 闪避+%d%%)" % [lv * 2.5, lv * 2]
+			"meta_repair":
+				preview_str = "📊 效果预览: 战车秒回自修 +%d SP/s ➔ +%d SP/s" % [lv * 3, (lv + 1) * 3] if not is_max else "📊 已达极限效果 (+%d SP/s 自修)" % (lv * 3)
+			"meta_magnet_gold":
+				preview_str = "📊 效果预览: 磁吸 +%d%% ➔ +%d%% | 收益 +%d%% ➔ +%d%%" % [lv * 20, (lv + 1) * 20, lv * 8, (lv + 1) * 8] if not is_max else "📊 已达极限效果"
+
+		if not preview_str.is_empty():
+			var prev_lbl := _make_outlined_label(preview_str, 11, Color(0.40, 0.95, 0.85))
+			info_v.add_child(prev_lbl)
+
 		var btn := Button.new()
 		btn.custom_minimum_size = Vector2(110, 38)
 		btn.disabled = is_max

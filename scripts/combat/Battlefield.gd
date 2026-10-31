@@ -1141,17 +1141,49 @@ func _populate_battlefield_level_cards() -> void:
 		var desc_txt: String = String(p["desc"]) % disp_num
 
 		var stat_compare: String = ""
+		var tangible_compare: String = ""
 		if p.get("is_pct", true):
 			var cur_val: float = float(GameState.bonus_stats.get(p["stat"], 0.0))
 			if p["stat"] == "crit_chance":
 				cur_val = GameState.crit_chance
 			var cur_disp: int = int(roundf(cur_val * 100.0))
 			var next_disp: int = cur_disp + disp_num
-			stat_compare = "📊 (当前 %d%% ➔ %d%%)" % [cur_disp, next_disp]
+			stat_compare = "📊 加成: %+d%% ➔ %+d%%" % [cur_disp, next_disp]
+
+			match p["id"]:
+				"main_dmg":
+					var rep_dmg: float = 0.0
+					for w in GameState.equipped_weapons:
+						if GameData.WEAPONS.get(w["id"], {}).get("slot", "") == "MAIN":
+							rep_dmg = GameState.get_weapon_effective_damage(w["id"], w.get("rarity", 0))
+							break
+					if rep_dmg > 0.0:
+						var next_dmg: float = rep_dmg * (1.0 + final_val)
+						tangible_compare = "💥 主炮伤害: %.0f ➔ %.0f (+%.0f)" % [rep_dmg, next_dmg, next_dmg - rep_dmg]
+				"max_weight":
+					var cur_w: float = GameState.max_weight
+					var next_w: float = cur_w * (1.0 + final_val)
+					var ch: Dictionary = GameData.CHASSIS.get(GameState.selected_chassis_id, {})
+					var sp_ton: float = float(ch.get("sp_per_ton", 20.0))
+					var delta_sp: int = int(roundf((next_w - cur_w) * sp_ton))
+					tangible_compare = "⚖️ 最大载重: %.1ft ➔ %.1ft (血量 +%d)" % [cur_w, next_w, delta_sp]
+				"move_ram":
+					var cur_spd: float = GameState.move_speed
+					var next_spd: float = cur_spd * (1.0 + final_val)
+					tangible_compare = "🚜 战车移速: %.0f ➔ %.0f (+%.0f)" % [cur_spd, next_spd, next_spd - cur_spd]
+				"reload_spd":
+					tangible_compare = "⚡ 装填加速: %+d%%" % disp_num
+				"crit_chance":
+					tangible_compare = "🎯 全车暴击: %d%% ➔ %d%%" % [cur_disp, next_disp]
 		else:
 			var cur_disp: int = int(roundf(GameState.sp_regen_per_sec))
 			var next_disp: int = cur_disp + disp_num
-			stat_compare = "📊 (当前 %d/s ➔ %d/s)" % [cur_disp, next_disp]
+			stat_compare = "📊 修护: %d/s ➔ %d/s" % [cur_disp, next_disp]
+			tangible_compare = "🔧 装甲每秒自修: +%d SP/秒" % disp_num
+
+		var full_compare: String = stat_compare
+		if not tangible_compare.is_empty():
+			full_compare += "\n" + tangible_compare
 
 		var card := _make_card_box(Color(0.16, 0.17, 0.21), t_col)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1175,7 +1207,7 @@ func _populate_battlefield_level_cards() -> void:
 
 		var is_emergency: bool = (GameState.selected_difficulty_id == "easy") and (player_tank.is_human_mode or (player_tank.current_sp <= GameState.max_sp * 0.25))
 		var heal_label: String = "⚡【简单模式·绝境逆转】紧急注入 +16% SP!" if is_emergency else "💚 战地应急抢修 +6% SP"
-		var desc_lbl := _make_outlined_label("✅ %s\n%s\n%s" % [desc_txt, stat_compare, heal_label], 14, Color(1.0, 0.88, 0.25) if is_emergency else Color(0.92, 0.96, 0.92))
+		var desc_lbl := _make_outlined_label("✅ %s\n%s\n%s" % [desc_txt, full_compare, heal_label], 14, Color(1.0, 0.88, 0.25) if is_emergency else Color(0.92, 0.96, 0.92))
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -1245,6 +1277,9 @@ func _populate_battlefield_level_cards() -> void:
 	stats_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	wv.add_child(stats_lbl)
 
+	var can_take_w: bool = GameState.can_equip_or_merge(airdrop_w_id, 0)
+	var prev_air: Dictionary = GameState.preview_weapon_purchase(airdrop_w_id, 0)
+
 	var hint_text: String = w_def["desc"]
 	if show_hints:
 		var syn_names: Array = []
@@ -1256,15 +1291,20 @@ func _populate_battlefield_level_cards() -> void:
 		if evo_partner_name != "":
 			hint_text += "\n🌟 超武配件 ➔ " + evo_partner_name
 		elif can_merge:
-			hint_text += "\n🔥 同名★1武器！拾取直接二合一升至 ★2！"
+			hint_text += "\n✨ 【战地二合一升星！】★1 ➔ ★2\n💥 伤害: %.0f ➔ %.0f (%+d) | 🛡️ 血量: %d ➔ %d" % [
+				prev_air["cur_dmg"], prev_air["new_dmg"], int(prev_air["dmg_delta"]),
+				int(prev_air["cur_sp"]), int(prev_air["new_sp"])
+			]
+		elif can_take_w:
+			hint_text += "\n🔧 【装配入空槽】\n💥 实际伤害: %.0f | 🛡️ 上车后血量: %d ➔ %d (%+d)" % [
+				prev_air["cur_dmg"], int(prev_air["cur_sp"]), int(prev_air["new_sp"]), int(prev_air["sp_delta"])
+			]
 
 	var w_desc := _make_outlined_label(hint_text, 13, Color(1.0, 0.88, 0.45) if (evo_partner_name != "" or can_merge) else Color(0.85, 0.85, 0.85))
 	w_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	w_desc.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	w_desc.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	wv.add_child(w_desc)
-
-	var can_take_w: bool = GameState.can_equip_or_merge(airdrop_w_id, 0)
 	var air_btn := Button.new()
 	air_btn.custom_minimum_size = Vector2(0, 44)
 	air_btn.text = "空投装配 (+6% SP)" if can_take_w else "槽位已满：折算 +35G"

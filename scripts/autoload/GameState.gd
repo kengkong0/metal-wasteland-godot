@@ -1152,3 +1152,291 @@ func get_stat_breakdown(stat_key: String) -> String:
 			]
 		_:
 			return "战车实时综合战斗指标（悬停可查看详细构成）"
+
+
+# ============================================================================
+# 无副作用的整备模拟与升级/换装前置对比计算器 (SIMULATION & PREVIEW HELPERS)
+# ============================================================================
+func simulate_stats(p_engine_id: String = "", p_c_unit_id: String = "", p_weapons: Variant = null, p_tank_mods: Variant = null, p_chassis_id: String = "", p_flat_weight_bonus: Variant = null, p_override_bonus_stats: Variant = null) -> Dictionary:
+	var use_eng_id: String = p_engine_id if not p_engine_id.is_empty() else equipped_engine_id
+	var use_cu_id: String = p_c_unit_id if not p_c_unit_id.is_empty() else equipped_c_unit_id
+	var use_ch_id: String = p_chassis_id if not p_chassis_id.is_empty() else selected_chassis_id
+	var use_flat_wt: float = float(p_flat_weight_bonus) if p_flat_weight_bonus != null else float(bonus_stats.get("flat_max_weight", 0.0))
+	var use_bonus: Dictionary = p_override_bonus_stats if p_override_bonus_stats != null else bonus_stats
+
+	var ch: Dictionary = GameData.CHASSIS.get(use_ch_id, GameData.CHASSIS["buggy"])
+	var eng: Dictionary = GameData.ENGINES.get(use_eng_id, GameData.ENGINES["eng_bulldog_v8"])
+	var cu: Dictionary = GameData.C_UNITS.get(use_cu_id, GameData.C_UNITS["cu_type66"])
+
+	var sim_weapons: Array = []
+	if p_weapons != null:
+		sim_weapons = p_weapons
+	else:
+		sim_weapons = equipped_weapons.duplicate(true)
+
+	var sim_tank_mods: Dictionary = {}
+	if p_tank_mods != null:
+		sim_tank_mods = p_tank_mods
+	else:
+		sim_tank_mods = equipped_tank_mods.duplicate(true)
+
+	# 1. 羁绊统计
+	var sim_synergies: Dictionary = {}
+	for w_entry in sim_weapons:
+		var w_def: Dictionary = GameData.WEAPONS.get(w_entry["id"], {})
+		for tag in w_def.get("tags", []):
+			sim_synergies[tag] = sim_synergies.get(tag, 0) + 1
+	for m_id in sim_tank_mods.keys():
+		var m_def: Dictionary = GameData.TANK_MODS.get(m_id, {})
+		for tag in m_def.get("tags", []):
+			sim_synergies[tag] = sim_synergies.get(tag, 0) + 1
+
+	# 2. 最大载重
+	var eng_weight: float = float(eng.get("max_weight", 18.0))
+	if ch.get("dual_engine", false):
+		eng_weight *= 1.60
+	var sim_max_weight: float = (eng_weight + use_flat_wt) * (1.0 + float(use_bonus.get("max_weight_pct", 0.0)))
+
+	# 3. 已用载重
+	var sim_used_weight: float = float(ch.get("base_weight", 5.0)) + float(cu.get("weight", 1.0))
+	for w_entry in sim_weapons:
+		var wid: String = w_entry["id"]
+		var rar: int = int(w_entry.get("rarity", 0))
+		var w_def: Dictionary = GameData.WEAPONS.get(wid, {})
+		var w: float = float(w_def.get("weight", 2.0))
+		if not w_def.get("is_evo", false):
+			w *= (1.0 + float(rar) * 0.10)
+		if w_def.get("slot", "") == "SE" and use_ch_id == "missile_carrier":
+			w *= 0.65
+		if w_def.get("slot", "") == "MAIN" and sim_synergies.get("artillery", 0) >= 2:
+			w *= 0.80
+		sim_used_weight += snappedf(w, 0.1)
+
+	var sim_free_weight: float = maxf(0.0, sim_max_weight - sim_used_weight)
+	var sim_overweight: float = maxf(0.0, sim_used_weight - sim_max_weight)
+
+	# 4. 最大SP
+	var sp_per_ton: float = float(ch.get("sp_per_ton", 20.0))
+	if sim_synergies.get("juggernaut", 0) >= 2:
+		sp_per_ton += 6.0
+	sp_per_ton *= (1.0 + float(use_bonus.get("sp_per_ton_pct", 0.0)))
+	var raw_sp: float = float(ch.get("base_sp", 140.0)) + float(use_bonus.get("flat_sp_bonus", 0.0)) + sim_free_weight * sp_per_ton
+	var sim_max_sp: float = maxf(100.0, roundf(raw_sp))
+
+	# 5. 移速
+	var base_spd: float = float(ch.get("speed", 210.0))
+	var spd_mult: float = 1.0 + float(use_bonus.get("move_speed_pct", 0.0)) + float(eng.get("speed_Bonus", eng.get("speed_bonus", 0.0)))
+	if sim_overweight > 0.0:
+		spd_mult *= maxf(0.35, 1.0 - sim_overweight * 0.12)
+	var sim_move_speed: float = base_spd * spd_mult
+
+	# 6. 暴击、闪避、大招CD
+	var sim_crit: float = clampf(float(use_bonus.get("crit_chance", 0.08)) + float(cu.get("crit_bonus", 0.0)), 0.0, 0.90)
+	var sim_dodge: float = clampf(float(use_bonus.get("dodge", 0.05)) + float(cu.get("dodge_bonus", 0.0)), 0.0, 0.75)
+	var sim_c_cd: float = float(cu.get("all_out_cd", 12.0))
+
+	return {
+		"max_weight": sim_max_weight,
+		"used_weight": sim_used_weight,
+		"free_weight": sim_free_weight,
+		"overweight": sim_overweight,
+		"max_sp": sim_max_sp,
+		"move_speed": sim_move_speed,
+		"crit_chance": sim_crit,
+		"dodge_chance": sim_dodge,
+		"c_unit_cd": sim_c_cd,
+		"sp_per_ton": sp_per_ton
+	}
+
+func preview_weapon_purchase(weapon_id: String, rarity: int) -> Dictionary:
+	var cur_stats: Dictionary = {
+		"max_weight": max_weight,
+		"used_weight": used_weight,
+		"free_weight": free_weight,
+		"max_sp": max_sp,
+		"move_speed": move_speed
+	}
+	var is_merge: bool = false
+	var merge_idx: int = -1
+	var sim_weapons: Array = equipped_weapons.duplicate(true)
+	if rarity < 4:
+		for i in range(sim_weapons.size()):
+			if sim_weapons[i]["id"] == weapon_id and int(sim_weapons[i].get("rarity", 0)) == rarity:
+				is_merge = true
+				merge_idx = i
+				sim_weapons[i]["rarity"] = rarity + 1
+				break
+	if not is_merge:
+		sim_weapons.append({"id": weapon_id, "rarity": rarity})
+
+	var new_stats: Dictionary = simulate_stats("", "", sim_weapons)
+	var cur_dmg: float = get_weapon_effective_damage(weapon_id, rarity)
+	var next_rar: int = rarity + 1 if is_merge else rarity
+	var new_dmg: float = get_weapon_effective_damage(weapon_id, next_rar)
+	var cur_w: float = get_weapon_effective_weight(weapon_id, rarity)
+	var new_w: float = get_weapon_effective_weight(weapon_id, next_rar)
+
+	return {
+		"is_merge": is_merge,
+		"merge_idx": merge_idx,
+		"cur_rarity": rarity,
+		"next_rarity": next_rar,
+		"cur_dmg": cur_dmg,
+		"new_dmg": new_dmg,
+		"dmg_delta": new_dmg - cur_dmg,
+		"cur_w": cur_w,
+		"new_w": new_w,
+		"w_delta": new_w - cur_w,
+		"cur_sp": cur_stats["max_sp"],
+		"new_sp": new_stats["max_sp"],
+		"sp_delta": new_stats["max_sp"] - cur_stats["max_sp"],
+		"cur_used_w": cur_stats["used_weight"],
+		"new_used_w": new_stats["used_weight"],
+		"is_overweight": new_stats["overweight"] > 0.0
+	}
+
+func preview_engine_switch(new_engine_id: String) -> Dictionary:
+	var cur_stats: Dictionary = {
+		"max_weight": max_weight,
+		"used_weight": used_weight,
+		"free_weight": free_weight,
+		"max_sp": max_sp,
+		"move_speed": move_speed
+	}
+	var new_stats: Dictionary = simulate_stats(new_engine_id)
+	var cur_eng: Dictionary = GameData.ENGINES.get(equipped_engine_id, {})
+	var new_eng: Dictionary = GameData.ENGINES.get(new_engine_id, {})
+
+	return {
+		"cur_eng_name": cur_eng.get("name", "标准引擎"),
+		"new_eng_name": new_eng.get("name", "新引擎"),
+		"cur_max_w": cur_stats["max_weight"],
+		"new_max_w": new_stats["max_weight"],
+		"max_w_delta": new_stats["max_weight"] - cur_stats["max_weight"],
+		"cur_sp": cur_stats["max_sp"],
+		"new_sp": new_stats["max_sp"],
+		"sp_delta": new_stats["max_sp"] - cur_stats["max_sp"],
+		"cur_speed": cur_stats["move_speed"],
+		"new_speed": new_stats["move_speed"],
+		"speed_delta": new_stats["move_speed"] - cur_stats["move_speed"],
+		"cur_all_dmg": float(cur_eng.get("all_dmg_bonus", 0.0)),
+		"new_all_dmg": float(new_eng.get("all_dmg_bonus", 0.0)),
+		"cur_main_dmg": float(cur_eng.get("main_dmg_bonus", 0.0)),
+		"new_main_dmg": float(new_eng.get("main_dmg_bonus", 0.0))
+	}
+
+func preview_c_unit_switch(new_cu_id: String) -> Dictionary:
+	var cur_cu: Dictionary = GameData.C_UNITS.get(equipped_c_unit_id, {})
+	var new_cu: Dictionary = GameData.C_UNITS.get(new_cu_id, {})
+	var new_stats: Dictionary = simulate_stats("", new_cu_id)
+
+	return {
+		"cur_cu_name": cur_cu.get("name", "标准火控"),
+		"new_cu_name": new_cu.get("name", "新火控"),
+		"cur_cd": float(cur_cu.get("all_out_cd", 12.0)),
+		"new_cd": float(new_cu.get("all_out_cd", 12.0)),
+		"cd_delta": float(new_cu.get("all_out_cd", 12.0)) - float(cur_cu.get("all_out_cd", 12.0)),
+		"cur_crit": crit_chance,
+		"new_crit": new_stats["crit_chance"],
+		"crit_delta": new_stats["crit_chance"] - crit_chance,
+		"cur_dodge": dodge_chance,
+		"new_dodge": new_stats["dodge_chance"],
+		"dodge_delta": new_stats["dodge_chance"] - dodge_chance,
+		"cur_sp": max_sp,
+		"new_sp": new_stats["max_sp"],
+		"sp_delta": new_stats["max_sp"] - max_sp,
+		"cur_w": float(cur_cu.get("weight", 1.0)),
+		"new_w": float(new_cu.get("weight", 1.0))
+	}
+
+func preview_tune_engine(ton_gain: float = 2.5) -> Dictionary:
+	var cur_flat: float = float(bonus_stats.get("flat_max_weight", 0.0))
+	var new_stats: Dictionary = simulate_stats("", "", null, null, "", cur_flat + ton_gain)
+	return {
+		"cur_max_w": max_weight,
+		"new_max_w": new_stats["max_weight"],
+		"max_w_delta": new_stats["max_weight"] - max_weight,
+		"cur_sp": max_sp,
+		"new_sp": new_stats["max_sp"],
+		"sp_delta": new_stats["max_sp"] - max_sp
+	}
+
+func preview_tank_mod_purchase(mod_id: String) -> Dictionary:
+	var m_def: Dictionary = GameData.TANK_MODS.get(mod_id, {})
+	var sim_mods: Dictionary = equipped_tank_mods.duplicate(true)
+	sim_mods[mod_id] = int(sim_mods.get(mod_id, 0)) + 1
+	var sim_bonus: Dictionary = bonus_stats.duplicate(true)
+	var mods: Dictionary = m_def.get("mods", {})
+	for k in mods.keys():
+		sim_bonus[k] = float(sim_bonus.get(k, 0.0)) + float(mods[k])
+	var new_stats: Dictionary = simulate_stats("", "", null, sim_mods, "", null, sim_bonus)
+	var stat_deltas: Array = []
+	for k in mods.keys():
+		var d: float = float(mods[k])
+		var name_map: Dictionary = {
+			"reload_speed_pct": "装填攻速",
+			"main_dmg_pct": "主炮伤害",
+			"sub_dmg_pct": "副武伤害",
+			"elemental_dmg_pct": "元素伤害",
+			"crit_chance": "暴击几率",
+			"dodge": "闪避几率",
+			"move_speed_pct": "战车移速",
+			"gold_gain_pct": "赏金收益",
+			"flat_sp_bonus": "基础装甲",
+			"flat_sp_regen": "装甲每秒自修"
+		}
+		var stat_name: String = name_map.get(k, k)
+		var is_pct: bool = k.ends_with("_pct") or k in ["crit_chance", "dodge"]
+		if is_pct:
+			stat_deltas.append("%s %+d%%" % [stat_name, int(roundf(d * 100.0))])
+		else:
+			stat_deltas.append("%s %+.0f" % [stat_name, d])
+
+	return {
+		"cur_sp": max_sp,
+		"new_sp": new_stats["max_sp"],
+		"sp_delta": new_stats["max_sp"] - max_sp,
+		"cur_max_w": max_weight,
+		"new_max_w": new_stats["max_weight"],
+		"cur_speed": move_speed,
+		"new_speed": new_stats["move_speed"],
+		"stat_deltas": stat_deltas
+	}
+
+func preview_chassis_switch(new_ch_id: String) -> Dictionary:
+	var cur_ch: Dictionary = GameData.CHASSIS.get(selected_chassis_id, {})
+	var new_ch: Dictionary = GameData.CHASSIS.get(new_ch_id, {})
+	var new_stats: Dictionary = simulate_stats("", "", null, null, new_ch_id)
+	return {
+		"cur_ch_name": cur_ch.get("name", "当前底盘"),
+		"new_ch_name": new_ch.get("name", "新底盘"),
+		"cur_sp": max_sp,
+		"new_sp": new_stats["max_sp"],
+		"sp_delta": new_stats["max_sp"] - max_sp,
+		"cur_speed": move_speed,
+		"new_speed": new_stats["move_speed"],
+		"cur_sp_per_ton": float(cur_ch.get("sp_per_ton", 20.0)),
+		"new_sp_per_ton": float(new_ch.get("sp_per_ton", 20.0)),
+		"cur_slots_count": chassis_slots.size(),
+		"new_slots_count": (new_ch.get("slots", []) as Array).size()
+	}
+
+func preview_sell_weapon(slot_idx: int) -> Dictionary:
+	if slot_idx < 0 or slot_idx >= equipped_weapons.size():
+		return {}
+	var sim_weapons: Array = equipped_weapons.duplicate(true)
+	var removed_w: Dictionary = sim_weapons[slot_idx]
+	sim_weapons.remove_at(slot_idx)
+	var new_stats: Dictionary = simulate_stats("", "", sim_weapons)
+	var w_def: Dictionary = GameData.WEAPONS.get(removed_w["id"], {})
+	var rar: int = int(removed_w.get("rarity", 0))
+	var refund: int = int(w_def.get("cost", 50) * pow(1.6, rar) * 0.6)
+	return {
+		"refund": refund,
+		"cur_sp": max_sp,
+		"new_sp": new_stats["max_sp"],
+		"sp_delta": new_stats["max_sp"] - max_sp,
+		"cur_used_w": used_weight,
+		"new_used_w": new_stats["used_weight"],
+		"freed_w": used_weight - new_stats["used_weight"]
+	}
