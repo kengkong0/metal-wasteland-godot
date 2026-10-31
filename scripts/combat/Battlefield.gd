@@ -989,7 +989,7 @@ func _process(delta: float) -> void:
 		_spawn_wanted_boss(GameState.active_wanted_boss_id)
 
 	# 2. 绯红孤狼乱入救援
-	if boss_spawned_this_wave and not red_wolf_rescued_this_run and not player_tank.is_human_mode:
+	if boss_spawned_this_wave and not red_wolf_rescued_this_run:
 		if player_tank.current_sp > 0.0 and player_tank.current_sp <= GameState.max_sp * 0.25:
 			_trigger_red_wolf_rescue()
 
@@ -1259,8 +1259,6 @@ func on_enemy_killed(_enemy_node: Node2D) -> void:
 	GameState.total_kills += 1
 	GameState.report_metric("total_kills", 1, true)
 	GameState.report_metric("max_combo", combo_count, false)
-	if is_instance_valid(player_tank) and player_tank.is_human_mode:
-		GameState.report_metric("human_kills", 1, true)
 
 	if combo_count in [15, 30, 50, 75, 100, 150, 200, 300]:
 		var p_pos: Vector2 = player_tank.get_active_position()
@@ -1476,7 +1474,7 @@ func _populate_battlefield_level_cards() -> void:
 		var sep := HSeparator.new()
 		cv.add_child(sep)
 
-		var is_emergency: bool = (GameState.selected_difficulty_id == "easy") and (player_tank.is_human_mode or (player_tank.current_sp <= GameState.max_sp * 0.25))
+		var is_emergency: bool = (GameState.selected_difficulty_id == "easy") and (player_tank.current_sp <= GameState.max_sp * 0.25)
 		var desc_lbl := _make_outlined_label(card_content_str, 15, Color(1.0, 0.90, 0.35) if is_emergency else Color(0.94, 0.96, 0.94))
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1493,12 +1491,8 @@ func _populate_battlefield_level_cards() -> void:
 			GameState.pending_level_ups = max(0, GameState.pending_level_ups - 1)
 			GameState.recalculate_stats()
 			if is_emergency:
-				if player_tank.is_human_mode:
-					player_tank.human_hp = minf(GameState.max_human_hp, player_tank.human_hp + 28.0)
-					fx_layer.spawn_text(player_tank.human_pos, "⚡ 绝境翻盘！紧急急救 +28 HP!", Color(0.3, 1.0, 0.5), 1.35)
-				else:
-					player_tank.heal_sp(GameState.max_sp * 0.16)
-					fx_layer.spawn_text(player_tank.global_position, "⚡ 绝境翻盘！装甲紧急注能 +16% SP!", Color(1.0, 0.88, 0.2), 1.35)
+				player_tank.heal_sp(GameState.max_sp * 0.16)
+				fx_layer.spawn_text(player_tank.global_position, "⚡ 绝境翻盘！装甲紧急注能 +16% SP!", Color(1.0, 0.88, 0.2), 1.35)
 			else:
 				player_tank.heal_sp(GameState.max_sp * 0.06)
 			SoundManager.play("coin", 0.08, 0.0)
@@ -1988,19 +1982,12 @@ func _complete_arena_event() -> void:
 				e.take_damage(260.0 + GameState.current_wave * 35.0, true, "electric", ev_pos, false)
 
 func _update_hud() -> void:
-	# 1. 更新左上角 SP/HP 主血条
-	if player_tank.is_human_mode:
-		bar_sp.max_value = maxf(1.0, GameState.max_human_hp)
-		bar_sp.value = clampf(player_tank.human_hp, 0.0, bar_sp.max_value)
-		style_sp_fill.bg_color = Color(0.92, 0.22, 0.22)
-		var core_info: String = "【动力核心: %d/3】" % player_tank.repair_cores_collected if not player_tank.is_voluntary_unboard else "【步兵突击】"
-		lbl_sp_val.text = "❤️ 猎人 HP: %d / %d  %s (拾取核心/逃入小镇救车)" % [int(player_tank.human_hp), int(GameState.max_human_hp), core_info]
-	else:
-		bar_sp.max_value = maxf(1.0, GameState.max_sp)
-		bar_sp.value = clampf(player_tank.current_sp, 0.0, bar_sp.max_value)
-		var sp_ratio: float = bar_sp.value / bar_sp.max_value
-		style_sp_fill.bg_color = Color(0.20, 0.82, 0.38) if sp_ratio > 0.30 else Color(0.95, 0.35, 0.18)
-		lbl_sp_val.text = "🛡️ %d / %d SP  (+%.0f/s)" % [int(player_tank.current_sp), int(GameState.max_sp), GameState.sp_regen_per_sec]
+	# 1. 更新左上角 SP 主血条
+	bar_sp.max_value = maxf(1.0, GameState.max_sp)
+	bar_sp.value = clampf(player_tank.current_sp, 0.0, bar_sp.max_value)
+	var sp_ratio: float = bar_sp.value / bar_sp.max_value
+	style_sp_fill.bg_color = Color(0.20, 0.82, 0.38) if sp_ratio > 0.30 else Color(0.95, 0.35, 0.18)
+	lbl_sp_val.text = "🛡️ %d / %d SP  (+%.0f/s)" % [int(player_tank.current_sp), int(GameState.max_sp), GameState.sp_regen_per_sec]
 
 	# 2. 更新经验条
 	bar_xp.max_value = maxf(1.0, float(GameState.xp_to_next))
@@ -2161,10 +2148,9 @@ func _draw_danger_vignette() -> void:
 	if vp_sz.x <= 10.0 or vp_sz.y <= 10.0:
 		return
 
-	var is_human: bool = player_tank.is_human_mode
 	var sp_ratio: float = player_tank.current_sp / maxf(1.0, GameState.max_sp)
 
-	if not is_human and sp_ratio >= 0.30 and not is_horde_active:
+	if sp_ratio >= 0.30 and not is_horde_active:
 		return
 
 	var t: float = float(Time.get_ticks_msec()) * 0.005
@@ -2174,11 +2160,7 @@ func _draw_danger_vignette() -> void:
 	var border_depth: float = 52.0
 	var alert_text: String = ""
 
-	if is_human:
-		base_col = Color(0.95, 0.22, 0.08, 0.45 * pulse)
-		border_depth = 64.0
-		alert_text = "🚨 战车大破！猎人肉身脱出，快靠近残骸抢修！"
-	elif sp_ratio < 0.30:
+	if sp_ratio < 0.30:
 		var danger_mult: float = 1.0 - (sp_ratio / 0.30)
 		base_col = Color(0.85, 0.06, 0.06, (0.28 + 0.35 * danger_mult) * pulse)
 		border_depth = 44.0 + 26.0 * danger_mult
@@ -2256,22 +2238,7 @@ func _draw_offscreen_indicators() -> void:
 			"is_town": true
 		})
 
-	# 4. 人形态专属导航：战车残骸与散落动力核心
-	if is_instance_valid(player_tank) and player_tank.is_human_mode and not player_tank.is_voluntary_unboard:
-		targets.append({
-			"pos": player_tank.global_position,
-			"icon": "🚜",
-			"color": Color(1.0, 0.65, 0.2),
-			"border_col": Color(1.0, 0.9, 0.3)
-		})
-		for d in drops_container.get_children():
-			if is_instance_valid(d) and d.get("drop_type") == "repair_core":
-				targets.append({
-					"pos": d.global_position,
-					"icon": "⚡",
-					"color": Color(0.35, 1.0, 0.65),
-					"border_col": Color(1.0, 1.0, 0.5)
-				})
+
 
 	# 3. 埋藏宝箱与战场动态事件信标
 	for d in drops_container.get_children():

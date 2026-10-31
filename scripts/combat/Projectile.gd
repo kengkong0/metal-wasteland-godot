@@ -232,7 +232,7 @@ func _process(delta: float) -> void:
 		var pt: Node2D = bf.player_tank
 		if is_instance_valid(pt):
 			var p_pos: Vector2 = pt.get_active_position()
-			var hit_r: float = 16.0 if pt.is_human_mode else 28.0
+			var hit_r: float = 28.0
 			if global_position.distance_to(p_pos) <= (radius + hit_r):
 				if effect_type == "emp_web":
 					pt.apply_emp_slow(2.2)

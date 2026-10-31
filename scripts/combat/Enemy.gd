@@ -235,7 +235,7 @@ func _process(delta: float) -> void:
 	global_position.y = clampf(global_position.y, bf.arena_rect.position.y + radius, bf.arena_rect.end.y - radius)
 
 	# 近身接触伤害与战车碾压判定
-	var hit_dist: float = radius + (22.0 if player.is_human_mode else 40.0)
+	var hit_dist: float = radius + 40.0
 	if global_position.distance_to(target_pos) <= hit_dist + 3.0:
 		player.on_enemy_collision(self, delta)
 
@@ -935,7 +935,7 @@ func _apply_enemy_separation(delta: float, bf: Node) -> void:
 func _apply_player_body_collision(player: Node2D, target_pos: Vector2) -> void:
 	if not is_instance_valid(player):
 		return
-	var p_radius: float = 22.0 if player.is_human_mode else 40.0
+	var p_radius: float = 40.0
 	var min_dist: float = p_radius + radius
 	var to_self: Vector2 = global_position - target_pos
 	var cur_dist: float = to_self.length()

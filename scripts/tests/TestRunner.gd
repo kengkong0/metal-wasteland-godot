@@ -332,17 +332,13 @@ func test_suite_6_combat_simulation() -> void:
 	p_tank.take_damage(15.0)
 	assert_true(p_tank.current_sp < initial_sp, "战车SP成功承受伤害: 原 %.1f -> 现 %.1f" % [initial_sp, p_tank.current_sp])
 
-	# 模拟大破下车逻辑
+	# 模拟战车SP归零触发单局唯一紧急轨道除颤卫星
+	GameState.field_defib_available = true
 	p_tank.invuln_timer = 0.0
-	p_tank.current_sp = 0.0
+	p_tank.current_sp = 5.0
 	p_tank.take_damage(10.0)
-	assert_true(p_tank.is_human_mode, "SP归零后成功紧急脱离战车进入【步兵肉搏状态】")
-
-	# 步兵修复重回战车
-	p_tank.human_pos = p_tank.global_position
-	p_tank.repair_progress = p_tank.repair_time_needed
-	p_tank._process_human_mode(0.1, bf_node, Vector2.ZERO)
-	assert_true(not p_tank.is_human_mode, "完成抢修后成功重回战车！")
+	assert_true(not GameState.field_defib_available, "战车SP归零触发单局唯一紧急轨道除颤卫星")
+	assert_true(p_tank.current_sp > 0.0, "除颤后战车紧急恢复50% SP: %.1f" % p_tank.current_sp)
 	assert_true(p_tank.current_sp > 0.0, "重回战车后装甲SP恢复: %.1f" % p_tank.current_sp)
 
 	bf_node.queue_free()
@@ -1002,15 +998,7 @@ func test_suite_14_wasteland_town_and_pacing_system() -> void:
 # 15. 绝地涅槃·人车合一与战车应急脱险抢修体系验证
 # ============================================================================
 func test_suite_15_human_revamp_and_ejection_system() -> void:
-	print("\n--- [Suite 15] 绝地涅槃·人车合一与战车脱险抢修验证 ---")
-
-	GameState.start_new_run("bounty_hunter", "buggy", 0, "normal")
-	GameState.max_sp = 1500.0
-	GameState.level = 8
-	GameState.recalculate_stats()
-
-	# 1. 验证人车合一：人物生命值动态缩放与战车深度绑定
-	assert_true(GameState.max_human_hp >= 400.0, "人车合一：步兵 HP 深度继承战车最大 SP 与等级 (当前 HP: %.0f)" % GameState.max_human_hp)
+	print("\n--- [Suite 15] 全时战车纯化体系与应急除颤终局验证 ---")
 
 	var bf_scene: PackedScene = load("res://scenes/Battlefield.tscn")
 	var bf: Node2D = bf_scene.instantiate()
@@ -1020,54 +1008,36 @@ func test_suite_15_human_revamp_and_ejection_system() -> void:
 	var p: Node2D = bf.player_tank
 	assert_true(is_instance_valid(p), "战场战车加载正常")
 
-	# 2. 验证白兵武器伤害深度继承战车主炮/SE火力
-	var h_dmg_base: float = p.get_human_effective_weapon_damage()
-	assert_true(h_dmg_base >= 80.0, "步兵基础火力已升级为反装甲战术武器 (伤害: %.1f)" % h_dmg_base)
+	# 2. 验证纯战车装甲 SP 承伤体系完整
+	var cur_max_sp: float = GameState.max_sp
+	assert_true(cur_max_sp >= 200.0, "战车装甲SP底盘承伤体系完整 (当前SP上限: %.0f)" % cur_max_sp)
 
-	# 3. 验证战车大破：全向冲击震慑、3秒绝对无敌与动力核心散落
-	p.current_sp = 0.0
-	p._trigger_tank_wreck(bf)
-	assert_true(p.is_human_mode, "战车 SP 归零成功触发应急弹射进入步兵肉搏状态")
-	assert_true(p.invuln_timer >= 2.8, "出舱步兵享有 3.0s 绝对无敌保护，拒绝下车秒躺 (当前: %.1fs)" % p.invuln_timer)
-	assert_true(p.human_burst_timer > 0.0, "出舱步兵获得战术冲刺移速加成")
-	assert_true(p.human_hp == GameState.max_human_hp, "出舱步兵以动态全额血量登场 (当前: %.0f)" % p.human_hp)
+	# 3. 验证战车受击直接扣减 SP
+	p.take_damage(20.0)
+	assert_true(p.current_sp < cur_max_sp, "战车直接承受全额伤害扣减")
 
-	# 4. 验证散落 3 枚应急动力核心
-	var core_count: int = 0
-	for d in bf.drops_container.get_children():
-		if is_instance_valid(d) and d.get("drop_type") == "repair_core":
-			core_count += 1
-	assert_true(core_count == 3, "战车大破在四周安全距离散落 3 枚应急动力核心 (生成: %d)" % core_count)
+	# 4. 验证战车 SP 归零且有除颤卫星时，触发 50% SP 原地紧急复苏与 2.5s 无敌
+	GameState.field_defib_available = true
+	p.invuln_timer = 0.0
+	p.current_sp = 10.0
+	p.take_damage(30.0)
+	assert_true(not GameState.field_defib_available, "战车SP归零触发单局唯一紧急特斯拉轨道除颤卫星")
+	assert_true(p.current_sp >= cur_max_sp * 0.45, "轨道除颤为战车紧急重启恢复50%% SP (当前SP: %.1f)" % p.current_sp)
+	assert_true(p.invuln_timer >= 2.0, "除颤重生享有 2.5s 绝境无敌保护时间")
 
-	# 5. 验证拾取动力核心与绝境重启
-	p.on_collect_repair_core()
-	assert_true(p.repair_cores_collected == 1, "拾取动力核心进度正确记录 (1/3)")
-	p.on_collect_repair_core()
-	p.on_collect_repair_core()
-	assert_true(not p.is_human_mode, "集齐 3 枚动力核心后，战车原地绝境重启！")
-	assert_true(p.current_sp >= GameState.max_sp * 0.45, "战车重启后恢复 50%% 装甲 SP (当前 SP: %.1f)" % p.current_sp)
+	# 5. 验证战车 SP 归零且无除颤卫星时，立即判定战车彻底损毁
+	GameState.field_defib_available = false
+	p.invuln_timer = 0.0
+	p.current_sp = 10.0
+	p.take_damage(30.0)
+	assert_true(p.current_sp == 0.0, "无除颤次数时战车SP归零")
+	assert_true(not is_instance_valid(bf) or not bf.wave_active, "战车彻底大破爆炸，触发全军覆没战斗终局")
 
-	# 6. 验证逃入麦卡休整小镇安全区救援机制
-	p.is_human_mode = true
-	p.is_voluntary_unboard = false
-	bf.is_player_in_safe_zone = true
-	p._process_human_mode(0.05, bf, Vector2.ZERO)
-	assert_true(not p.is_human_mode, "步兵撤入休整小镇安全区，触发应急拖车抢修重回战车！")
-	assert_true(p.current_sp >= GameState.max_sp * 0.60, "小镇救援重组战车恢复 65%% SP")
-
-	# 7. 验证原地站立不动绝不触发自动修车或隔空吸核心（彻底根除挂机无限复活死循环）
-	bf.is_player_in_safe_zone = false
-	GameState.pickup_range = 360.0
-	p._trigger_tank_wreck(bf)
-	for _step in range(30):
-		p._process_human_mode(0.2, bf, Vector2.ZERO)
-		for d in bf.drops_container.get_children():
-			if is_instance_valid(d):
-				d._process(0.2)
-	assert_true(p.is_human_mode and p.repair_cores_collected == 0, "原地站立不动绝不自动吸附核心或自动修车，100%% 根除战车毁灭-恢复死循环")
-
-	# 8. 验证小镇安全区【休战停火协议】与【8秒护盾限时防白嫖】
-	p.reboot_tank(1.0)
+	# 6. 重新初始化战场，验证小镇安全区与纯战车形态
+	bf = bf_scene.instantiate()
+	add_child(bf)
+	bf.start_wave()
+	p = bf.player_tank
 	bf.town_available = true
 	bf.town_visited_this_wave = false
 	bf.town_shield_time_left = 8.0
@@ -1075,6 +1045,9 @@ func test_suite_15_human_revamp_and_ejection_system() -> void:
 	p.human_pos = bf.town_pos
 	bf._process(0.05)
 	assert_true(bf.is_player_in_safe_zone, "战车进入小镇安全区")
+	assert_true(not p.is_human_mode, "玩家全时保持战车形态，彻底移除步兵下车肉搏机制")
+
+	# 7. 验证小镇安全区【休战停火协议】
 	bf._do_spawn_enemy("bio_ant", bf.town_pos + Vector2(230, 0))
 	for c in bf.projectiles_container.get_children():
 		bf.recycle_projectile(c)
@@ -1082,15 +1055,14 @@ func test_suite_15_human_revamp_and_ejection_system() -> void:
 		p.weapon_timers[w_idx] = 0.0
 	p._process(0.1)
 	assert_true(bf.projectiles_container.get_child_count() == 0, "安全区休战停火协议生效：安全区内禁止开火，彻底杜绝站圈内无敌打人")
+
+	# 8. 验证小镇安全区【8秒护盾限时防白嫖】
 	bf._process(8.2)
 	assert_true(not bf.town_available, "安全区超时逗留满 8s 不进镇，力场护盾耗尽并自动移防关闭")
 
 	bf.queue_free()
 
 
-# ============================================================================
-# 16. 怪物实体体积互斥碰撞与角色遮蔽高亮系统验证
-# ============================================================================
 func test_suite_16_enemy_volume_separation_and_player_visibility() -> void:
 	print("\n--- [Suite 16] 怪物实体体积碰撞互斥与高亮防遮蔽全量验证 ---")
 
@@ -1129,15 +1101,15 @@ func test_suite_16_enemy_volume_separation_and_player_visibility() -> void:
 	var min_allowed_dist: float = 40.0 + float(e3.get("radius"))
 	assert_true(p_dist >= min_allowed_dist - 0.5, "战车实体刚性体积生效：小怪被阻挡在外围合围圈，禁止穿透车身内部 (车怪间距: %.1f px >= 门限: %.1f px)" % [p_dist, min_allowed_dist])
 
-	# 4. 验证步兵模式下刚性体积阻挡
-	p.is_human_mode = true
-	p.human_pos = Vector2(1200, 1200)
-	var e4: Node2D = bf._do_spawn_enemy("bio_ant", Vector2(1205, 1200))
+	# 4. 验证战车全向刚性体积阻挡：对角切入小怪同样被阻隔在车体外围
+	p.is_human_mode = false
+	p.global_position = Vector2(1200, 1200)
+	var e4: Node2D = bf._do_spawn_enemy("bio_ant", Vector2(1205, 1205))
 	bf.rebuild_spatial_grid()
 	e4._process(0.05)
-	var h_dist: float = e4.global_position.distance_to(p.human_pos)
-	var min_h_allowed: float = 22.0 + float(e4.get("radius"))
-	assert_true(h_dist >= min_h_allowed - 0.5, "步兵模式下实体刚性体积生效：小怪被阻隔在步兵身侧外围 (人怪间距: %.1f px >= 门限: %.1f px)" % [h_dist, min_h_allowed])
+	var h_dist: float = e4.global_position.distance_to(p.global_position)
+	var min_h_allowed: float = 40.0 + float(e4.get("radius"))
+	assert_true(h_dist >= min_h_allowed - 0.5, "战车全向刚性体积生效：对角切入小怪被阻隔在车体外围 (车怪间距: %.1f px >= 门限: %.1f px)" % [h_dist, min_h_allowed])
 
 	# 5. 验证 Boss 霸体质量与普通小怪互斥权重
 	var boss: Node2D = bf._spawn_wanted_boss("boss_killdozer")
