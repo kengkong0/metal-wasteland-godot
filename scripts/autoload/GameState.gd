@@ -591,7 +591,7 @@ func recalculate_stats() -> void:
 	var h_mult: float = float(bonus_stats.get("human_hp_mult", 1.0))
 	if synergy_counts.get("lone_cub", 0) >= 2:
 		h_mult += 0.5
-	var base_h_hp: float = 140.0 + get_meta_level("meta_sp") * 15.0 + level * 14.0
+	var base_h_hp: float = 240.0 + (max_sp * 0.16) + get_meta_level("meta_sp") * 25.0 + level * 20.0
 	max_human_hp = roundf(base_h_hp * h_mult)
 
 	emit_signal("stats_updated")

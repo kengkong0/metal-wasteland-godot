@@ -23,6 +23,7 @@ func _ready() -> void:
 	test_suite_12_stat_previews_and_layout_constraints()
 	test_suite_13_weapon_vfx_and_seamless_map()
 	test_suite_14_wasteland_town_and_pacing_system()
+	test_suite_15_human_revamp_and_ejection_system()
 
 	print("\n========================================================")
 	print("📊 [TEST RESULTS] 测试统计汇总:")
@@ -992,5 +993,74 @@ func test_suite_14_wasteland_town_and_pacing_system() -> void:
 	bf._process(0.1)
 	assert_true(bf.elite_spawn_timer >= 15.0, "开局前 10s 严格禁止重装精英怪刷出，留出从容探索/进镇窗口")
 	assert_true(bf.ring_spawn_timer >= 18.0, "开局前 10s 严格禁止 360° 环形包围突袭")
+
+	bf.queue_free()
+
+
+# ============================================================================
+# 15. 绝地涅槃·人车合一与战车应急脱险抢修体系验证
+# ============================================================================
+func test_suite_15_human_revamp_and_ejection_system() -> void:
+	print("\n--- [Suite 15] 绝地涅槃·人车合一与战车脱险抢修验证 ---")
+
+	GameState.start_new_run("bounty_hunter", "buggy", 0, "normal")
+	GameState.max_sp = 1500.0
+	GameState.level = 8
+	GameState.recalculate_stats()
+
+	# 1. 验证人车合一：人物生命值动态缩放与战车深度绑定
+	assert_true(GameState.max_human_hp >= 400.0, "人车合一：步兵 HP 深度继承战车最大 SP 与等级 (当前 HP: %.0f)" % GameState.max_human_hp)
+
+	var bf_scene: PackedScene = load("res://scenes/Battlefield.tscn")
+	var bf: Node2D = bf_scene.instantiate()
+	add_child(bf)
+	bf.start_wave()
+
+	var p: Node2D = bf.player_tank
+	assert_true(is_instance_valid(p), "战场战车加载正常")
+
+	# 2. 验证白兵武器伤害深度继承战车主炮/SE火力
+	var h_dmg_base: float = p.get_human_effective_weapon_damage()
+	assert_true(h_dmg_base >= 80.0, "步兵基础火力已升级为反装甲战术武器 (伤害: %.1f)" % h_dmg_base)
+
+	# 3. 验证战车大破：全向冲击震慑、3秒绝对无敌与动力核心散落
+	p.current_sp = 0.0
+	p._trigger_tank_wreck(bf)
+	assert_true(p.is_human_mode, "战车 SP 归零成功触发应急弹射进入步兵肉搏状态")
+	assert_true(p.invuln_timer >= 2.8, "出舱步兵享有 3.0s 绝对无敌保护，拒绝下车秒躺 (当前: %.1fs)" % p.invuln_timer)
+	assert_true(p.human_burst_timer > 0.0, "出舱步兵获得战术冲刺移速加成")
+	assert_true(p.human_hp == GameState.max_human_hp, "出舱步兵以动态全额血量登场 (当前: %.0f)" % p.human_hp)
+
+	# 4. 验证散落 3 枚应急动力核心
+	var core_count: int = 0
+	for d in bf.drops_container.get_children():
+		if is_instance_valid(d) and d.get("drop_type") == "repair_core":
+			core_count += 1
+	assert_true(core_count == 3, "战车大破在四周安全距离散落 3 枚应急动力核心 (生成: %d)" % core_count)
+
+	# 5. 验证拾取动力核心与绝境重启
+	p.on_collect_repair_core()
+	assert_true(p.repair_cores_collected == 1, "拾取动力核心进度正确记录 (1/3)")
+	p.on_collect_repair_core()
+	p.on_collect_repair_core()
+	assert_true(not p.is_human_mode, "集齐 3 枚动力核心后，战车原地绝境重启！")
+	assert_true(p.current_sp >= GameState.max_sp * 0.45, "战车重启后恢复 50%% 装甲 SP (当前 SP: %.1f)" % p.current_sp)
+
+	# 6. 验证逃入麦卡休整小镇安全区救援机制
+	p.is_human_mode = true
+	p.is_voluntary_unboard = false
+	bf.is_player_in_safe_zone = true
+	p._process_human_mode(0.05, bf, Vector2.ZERO)
+	assert_true(not p.is_human_mode, "步兵撤入休整小镇安全区，触发应急拖车抢修重回战车！")
+	assert_true(p.current_sp >= GameState.max_sp * 0.60, "小镇救援重组战车恢复 65%% SP")
+
+	# 7. 验证残骸近距离快速抢修
+	p.is_human_mode = true
+	p.is_voluntary_unboard = false
+	bf.is_player_in_safe_zone = false
+	p.human_pos = p.global_position
+	p.repair_progress = 2.5
+	p._process_human_mode(0.05, bf, Vector2.ZERO)
+	assert_true(not p.is_human_mode, "靠近战车残骸快速读条抢修重回战车！")
 
 	bf.queue_free()

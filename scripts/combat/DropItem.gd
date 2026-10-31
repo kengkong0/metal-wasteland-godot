@@ -27,6 +27,8 @@ func _process(delta: float) -> void:
 	var magnet_radius: float = GameState.pickup_range
 	if drop_type == "buried_chest":
 		magnet_radius = 52.0 # 宝箱需靠近开启
+	elif drop_type == "repair_core":
+		magnet_radius = maxf(95.0, GameState.pickup_range)
 
 	if dist < magnet_radius:
 		magnetized = true
@@ -67,6 +69,12 @@ func _collect(bf: Node, player: Node2D) -> void:
 			else:
 				bf.fx_layer.spawn_text(global_position, "挖出埋藏箱 +%dG & 弹药!" % bonus_g, Color(1.0, 0.88, 0.2), 1.35)
 			SoundManager.play("upgrade", 0.04, 1.0)
+		"repair_core":
+			if is_instance_valid(player) and player.has_method("on_collect_repair_core"):
+				player.on_collect_repair_core()
+			else:
+				bf.fx_layer.spawn_text(global_position, "🔧 动力核心就位!", Color(0.3, 1.0, 0.5), 1.25)
+			SoundManager.play("upgrade", 0.05, 1.5)
 	if is_instance_valid(bf) and bf.has_method("recycle_drop"):
 		bf.recycle_drop(self)
 	else:
@@ -99,3 +107,11 @@ func _draw() -> void:
 				draw_rect(Rect2(-16, -12, 32, 24), Color(0.75, 0.52, 0.15))
 				draw_rect(Rect2(-16, -12, 32, 24), Color(1.0, 0.90, 0.35), false, 2.5)
 				draw_rect(Rect2(-4, -4, 8, 8), Color(1.0, 0.95, 0.5))
+		"repair_core":
+			var core_pulse: float = 1.0 + sin(pulse_time * 2.5) * 0.18
+			draw_circle(Vector2.ZERO, 18.0 * core_pulse, Color(0.15, 0.95, 0.45, 0.25))
+			draw_arc(Vector2.ZERO, 20.0 * core_pulse, 0.0, TAU, 24, Color(0.35, 1.0, 0.65, 0.8), 2.5)
+			draw_arc(Vector2.ZERO, 13.0, pulse_time * 3.0, pulse_time * 3.0 + PI * 1.3, 16, Color(1.0, 0.85, 0.25), 3.0)
+			draw_circle(Vector2.ZERO, 10.0, Color(0.2, 0.85, 0.5))
+			draw_circle(Vector2.ZERO, 5.0, Color.WHITE)
+			draw_string(ThemeDB.fallback_font, Vector2(-18, -26), "⚡动力核心", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color(0.4, 1.0, 0.65))

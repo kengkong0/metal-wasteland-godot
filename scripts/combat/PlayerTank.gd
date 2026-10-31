@@ -33,6 +33,9 @@ var orbit_angle: float = 0.0
 var repair_progress: float = 0.0
 var repair_time_needed: float = 4.5
 var human_fire_timer: float = 0.0
+var repair_cores_needed: int = 3
+var repair_cores_collected: int = 0
+var human_burst_timer: float = 0.0
 var chassis_special_timer: float = 0.0
 var tread_timer: float = 0.0
 var turret_kick_dist: float = 0.0 # 主炮/重炮开火后坐力炮管后缩
@@ -156,6 +159,53 @@ func _process(delta: float) -> void:
 
 	queue_redraw()
 
+func get_human_effective_weapon_damage() -> float:
+	var base_dmg: float = 65.0 + GameState.level * 16.0 + (GameState.max_sp * 0.03)
+	var eng: Dictionary = GameData.ENGINES.get(GameState.equipped_engine_id, {})
+	var mult: float = 1.0 + float(eng.get("all_dmg_bonus", 0.0)) + float(GameState.bonus_stats.get("weapon_dmg_all_pct", 0.0))
+	mult += float(GameState.bonus_stats.get("main_dmg_pct", 0.0)) * 0.5
+	var h_dmg_mult: float = float(GameState.bonus_stats.get("human_damage_mult", 1.0))
+	return base_dmg * mult * h_dmg_mult
+
+func on_collect_repair_core() -> void:
+	if not is_human_mode or is_voluntary_unboard:
+		return
+	repair_cores_collected += 1
+	var bf: Node = get_parent()
+	human_hp = minf(GameState.max_human_hp, human_hp + GameState.max_human_hp * 0.30)
+	invuln_timer = maxf(invuln_timer, 1.2)
+	SoundManager.play("upgrade", 0.05, 1.5)
+	if is_instance_valid(bf) and is_instance_valid(bf.fx_layer):
+		bf.fx_layer.spawn_text(human_pos, "🔧 应急动力核心就位 (%d/3)!" % repair_cores_collected, Color(0.35, 1.0, 0.65), 1.25)
+		bf.fx_layer.spawn_shockwave(human_pos, 85.0, Color(0.3, 1.0, 0.5))
+	if repair_cores_collected >= repair_cores_needed:
+		reboot_tank(0.50, "⚡ 动力核心全部就位! 战车绝境重装重启! ⚡")
+
+func reboot_tank(sp_ratio: float, msg: String = "⚡ 战车抢修完毕，重返战场! ⚡") -> void:
+	is_human_mode = false
+	is_voluntary_unboard = false
+	current_sp = GameState.max_sp * sp_ratio
+	human_hp = GameState.max_human_hp
+	invuln_timer = 2.0
+	repair_progress = 0.0
+	repair_cores_collected = 0
+	global_position = human_pos
+	chassis_angle = turret_angle
+	GameState.report_metric("repair_success_count", 1, true)
+	GameState.report_metric("total_repaired_sp", current_sp, true)
+	var bf: Node = get_parent()
+	if is_instance_valid(bf):
+		bf.trigger_screen_shake(14.0, 0.4)
+		if is_instance_valid(bf.fx_layer):
+			bf.fx_layer.spawn_explosion(global_position, 220.0, Color(0.35, 1.0, 0.75))
+			bf.fx_layer.spawn_text(global_position, msg, Color(0.35, 1.0, 0.65), 1.65)
+		for e in bf.enemies_container.get_children():
+			if is_instance_valid(e) and global_position.distance_to(e.global_position) <= 240.0:
+				e.take_damage(200.0 + GameState.level * 25.0, true, "electric", global_position, false)
+				if not e.is_boss:
+					e.global_position += (e.global_position - global_position).normalized() * 120.0
+	SoundManager.play("upgrade", 0.05, 3.0)
+
 func _handle_eject_key(bf: Node) -> void:
 	if not is_human_mode:
 		# 废土武道家：主动引爆战车造成 8倍最大SP 全屏核爆！
@@ -222,55 +272,58 @@ func _process_tank_mode(delta: float, bf: Node, move_input: Vector2) -> void:
 					bf.spawn_player_projectile(global_position, dir, 720.0, 22.0 + GameState.level * 4.0, 0.0, "", false, false, 1)
 
 func _process_human_mode(delta: float, bf: Node, move_input: Vector2) -> void:
-	# [Space] 步兵战术翻滚 (无敌帧 + 冲刺)
+	if human_burst_timer > 0.0:
+		human_burst_timer -= delta
+
+	# 1. 检查是否逃入休整小镇安全区 (小镇拖车救援机制)
+	if not is_voluntary_unboard and is_instance_valid(bf) and bool(bf.get("is_player_in_safe_zone")):
+		reboot_tank(0.65, "🏰 麦卡小镇应急拖车救援生效! 战车重装复原!")
+		return
+
+	# 2. [Space] 步兵战术翻滚 (无敌帧 + 高速位移)
 	if Input.is_action_just_pressed("dodge_roll") and dodge_roll_timer <= 0.0:
-		dodge_roll_timer = 0.32
-		invuln_timer = 0.40
+		dodge_roll_timer = 0.28
+		invuln_timer = 0.45
 		bf.fx_layer.spawn_text(human_pos, "战术翻滚!", Color(0.5, 0.95, 1.0), 0.95)
 
-	var h_spd: float = 265.0 * (1.0 + GameState.bonus_stats.get("human_speed_pct", 0.0))
+	var h_spd: float = (GameState.move_speed + 45.0) * (1.0 + GameState.bonus_stats.get("human_speed_pct", 0.0)) + (55.0 if human_burst_timer > 0.0 else 0.0)
 	if dodge_roll_timer > 0.0:
-		h_spd *= 2.1
+		h_spd *= 2.2
 	var dir: Vector2 = move_input if move_input.length() > 0.1 else (Vector2.from_angle(chassis_angle) if dodge_roll_timer > 0.0 else Vector2.ZERO)
 	human_pos += dir * h_spd * delta
 	human_pos.x = clampf(human_pos.x, bf.arena_rect.position.x + 18.0, bf.arena_rect.end.x - 18.0)
 	human_pos.y = clampf(human_pos.y, bf.arena_rect.position.y + 18.0, bf.arena_rect.end.y - 18.0)
 
-	# 步兵自动手持霰弹/激光扳手射击 (支持手柄右摇杆手动指向射击)
+	# 3. 步兵自动手持反装甲微型火箭/高能暴风手枪 (伤害与攻速全面继承战车构筑)
 	var h_right_stick: Vector2 = Input.get_vector("aim_left", "aim_right", "aim_up", "aim_down", 0.25)
 	human_fire_timer -= delta
-	var fire_cd: float = 0.28 / (1.0 + GameState.bonus_stats.get("human_speed_pct", 0.0))
+	var reload_bonus: float = 1.0 + float(GameState.bonus_stats.get("reload_speed_pct", 0.0))
+	var fire_cd: float = 0.24 / (reload_bonus * (1.0 + float(GameState.bonus_stats.get("human_speed_pct", 0.0))))
 	if GameState.synergy_counts.get("lone_cub", 0) >= 2:
 		fire_cd *= 0.72
 	if human_fire_timer <= 0.0:
-		var target: Node2D = bf.get_nearest_enemy(human_pos, 360.0)
+		var target: Node2D = bf.get_nearest_enemy(human_pos, 420.0)
 		if h_right_stick.length() > 0.25 or is_instance_valid(target):
 			human_fire_timer = fire_cd
 			var aim: Vector2 = h_right_stick.normalized() if h_right_stick.length() > 0.25 else (target.global_position - human_pos).normalized()
 			turret_angle = aim.angle()
-			var h_dmg: float = (28.0 + GameState.level * 6.0) * float(GameState.bonus_stats.get("human_hp_mult", 1.0))
-			var is_crit: bool = randf() < (GameState.crit_chance + 0.15)
+			var h_dmg: float = get_human_effective_weapon_damage()
+			var is_crit: bool = randf() < (GameState.crit_chance + 0.20)
 			for i in range(-1, 2):
-				bf.spawn_player_projectile(human_pos, aim.rotated(i * 0.12), 680.0, h_dmg, 0.0, "", is_crit, false, 1, "human_handgun", 0)
+				bf.spawn_player_projectile(human_pos, aim.rotated(i * 0.10), 750.0, h_dmg, 0.0, "", is_crit, false, 1, "human_handgun", 0)
 			if is_instance_valid(bf.fx_layer):
-				bf.fx_layer.spawn_muzzle_flash(human_pos + aim * 14.0, aim, "machinegun", 0.75)
+				bf.fx_layer.spawn_muzzle_flash(human_pos + aim * 14.0, aim, "machinegun", 0.85)
 				bf.fx_layer.spawn_casing(human_pos, -aim.rotated(randf_range(0.7, 1.4)), false)
 			SoundManager.play("subgun_mg", 0.15, -4.0)
 
-	# 战地抢修战车判定 (靠近战车残骸读条修复)
+	# 4. 战地抢修战车判定 (靠近战车残骸快速抢修，所需时间随捡到核心数大幅减少)
 	if not is_voluntary_unboard:
-		if human_pos.distance_to(global_position) <= 98.0:
-			repair_progress += delta
-			if repair_progress >= repair_time_needed:
-				repair_progress = 0.0
-				is_human_mode = false
-				var rep_sp: float = GameState.max_sp * 0.42
-				current_sp = rep_sp
-				GameState.report_metric("repair_success_count", 1, true)
-				GameState.report_metric("total_repaired_sp", rep_sp, true)
-				invuln_timer = 1.2
-				bf.fx_layer.spawn_text(global_position, "战车抢修完成! 重返战场!", Color(0.3, 1.0, 0.45), 1.45)
-				SoundManager.play("upgrade", 0.05, 2.0)
+		if human_pos.distance_to(global_position) <= 125.0:
+			repair_progress += delta * 1.5
+			var time_req: float = maxf(0.8, 2.2 - float(repair_cores_collected) * 0.6)
+			if repair_progress >= time_req or repair_progress >= repair_time_needed:
+				reboot_tank(0.45, "🔧 现场抢修完成! 重返战车!")
+				return
 
 func _process_tank_weapons(delta: float, bf: Node) -> void:
 	# 主炮瞄准方向：支持【手柄右摇杆360°双摇杆瞄准】、【鼠标手动瞄准】与【C装置自动索敌】
@@ -767,8 +820,9 @@ func take_damage(amount: float, _source_pos: Vector2 = Vector2.ZERO) -> void:
 	if is_instance_valid(bf) and bool(bf.get("is_player_in_safe_zone")):
 		return
 
-	# 闪避判定 (含热烟幕 100% 绝对闪避) + 幻影全息诱饵脉冲
-	if smoke_evade_timer > 0.0 or randf() < GameState.dodge_chance:
+	# 闪避判定 (含热烟幕 100% 绝对闪避) + 步兵小型目标高机动闪避 (+15%)
+	var eff_dodge: float = GameState.dodge_chance + (0.15 if is_human_mode else 0.0)
+	if smoke_evade_timer > 0.0 or randf() < eff_dodge:
 		GameState.report_metric("dodge_count", 1, true)
 		bf.fx_layer.spawn_text(get_active_position(), "闪避 MISS!", Color(0.45, 0.95, 1.0), 1.05)
 		if GameState.equipped_c_unit_id == "cu_mirage":
@@ -778,7 +832,7 @@ func take_damage(amount: float, _source_pos: Vector2 = Vector2.ZERO) -> void:
 					e.take_damage(65.0 + GameState.level * 12.0, false, "electric", get_active_position(), false)
 		return
 
-	invuln_timer = 0.22
+	invuln_timer = 0.35 if is_human_mode else 0.22
 	if is_human_mode:
 		human_hp -= amount
 		bf.fx_layer.spawn_text(human_pos, "-%d HP" % int(amount), Color(1.0, 0.2, 0.25), 1.15)
@@ -817,18 +871,35 @@ func _trigger_tank_wreck(bf: Node) -> void:
 	is_voluntary_unboard = false
 	human_pos = global_position + Vector2(0, 28)
 	repair_progress = 0.0
-	invuln_timer = 1.2
-	bf.trigger_screen_shake(12.0, 0.35)
-	bf.fx_layer.spawn_explosion(global_position, 135.0, Color(1.0, 0.45, 0.15))
-	bf.fx_layer.spawn_text(global_position, "★ 战车大破! 紧急跳车肉搏! 靠近残骸抢修! ★", Color(1.0, 0.30, 0.20), 1.45)
+	repair_cores_needed = 3
+	repair_cores_collected = 0
+	human_hp = GameState.max_human_hp
+	invuln_timer = 3.0
+	human_burst_timer = 4.5
+	bf.trigger_screen_shake(16.0, 0.45)
+	bf.fx_layer.spawn_explosion(global_position, 160.0, Color(1.0, 0.45, 0.15))
+	bf.fx_layer.spawn_smoke_puff(global_position, 65.0, Color(0.3, 0.3, 0.3, 0.8), 3.0)
+	bf.fx_layer.spawn_text(global_position, "★ 战车大破! 紧急脱险弹射! 拾取3枚动力核心或逃往休整小镇! ★", Color(1.0, 0.30, 0.20), 2.0)
 	SoundManager.play("eject_alarm", 0.04, 2.0)
 
-	# 震退周围贴脸怪
+	# 全向强力 EMP 冲击波：震飞 180px 并定身 3.5s
 	for e in bf.enemies_container.get_children():
-		if is_instance_valid(e) and global_position.distance_to(e.global_position) <= 160.0:
-			e.take_damage(85.0, false, "", global_position, false)
+		if is_instance_valid(e) and global_position.distance_to(e.global_position) <= 280.0:
+			e.take_damage(120.0 + GameState.level * 18.0, false, "electric", global_position, false)
 			if not e.is_boss:
-				e.global_position += (e.global_position - global_position).normalized() * 65.0
+				e.global_position += (e.global_position - global_position).normalized() * 180.0
+			if "freeze_timer" in e:
+				e.freeze_timer = maxf(e.freeze_timer, 3.5)
+
+	# 向四周散落 3 枚应急动力核心
+	var base_ang: float = randf() * TAU
+	for i in range(3):
+		var c_ang: float = base_ang + float(i) * (TAU / 3.0) + randf_range(-0.25, 0.25)
+		var c_dist: float = randf_range(150.0, 230.0)
+		var c_pos: Vector2 = global_position + Vector2.from_angle(c_ang) * c_dist
+		c_pos.x = clampf(c_pos.x, bf.arena_rect.position.x + 40.0, bf.arena_rect.end.x - 40.0)
+		c_pos.y = clampf(c_pos.y, bf.arena_rect.position.y + 40.0, bf.arena_rect.end.y - 40.0)
+		bf.spawn_drop("repair_core", 1, c_pos)
 
 func get_effective_paint() -> Dictionary:
 	var ch_id: String = GameState.selected_chassis_id
@@ -870,7 +941,9 @@ func _draw() -> void:
 
 	# 2. 绘制战车大破抢修圈与条形抢修进度条
 	if is_human_mode and not is_voluntary_unboard:
-		draw_arc(Vector2.ZERO, 95.0, 0.0, TAU, 36, Color(0.25, 1.0, 0.45, 0.75), 3.0)
+		draw_arc(Vector2.ZERO, 125.0, 0.0, TAU, 36, Color(0.25, 1.0, 0.45, 0.75), 3.0)
+		draw_string_outline(ThemeDB.fallback_font, Vector2(-65, -82), "⚡ 核心: %d/3 | 快速抢修" % repair_cores_collected, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, 3, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, Vector2(-65, -82), "⚡ 核心: %d/3 | 快速抢修" % repair_cores_collected, HORIZONTAL_ALIGNMENT_LEFT, -1, 13, Color(0.4, 1.0, 0.65))
 		var rep_ratio: float = clampf(repair_progress / repair_time_needed, 0.0, 1.0)
 		draw_arc(Vector2.ZERO, 95.0, -PI * 0.5, -PI * 0.5 + TAU * rep_ratio, 36, Color(1.0, 0.92, 0.25), 7.0)
 		var rbw: float = 82.0
@@ -973,6 +1046,9 @@ func _draw() -> void:
 		var rel_h: Vector2 = human_pos - global_position
 		var h_commando_tex: Texture2D = GameData.get_tex("human_commando")
 		draw_arc(rel_h, 22.0, 0.0, TAU, 24, Color(0.35, 1.0, 0.55, 0.85), 2.5)
+		if invuln_timer > 0.0:
+			draw_circle(rel_h, 30.0, Color(0.35, 0.95, 1.0, 0.20))
+			draw_arc(rel_h, 30.0, 0.0, TAU, 24, Color(0.4, 1.0, 0.85, 0.85), 2.5)
 		var h_skin_id: String = GameState.get_hunter_skin(GameState.selected_hunter_id)
 		var h_skin_def: Dictionary = GameData.get_hunter_skin_def(GameState.selected_hunter_id, h_skin_id)
 		var h_tint: Color = h_skin_def.get("tint", Color.WHITE)

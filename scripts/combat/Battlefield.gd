@@ -1966,7 +1966,8 @@ func _update_hud() -> void:
 		bar_sp.max_value = maxf(1.0, GameState.max_human_hp)
 		bar_sp.value = clampf(player_tank.human_hp, 0.0, bar_sp.max_value)
 		style_sp_fill.bg_color = Color(0.92, 0.22, 0.22)
-		lbl_sp_val.text = "❤️ 步兵 HP: %d / %d (靠近战车抢修!)" % [int(player_tank.human_hp), int(GameState.max_human_hp)]
+		var core_info: String = "【动力核心: %d/3】" % player_tank.repair_cores_collected if not player_tank.is_voluntary_unboard else "【步兵突击】"
+		lbl_sp_val.text = "❤️ 猎人 HP: %d / %d  %s (拾取核心/逃入小镇救车)" % [int(player_tank.human_hp), int(GameState.max_human_hp), core_info]
 	else:
 		bar_sp.max_value = maxf(1.0, GameState.max_sp)
 		bar_sp.value = clampf(player_tank.current_sp, 0.0, bar_sp.max_value)
@@ -2081,9 +2082,15 @@ func _draw_minimap() -> void:
 
 	# 3. 埋藏宝箱 (黄金菱形亮点)
 	for d in drops_container.get_children():
-		if is_instance_valid(d) and d.get("drop_type") == "buried_chest":
-			var d_pos: Vector2 = Vector2(d.global_position.x * sx, d.global_position.y * sy)
-			minimap_ctrl.draw_circle(d_pos, 3.5, Color(1.0, 0.85, 0.25))
+		if is_instance_valid(d):
+			var dtype: String = d.get("drop_type")
+			if dtype == "buried_chest":
+				var d_pos: Vector2 = Vector2(d.global_position.x * sx, d.global_position.y * sy)
+				minimap_ctrl.draw_circle(d_pos, 3.5, Color(1.0, 0.85, 0.25))
+			elif dtype == "repair_core":
+				var c_pos: Vector2 = Vector2(d.global_position.x * sx, d.global_position.y * sy)
+				minimap_ctrl.draw_circle(c_pos, 4.0, Color(0.35, 1.0, 0.65))
+				minimap_ctrl.draw_circle(c_pos, 2.0, Color.WHITE)
 
 	# 4. 机械兽群、精英与赏金首
 	for e in enemies_container.get_children():
@@ -2221,6 +2228,23 @@ func _draw_offscreen_indicators() -> void:
 			"border_col": Color(0.85, 1.0, 0.55),
 			"is_town": true
 		})
+
+	# 4. 人形态专属导航：战车残骸与散落动力核心
+	if is_instance_valid(player_tank) and player_tank.is_human_mode and not player_tank.is_voluntary_unboard:
+		targets.append({
+			"pos": player_tank.global_position,
+			"icon": "🚜",
+			"color": Color(1.0, 0.65, 0.2),
+			"border_col": Color(1.0, 0.9, 0.3)
+		})
+		for d in drops_container.get_children():
+			if is_instance_valid(d) and d.get("drop_type") == "repair_core":
+				targets.append({
+					"pos": d.global_position,
+					"icon": "⚡",
+					"color": Color(0.35, 1.0, 0.65),
+					"border_col": Color(1.0, 1.0, 0.5)
+				})
 
 	# 3. 埋藏宝箱与战场动态事件信标
 	for d in drops_container.get_children():
