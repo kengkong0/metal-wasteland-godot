@@ -1381,10 +1381,11 @@ func _populate_battlefield_level_cards() -> void:
 		c.queue_free()
 
 	var show_hints: bool = GameState.should_show_build_hints()
+	var heal_banner: String = "  |  💚 升级即时抢修 +6% 战车SP"
 	if show_hints:
-		lbl_level_up_sub.text = "💡 选择一项猎人专精强化 (随波次解锁 ★2精良 / ★3稀有 / ★4史诗 高阶属性卡)"
+		lbl_level_up_sub.text = "💡 选择一项强化" + heal_banner + " (随波次解锁高阶属性卡)"
 	else:
-		lbl_level_up_sub.text = "🔴 【地狱模式盲配】已隐藏流派与超武配件提示，全凭老猎人直觉搭配！"
+		lbl_level_up_sub.text = "🔴 【地狱模式盲配】已隐藏流派提示" + heal_banner
 
 	var perks: Array = GameData.LEVEL_PERKS.duplicate()
 	perks.shuffle()
@@ -1448,9 +1449,12 @@ func _populate_battlefield_level_cards() -> void:
 			stat_compare = "📊 修护: %d/s ➔ %d/s" % [cur_disp, next_disp]
 			tangible_compare = "🔧 装甲每秒自修: +%d SP/秒" % disp_num
 
-		var full_compare: String = stat_compare
+		# 极简二行结构：去除多余图表与重复百分比，1秒直观决策
+		var card_lines: Array = []
+		card_lines.append(desc_txt)
 		if not tangible_compare.is_empty():
-			full_compare += "\n" + tangible_compare
+			card_lines.append(tangible_compare)
+		var card_content_str: String = "\n".join(card_lines)
 
 		var card := _make_card_box(Color(0.16, 0.17, 0.21), t_col)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1473,8 +1477,7 @@ func _populate_battlefield_level_cards() -> void:
 		cv.add_child(sep)
 
 		var is_emergency: bool = (GameState.selected_difficulty_id == "easy") and (player_tank.is_human_mode or (player_tank.current_sp <= GameState.max_sp * 0.25))
-		var heal_label: String = "⚡【简单模式·绝境逆转】紧急注入 +16% SP!" if is_emergency else "💚 战地应急抢修 +6% SP"
-		var desc_lbl := _make_outlined_label("✅ %s\n%s\n%s" % [desc_txt, full_compare, heal_label], 14, Color(1.0, 0.88, 0.25) if is_emergency else Color(0.92, 0.96, 0.92))
+		var desc_lbl := _make_outlined_label(card_content_str, 15, Color(1.0, 0.90, 0.35) if is_emergency else Color(0.94, 0.96, 0.94))
 		desc_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		desc_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		desc_lbl.size_flags_vertical = Control.SIZE_EXPAND_FILL
