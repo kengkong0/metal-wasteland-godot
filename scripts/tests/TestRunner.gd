@@ -1054,13 +1054,34 @@ func test_suite_15_human_revamp_and_ejection_system() -> void:
 	assert_true(not p.is_human_mode, "步兵撤入休整小镇安全区，触发应急拖车抢修重回战车！")
 	assert_true(p.current_sp >= GameState.max_sp * 0.60, "小镇救援重组战车恢复 65%% SP")
 
-	# 7. 验证残骸近距离快速抢修
-	p.is_human_mode = true
-	p.is_voluntary_unboard = false
+	# 7. 验证原地站立不动绝不触发自动修车或隔空吸核心（彻底根除挂机无限复活死循环）
 	bf.is_player_in_safe_zone = false
-	p.human_pos = p.global_position
-	p.repair_progress = 2.5
-	p._process_human_mode(0.05, bf, Vector2.ZERO)
-	assert_true(not p.is_human_mode, "靠近战车残骸快速读条抢修重回战车！")
+	GameState.pickup_range = 360.0
+	p._trigger_tank_wreck(bf)
+	for _step in range(30):
+		p._process_human_mode(0.2, bf, Vector2.ZERO)
+		for d in bf.drops_container.get_children():
+			if is_instance_valid(d):
+				d._process(0.2)
+	assert_true(p.is_human_mode and p.repair_cores_collected == 0, "原地站立不动绝不自动吸附核心或自动修车，100%% 根除战车毁灭-恢复死循环")
+
+	# 8. 验证小镇安全区【休战停火协议】与【8秒护盾限时防白嫖】
+	p.reboot_tank(1.0)
+	bf.town_available = true
+	bf.town_visited_this_wave = false
+	bf.town_shield_time_left = 8.0
+	p.global_position = bf.town_pos
+	p.human_pos = bf.town_pos
+	bf._process(0.05)
+	assert_true(bf.is_player_in_safe_zone, "战车进入小镇安全区")
+	bf._do_spawn_enemy("bio_ant", bf.town_pos + Vector2(230, 0))
+	for c in bf.projectiles_container.get_children():
+		bf.recycle_projectile(c)
+	for w_idx in range(p.weapon_timers.size()):
+		p.weapon_timers[w_idx] = 0.0
+	p._process(0.1)
+	assert_true(bf.projectiles_container.get_child_count() == 0, "安全区休战停火协议生效：安全区内禁止开火，彻底杜绝站圈内无敌打人")
+	bf._process(8.2)
+	assert_true(not bf.town_available, "安全区超时逗留满 8s 不进镇，力场护盾耗尽并自动移防关闭")
 
 	bf.queue_free()

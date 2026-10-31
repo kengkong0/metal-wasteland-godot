@@ -28,7 +28,7 @@ func _process(delta: float) -> void:
 	if drop_type == "buried_chest":
 		magnet_radius = 52.0 # 宝箱需靠近开启
 	elif drop_type == "repair_core":
-		magnet_radius = maxf(95.0, GameState.pickup_range)
+		magnet_radius = 42.0 # 动力核心需猎人亲自走位触碰拾取，绝不原地自动隔空吸附
 
 	if dist < magnet_radius:
 		magnetized = true

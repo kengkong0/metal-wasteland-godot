@@ -52,11 +52,13 @@ var dust_particles: Array = []
 # --- 荒原休整小镇与安全区 (Wasteland Rest Town & Safe Zone) ---
 var town_pos: Vector2 = Vector2(850.0, 800.0)
 var town_radius: float = 190.0
-var town_interact_radius: float = 125.0
+var town_interact_radius: float = 190.0
 var town_available: bool = true
 var town_visited_this_wave: bool = false
 var is_player_in_safe_zone: bool = false
 var town_pulse_time: float = 0.0
+var town_shield_max_time: float = 8.0
+var town_shield_time_left: float = 8.0
 var btn_enter_town: Button
 var spawn_telegraphs: Array = []
 var shake_timer: float = 0.0
@@ -722,6 +724,8 @@ func _advance_to_next_wave_seamless() -> void:
 	var vacuumed_gold: int = 0
 	for d in drops_container.get_children():
 		if is_instance_valid(d) and not d.is_queued_for_deletion():
+			if d.drop_type in ["repair_core", "buried_chest"]:
+				continue
 			match d.drop_type:
 				"scrap": vacuumed_scrap += d.value
 				"gold": vacuumed_gold += d.value
@@ -747,9 +751,10 @@ func _advance_to_next_wave_seamless() -> void:
 	elite_spawn_timer = 18.0
 	ring_spawn_timer = 22.0
 
-	# 重置休整小镇
+	# 重置休整小镇与安全区护盾容量
 	town_available = true
 	town_visited_this_wave = false
+	town_shield_time_left = town_shield_max_time
 	_place_town_for_wave()
 
 	banner_timer = 5.0
@@ -899,10 +904,11 @@ func start_wave() -> void:
 	elite_spawn_timer = 18.0
 	fx_layer.mortar_strikes.clear()
 
-	# 重置休整小镇
+	# 重置休整小镇与安全区护盾容量
 	town_available = true
 	town_visited_this_wave = false
 	is_player_in_safe_zone = false
+	town_shield_time_left = town_shield_max_time
 	_place_town_for_wave()
 
 	player_tank.init_for_wave(arena_rect.get_center())
@@ -1074,7 +1080,7 @@ func _process(delta: float) -> void:
 			_do_spawn_enemy(spawn_telegraphs[i]["id"], spawn_telegraphs[i]["pos"])
 			spawn_telegraphs.remove_at(i)
 
-	# 4.5 荒原休整小镇与安全区排斥力场处理
+	# 4.5 荒原休整小镇与安全区排斥力场处理 (含休战停火协议与护盾限时防挂机)
 	town_pulse_time += delta
 	if town_available and is_instance_valid(player_tank):
 		var p_pos: Vector2 = player_tank.get_active_position()
@@ -1082,16 +1088,28 @@ func _process(delta: float) -> void:
 		is_player_in_safe_zone = (dist_to_town <= town_radius)
 
 		if is_instance_valid(btn_enter_town):
-			btn_enter_town.visible = (dist_to_town <= town_interact_radius)
+			btn_enter_town.visible = is_player_in_safe_zone
+
+		# 处于安全区内：冻结波次倒计时、拦截内外弹道、并消耗安全区临时护盾容量 (8s)
+		if is_player_in_safe_zone:
+			wave_time_left += delta
+			town_shield_time_left -= delta
+			for proj in projectiles_container.get_children():
+				if is_instance_valid(proj) and not proj.is_queued_for_deletion():
+					if proj.global_position.distance_to(town_pos) <= town_radius + 16.0:
+						recycle_projectile(proj)
+			if town_shield_time_left <= 0.0:
+				on_town_exited()
 
 		# 怪物排斥力场：严防怪物越界踩入安全区
-		for e in enemies_container.get_children():
-			if is_instance_valid(e) and not e.is_queued_for_deletion():
-				var edist: float = e.global_position.distance_to(town_pos)
-				if edist < town_radius + 24.0:
-					var pdir: Vector2 = (e.global_position - town_pos).normalized()
-					if pdir == Vector2.ZERO: pdir = Vector2.UP
-					e.global_position = town_pos + pdir * (town_radius + 25.0)
+		if town_available:
+			for e in enemies_container.get_children():
+				if is_instance_valid(e) and not e.is_queued_for_deletion():
+					var edist: float = e.global_position.distance_to(town_pos)
+					if edist < town_radius + 24.0:
+						var pdir: Vector2 = (e.global_position - town_pos).normalized()
+						if pdir == Vector2.ZERO: pdir = Vector2.UP
+						e.global_position = town_pos + pdir * (town_radius + 25.0)
 	else:
 		is_player_in_safe_zone = false
 		if is_instance_valid(btn_enter_town):
@@ -2432,10 +2450,10 @@ func _draw() -> void:
 		draw_string(ThemeDB.fallback_font, town_pos + Vector2(-75, -town_radius - 14), t_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.35, 1.0, 0.65))
 
 		if is_player_in_safe_zone:
-			var prompt_txt: String = "💡 按 [E] / [空格] 进入小镇休整 (本波限进 1 次)"
+			var prompt_txt: String = "🕊️ 安全区休战停火中 (护盾维持 %.1fs) | 按 [E]/[空格] 进镇休整" % maxf(0.0, town_shield_time_left)
 			var pulse_prompt: float = 0.85 + sin(town_pulse_time * 6.0) * 0.15
-			draw_string_outline(ThemeDB.fallback_font, town_pos + Vector2(-130, town_radius + 24), prompt_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 3, Color.BLACK)
-			draw_string(ThemeDB.fallback_font, town_pos + Vector2(-130, town_radius + 24), prompt_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.95, 0.35, pulse_prompt))
+			draw_string_outline(ThemeDB.fallback_font, town_pos + Vector2(-175, town_radius + 24), prompt_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 3, Color.BLACK)
+			draw_string(ThemeDB.fallback_font, town_pos + Vector2(-175, town_radius + 24), prompt_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.95, 0.35, pulse_prompt))
 
 	# 3. 弹坑与沙地凹坑
 	for c in craters:
