@@ -44,6 +44,9 @@ var minimap_ctrl: Control
 var tread_marks: Array = []
 var craters: Array = []
 var landmarks: Array = []
+var wasteland_roads: Array = []
+var wasteland_fissures: Array = []
+var dust_particles: Array = []
 var spawn_telegraphs: Array = []
 var shake_timer: float = 0.0
 var shake_intensity: float = 0.0
@@ -162,6 +165,43 @@ func _update_arena_bounds() -> void:
 func _generate_wasteland_craters() -> void:
 	craters.clear()
 	landmarks.clear()
+	wasteland_roads.clear()
+	wasteland_fissures.clear()
+
+	# 1. 废土公路 (横跨战场的破裂柏油公路与废墟路基)
+	var road_start := Vector2(arena_rect.position.x, arena_rect.size.y * 0.42)
+	var road_mid := Vector2(arena_rect.size.x * 0.5, arena_rect.size.y * 0.48)
+	var road_end := Vector2(arena_rect.end.x, arena_rect.size.y * 0.54)
+	wasteland_roads.append({"p1": road_start, "p2": road_mid, "width": 110.0, "cracks": []})
+	wasteland_roads.append({"p1": road_mid, "p2": road_end, "width": 110.0, "cracks": []})
+	for r in wasteland_roads:
+		for s in range(14):
+			var t: float = float(s) / 14.0
+			var pt: Vector2 = r["p1"].lerp(r["p2"], t) + Vector2(randf_range(-36.0, 36.0), randf_range(-36.0, 36.0))
+			r["cracks"].append({
+				"pos": pt,
+				"size": Vector2(randf_range(16.0, 38.0), randf_range(10.0, 24.0)),
+				"rot": randf_range(0.0, TAU)
+			})
+
+	# 2. 地质断裂与深渊地缝 (Tectonic Fissures)
+	for i in range(7):
+		var fx: float = randf_range(arena_rect.position.x + 140, arena_rect.end.x - 140)
+		var fy: float = randf_range(arena_rect.position.y + 140, arena_rect.end.y - 140)
+		var f_cur := Vector2(fx, fy)
+		var f_pts: Array = [f_cur]
+		var f_dir: float = randf_range(0.0, TAU)
+		var num_segs: int = randi_range(5, 8)
+		for j in range(num_segs):
+			f_dir += randf_range(-0.55, 0.55)
+			f_cur += Vector2.from_angle(f_dir) * randf_range(30.0, 58.0)
+			f_pts.append(f_cur)
+		wasteland_fissures.append({
+			"points": f_pts,
+			"width": randf_range(3.5, 6.0)
+		})
+
+	# 3. 弹坑与沙地凹坑
 	for i in range(52):
 		craters.append({
 			"pos": Vector2(randf_range(arena_rect.position.x + 80, arena_rect.end.x - 80), randf_range(arena_rect.position.y + 80, arena_rect.end.y - 80)),
@@ -175,6 +215,16 @@ func _generate_wasteland_craters() -> void:
 			"angle": randf_range(0.0, TAU),
 			"kind": i % 3
 		})
+
+	# 4. 初始化风沙粒子
+	if dust_particles.is_empty():
+		for i in range(48):
+			dust_particles.append({
+				"pos": Vector2(randf_range(arena_rect.position.x, arena_rect.end.x), randf_range(arena_rect.position.y, arena_rect.end.y)),
+				"spd": randf_range(65.0, 140.0),
+				"size": randf_range(1.8, 3.8),
+				"alpha": randf_range(0.20, 0.45)
+			})
 
 func _build_hud() -> void:
 	hud_layer = CanvasLayer.new()
@@ -875,6 +925,16 @@ func _process(delta: float) -> void:
 			_finish_wave_success()
 			return
 
+	# 废土风沙环境微粒飘散
+	var wind_vec: Vector2 = Vector2(1.2, 0.35).normalized()
+	for dp in dust_particles:
+		dp["pos"] += wind_vec * (dp["spd"] * delta)
+		if dp["pos"].x > arena_rect.end.x:
+			dp["pos"].x = arena_rect.position.x
+			dp["pos"].y = randf_range(arena_rect.position.y, arena_rect.end.y)
+		elif dp["pos"].y > arena_rect.end.y:
+			dp["pos"].y = arena_rect.position.y
+
 	_update_hud()
 	queue_redraw()
 
@@ -1486,9 +1546,9 @@ func recycle_drop(d: Node2D) -> void:
 	else:
 		d.queue_free()
 
-func spawn_player_projectile(pos: Vector2, dir: Vector2, spd: float, dmg: float, splash: float, effect: String, is_crit: bool, is_main: bool, pierce: int, weapon_id: String = "") -> void:
+func spawn_player_projectile(pos: Vector2, dir: Vector2, spd: float, dmg: float, splash: float, effect: String, is_crit: bool, is_main: bool, pierce: int, weapon_id: String = "", p_rarity: int = 0) -> void:
 	var p: Node2D = _acquire_projectile()
-	p.setup_player_proj(pos, dir, spd, dmg, splash, effect, is_crit, is_main, pierce, weapon_id)
+	p.setup_player_proj(pos, dir, spd, dmg, splash, effect, is_crit, is_main, pierce, weapon_id, p_rarity)
 
 func spawn_enemy_projectile(pos: Vector2, dir: Vector2, spd: float, dmg: float, col: Color = Color(1.0, 0.25, 0.35), rad: float = 6.5, eff: String = "") -> void:
 	var p: Node2D = _acquire_projectile()
@@ -2045,31 +2105,56 @@ func _draw() -> void:
 	draw_rect(arena_rect.grow(700.0), bg_col.darkened(0.55))
 	draw_rect(arena_rect, bg_col)
 
-	# 2. 地形贴图高精平铺 (4 列 x 3 行，使贴图在 2800x1900 上保持清晰度与真实比例)
+	# 2. 地形贴图 1:1 无缝平铺 (彻底消除原 4x3 拉伸形变与接缝黑线)
 	var ter_tex: Texture2D = GameData.get_terrain_tex(String(m_def.get("id", "map_1")))
 	if ter_tex != null:
-		var cols: int = 4
-		var rows: int = 3
-		var cell_w: float = arena_rect.size.x / float(cols)
-		var cell_h: float = arena_rect.size.y / float(rows)
-		for rx in range(cols):
-			for ry in range(rows):
-				var tile_rect := Rect2(
-					arena_rect.position.x + rx * cell_w,
-					arena_rect.position.y + ry * cell_h,
-					cell_w,
-					cell_h
-				)
-				draw_texture_rect(ter_tex, tile_rect, false, Color(0.85, 0.85, 0.85, 0.88))
+		var tile_sz: float = 480.0
+		var x_tiles: int = int(ceil(arena_rect.size.x / tile_sz))
+		var y_tiles: int = int(ceil(arena_rect.size.y / tile_sz))
+		for ix in range(x_tiles):
+			for iy in range(y_tiles):
+				var px: float = arena_rect.position.x + float(ix) * tile_sz
+				var py: float = arena_rect.position.y + float(iy) * tile_sz
+				var w: float = minf(tile_sz, arena_rect.end.x - px)
+				var h: float = minf(tile_sz, arena_rect.end.y - py)
+				draw_texture_rect_region(ter_tex, Rect2(px, py, w, h), Rect2(0, 0, w, h), Color(0.92, 0.92, 0.92, 0.92))
 
-	# 3. 网格标线
-	var grid_line_col: Color = Color(grid_col.r, grid_col.g, grid_col.b, 0.25)
-	for x in range(int(arena_rect.position.x), int(arena_rect.end.x), 100):
-		draw_line(Vector2(x, arena_rect.position.y), Vector2(x, arena_rect.end.y), grid_line_col, 1.0)
-	for y in range(int(arena_rect.position.y), int(arena_rect.end.y), 100):
-		draw_line(Vector2(arena_rect.position.x, y), Vector2(arena_rect.end.x, y), grid_line_col, 1.0)
+	# 2.5 废土柏油公路 (破损公路基带 + 沥青碎裂凹坑 + 磨损黄色道路中线)
+	for road in wasteland_roads:
+		var p1: Vector2 = road["p1"]
+		var p2: Vector2 = road["p2"]
+		var rw: float = road["width"]
+		draw_line(p1, p2, Color(0.12, 0.11, 0.10, 0.62), rw)
+		draw_line(p1, p2, Color(0.16, 0.14, 0.13, 0.48), rw - 8.0)
+		for ck in road.get("cracks", []):
+			draw_set_transform(ck["pos"], ck["rot"], Vector2.ONE)
+			var csz: Vector2 = ck["size"]
+			draw_rect(Rect2(-csz * 0.5, csz), Color(0.08, 0.07, 0.06, 0.55))
+			draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+		var seg_len: float = 24.0
+		var gap_len: float = 16.0
+		var total_len: float = p1.distance_to(p2)
+		var r_dir: Vector2 = (p2 - p1).normalized()
+		var cur_d: float = 0.0
+		var line_col: Color = Color(0.85, 0.72, 0.22, 0.38)
+		while cur_d < total_len:
+			var sp: Vector2 = p1 + r_dir * cur_d
+			var ep: Vector2 = p1 + r_dir * minf(total_len, cur_d + seg_len)
+			draw_line(sp, ep, line_col, 2.5)
+			cur_d += seg_len + gap_len
 
-	# 4. 弹坑与沙地凹坑
+	# 2.8 地质断裂与深渊地缝 (Tectonic Fissures)
+	var mid_id: String = String(m_def.get("id", "map_1"))
+	var glow_col: Color = Color(0.95, 0.35, 0.10, 0.45) if mid_id == "map_4" else (Color(0.35, 0.95, 0.25, 0.40) if mid_id == "map_3" else Color(0.04, 0.03, 0.03, 0.70))
+	for f in wasteland_fissures:
+		var pts: Array = f["points"]
+		var fw: float = f["width"]
+		for idx in range(pts.size() - 1):
+			draw_line(pts[idx], pts[idx + 1], Color(0.05, 0.04, 0.04, 0.85), fw)
+			if mid_id in ["map_4", "map_3"]:
+				draw_line(pts[idx], pts[idx + 1], glow_col, fw * 0.45)
+
+	# 3. 弹坑与沙地凹坑
 	for c in craters:
 		draw_circle(c["pos"], c["radius"], bg_col.darkened(0.38))
 		draw_arc(c["pos"], c["radius"], 0.0, TAU, 24, grid_col.lightened(0.18), 2.5)
@@ -2125,6 +2210,13 @@ func _draw() -> void:
 			draw_string(ThemeDB.fallback_font, ep + Vector2(-75, -er - 12), ev_label, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, ecol)
 		elif ev_t == "acid_sandstorm":
 			draw_rect(arena_rect, Color(0.45, 0.85, 0.20, 0.08))
+
+	# 7.8 废土风沙与漂浮粒子 (Ambient Dust & Embers)
+	var dust_tint: Color = Color(1.0, 0.55, 0.20) if mid_id == "map_4" else Color(0.88, 0.80, 0.65)
+	for dp in dust_particles:
+		var c := dust_tint
+		c.a = dp["alpha"]
+		draw_circle(dp["pos"], dp["size"], c)
 
 	# 8. 废土警戒高压电网边界
 	draw_rect(arena_rect, border_col, false, 6.0)

@@ -21,6 +21,7 @@ func _ready() -> void:
 	test_suite_10_achievements_skins_and_paint_workshop()
 	test_suite_11_v2_blueprint_optimizations()
 	test_suite_12_stat_previews_and_layout_constraints()
+	test_suite_13_weapon_vfx_and_seamless_map()
 
 	print("\n========================================================")
 	print("📊 [TEST RESULTS] 测试统计汇总:")
@@ -805,3 +806,124 @@ func test_suite_12_stat_previews_and_layout_constraints() -> void:
 	assert_true(garage_ui.btn_tune_engine.tooltip_text.contains("最大载重"), "引擎扩载按钮提供详细 A ➔ B 悬停对比预览")
 
 	garage_ui.queue_free()
+
+# ============================================================================
+# 13. 武器绚丽弹道特效 (8大类型+星级缩放+弹壳火光) 与无缝废土大地图测试
+# ============================================================================
+func test_suite_13_weapon_vfx_and_seamless_map() -> void:
+	print("--- [Suite 13] 武器绚丽弹道特效与无缝废土地图综合验证 ---")
+
+	var ProjScript: Script = load("res://scripts/combat/Projectile.gd")
+	var FxScript: Script = load("res://scripts/combat/FloatingText.gd")
+	var BfScript: Script = load("res://scripts/combat/Battlefield.gd")
+	assert_true(ProjScript != null and FxScript != null and BfScript != null, "核心战斗弹道、粒子与战场脚本成功载入")
+
+	# 1. 验证 8 大武器专属弹道原型 (VFX Kind)
+	var p: Node2D = ProjScript.new()
+	add_child(p)
+
+	# 1.1 加特林/机枪 (tracer 曳光穿甲)
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 720.0, 30.0, 0.0, "", false, false, 1, "sub_gatling", 0)
+	assert_true(p.vfx_kind == "tracer" and p.trail_max >= 4, "加特林/副炮成功解析为 tracer 曳光弹形态 (带尾迹缓冲)")
+
+	# 1.2 巨型重炮 (shell 沉重炮弹 + 冲击波环)
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 650.0, 150.0, 70.0, "", false, true, 1, "cannon_105mm", 0)
+	assert_true(p.vfx_kind == "shell" and p.trail_max == 7, "主炮重型炮弹成功解析为 shell 炮弹形态 (高对比尾流)")
+
+	# 1.3 追踪导弹 (missile 火箭外形 + 尾翼 + 尾气青烟)
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 540.0, 80.0, 45.0, "homing", false, false, 1, "se_atm", 0)
+	assert_true(p.vfx_kind == "missile", "S-E 导弹成功解析为 missile 原型")
+
+	# 1.4 地狱火焰 (flame 翻滚火球)
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 480.0, 45.0, 0.0, "burn", false, false, 1, "sub_flamethrower", 0)
+	assert_true(p.vfx_kind == "flame", "喷火器成功解析为 flame 火浪形态")
+
+	# 1.5 强酸腐蚀 (acid 毒液水滴)
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 500.0, 50.0, 0.0, "acid", false, false, 1, "sub_acid", 0)
+	assert_true(p.vfx_kind == "acid", "酸液喷雾器成功解析为 acid 强酸水滴形态")
+
+	# 1.6 特斯拉电弧 (tesla 闪电离子球)
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 680.0, 40.0, 0.0, "electric", false, false, 1, "sub_spark", 0)
+	assert_true(p.vfx_kind == "tesla", "副炮电磁枪成功解析为 tesla 电弧光球形态")
+
+	# 1.7 贯穿激光 (laser 高能激光柱)
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 850.0, 120.0, 0.0, "laser", false, true, 3, "cannon_laser", 0)
+	assert_true(p.vfx_kind == "laser", "激光炮成功解析为 laser 强光柱形态")
+
+	# 1.8 神话超武原型 (evo_plasma, evo_omega, evo_nuke, evo_plague, evo_gaia)
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 700.0, 300.0, 100.0, "plasma_cluster", false, true, 2, "evo_red_wolf", 4)
+	assert_true(p.vfx_kind == "evo_plasma", "超武【日冕离子炮 / 绯红双星】成功解析为 evo_plasma 等离子超武形态")
+
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 900.0, 250.0, 0.0, "omega_laser", false, true, 5, "evo_omega_railgun", 4)
+	assert_true(p.vfx_kind == "evo_omega", "超武【欧米茄光矛 / Ω轨道炮】成功解析为 evo_omega 聚能终极激光形态")
+
+	# 2. 验证星级体积视觉成长 (★1 1.0x ➔ ★5 1.72x)
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 650.0, 80.0, 0.0, "", false, false, 1, "sub_gatling", 0)
+	assert_true(is_equal_approx(p.vis_scale, 1.0), "★1 武器弹道基础体积比例为 1.0x")
+
+	p.setup_player_proj(Vector2.ZERO, Vector2.RIGHT, 650.0, 80.0, 0.0, "", false, false, 1, "sub_gatling", 4)
+	assert_true(is_equal_approx(p.vis_scale, 1.72), "★5 (满级/超武) 武器弹道体积显著放大至 1.72x，反馈震撼")
+	p.queue_free()
+
+	# 3. 验证战场粒子与开火反馈系统 (FloatingText.gd)
+	var fx: Node2D = FxScript.new()
+	add_child(fx)
+
+	# 3.1 枪口焰 (Muzzle Flash)
+	fx.spawn_muzzle_flash(Vector2(100, 100), Vector2.RIGHT, "cannon", 1.5)
+	assert_true(fx.muzzle_flashes.size() == 1, "成功生成主炮炮口火光与暴风特效")
+	assert_true(fx.muzzle_flashes[0]["kind"] == "cannon", "枪口火光类型记录正确")
+
+	# 3.2 黄铜弹壳抛射 (Casings)
+	fx.spawn_casing(Vector2(100, 100), Vector2(-1, 0), true)
+	assert_true(fx.casings.size() == 1 and fx.casings[0]["is_cannon"], "成功抛射重炮大口径黄铜弹壳")
+
+	fx.spawn_casing(Vector2(100, 100), Vector2(-1, 0), false)
+	assert_true(fx.casings.size() == 2 and not fx.casings[1]["is_cannon"], "成功抛射副炮速射黄铜弹壳")
+
+	# 3.3 尾气青烟 (Smoke Puffs)
+	fx.spawn_smoke_puff(Vector2(200, 200), 8.0, Color(0.9, 0.9, 0.9, 0.5), 0.5)
+	assert_true(fx.smoke_puffs.size() == 1, "成功生成导弹/战车尾焰青烟粒子")
+
+	# 3.4 命中金属火花束 (Spark Shower)
+	fx.spawn_spark_shower(Vector2(300, 300), Vector2.RIGHT, Color.YELLOW, 8)
+	assert_true(fx.sparks.size() == 8, "击中金属甲板成功迸射 8 枚反向高光火星")
+
+	# 3.5 地面焦黑弹坑 (Scorch)
+	fx.spawn_scorch(Vector2(400, 400), 25.0)
+	assert_true(fx.scorches.size() == 1, "高爆弹爆炸成功在地面烙印焦黑弹坑")
+
+	# 模拟粒子生命周期衰减与自然移除
+	fx._process(0.2)
+	assert_true(fx.muzzle_flashes.is_empty(), "枪口短促火光 (0.11s) 历经 0.2s 后已自然消散")
+	assert_true(fx.casings.size() == 2, "黄铜弹壳在地面持续留存 (生命周期 1.6s)")
+
+	fx.queue_free()
+
+	# 4. 验证 100% 无缝地形纹理与废土公路地裂
+	var bf_scene: PackedScene = load("res://scenes/Battlefield.tscn")
+	var bf: Node2D = bf_scene.instantiate()
+	add_child(bf)
+	GameState.start_new_run("bounty_hunter", "buggy", 0, "normal")
+	bf.start_wave()
+
+	# 4.1 校验 5 幅地图贴图加载无缺失
+	for m_id in ["map_1", "map_2", "map_3", "map_4", "map_5"]:
+		var tex: Texture2D = GameData.get_terrain_tex(m_id)
+		assert_true(tex != null, "地图地形纹理加载正常: %s" % m_id)
+
+	# 4.2 校验废土公路生成
+	assert_true(bf.wasteland_roads.size() >= 2, "成功生成横跨废土战场的破裂柏油公路")
+	assert_true(bf.wasteland_roads[0].has("cracks") and bf.wasteland_roads[0]["cracks"].size() > 0, "柏油公路包含沥青破损路面凹坑细节")
+
+	# 4.3 校验地裂缝与断裂带生成
+	assert_true(bf.wasteland_fissures.size() == 7, "成功生成 7 条地质断裂带与深渊地缝")
+	assert_true(bf.wasteland_fissures[0]["points"].size() >= 5, "地裂缝包含多段曲折折线点集合")
+
+	# 4.4 校验环境风沙微粒漂浮
+	assert_true(bf.dust_particles.size() == 48, "成功生成 48 枚常驻环境废土风沙漂浮微粒")
+	var prev_pos_x: float = bf.dust_particles[0]["pos"].x
+	bf._process(0.25)
+	assert_true(bf.dust_particles[0]["pos"].x != prev_pos_x, "环境风沙粒子随风速实时位移飘散，赋予大地动态活力")
+
+	bf.queue_free()

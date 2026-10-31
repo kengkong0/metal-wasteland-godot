@@ -35,6 +35,7 @@ var repair_time_needed: float = 4.5
 var human_fire_timer: float = 0.0
 var chassis_special_timer: float = 0.0
 var tread_timer: float = 0.0
+var turret_kick_dist: float = 0.0 # 主炮/重炮开火后坐力炮管后缩
 
 func init_for_wave(spawn_pos: Vector2) -> void:
 	global_position = spawn_pos
@@ -98,6 +99,7 @@ func _process(delta: float) -> void:
 		return
 
 	orbit_angle += delta * 3.8
+	turret_kick_dist = maxf(0.0, turret_kick_dist - delta * 38.0)
 	if invuln_timer > 0.0:
 		invuln_timer -= delta
 	if dodge_roll_timer > 0.0:
@@ -249,7 +251,10 @@ func _process_human_mode(delta: float, bf: Node, move_input: Vector2) -> void:
 			var h_dmg: float = (28.0 + GameState.level * 6.0) * float(GameState.bonus_stats.get("human_hp_mult", 1.0))
 			var is_crit: bool = randf() < (GameState.crit_chance + 0.15)
 			for i in range(-1, 2):
-				bf.spawn_player_projectile(human_pos, aim.rotated(i * 0.12), 680.0, h_dmg, 0.0, "", is_crit, false, 1, "human_handgun")
+				bf.spawn_player_projectile(human_pos, aim.rotated(i * 0.12), 680.0, h_dmg, 0.0, "", is_crit, false, 1, "human_handgun", 0)
+			if is_instance_valid(bf.fx_layer):
+				bf.fx_layer.spawn_muzzle_flash(human_pos + aim * 14.0, aim, "machinegun", 0.75)
+				bf.fx_layer.spawn_casing(human_pos, -aim.rotated(randf_range(0.7, 1.4)), false)
 			SoundManager.play("subgun_mg", 0.15, -4.0)
 
 	# 战地抢修战车判定 (靠近战车残骸读条修复)
@@ -362,11 +367,21 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 		if GameState.synergy_counts.get("artillery", 0) >= 6 and randf() < 0.50:
 			extra_shots += 1
 
+		var w_rarity: int = rarity
 		var total_volleys: int = 1 + extra_shots
 		for v in range(total_volleys):
 			for b in range(burst):
 				var spread: float = (float(b) - float(burst - 1) * 0.5) * 0.08 + v * 0.05
-				bf.spawn_player_projectile(global_position + aim_dir * 26.0, aim_dir.rotated(spread), p_spd, dmg, splash, effect, is_crit, true, pierce, w_id)
+				bf.spawn_player_projectile(global_position + aim_dir * 26.0, aim_dir.rotated(spread), p_spd, dmg, splash, effect, is_crit, true, pierce, w_id, w_rarity)
+
+		# 炮口火光 + 弹壳抛射 + 炮管后退后坐力动画
+		turret_kick_dist = 11.0 + float(w_rarity) * 2.5
+		if is_instance_valid(bf.fx_layer):
+			var m_kind: String = "laser" if effect == "laser" else "cannon"
+			bf.fx_layer.spawn_muzzle_flash(global_position + aim_dir * 34.0, aim_dir, m_kind, 1.0 + 0.18 * float(w_rarity))
+			if effect != "laser":
+				var eject_d: Vector2 = -aim_dir.rotated(randf_range(0.7, 1.3))
+				bf.fx_layer.spawn_casing(global_position, eject_d, true)
 
 		var w_tons: float = float(w_def.get("weight", 5.0))
 		if effect == "laser":
@@ -390,9 +405,21 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 		var pierce: int = int(w_def.get("pierce", 1))
 		var p_spd: float = float(w_def.get("proj_speed", 720.0))
 
+		var w_rarity: int = rarity
 		for p in range(pellets):
 			var spread: float = randf_range(-0.18, 0.18) if pellets > 1 else randf_range(-0.04, 0.04)
-			bf.spawn_player_projectile(global_position + aim_dir * 18.0, aim_dir.rotated(spread), p_spd, dmg, 0.0, effect, is_crit, false, pierce, w_id)
+			bf.spawn_player_projectile(global_position + aim_dir * 18.0, aim_dir.rotated(spread), p_spd, dmg, 0.0, effect, is_crit, false, pierce, w_id, w_rarity)
+
+		if is_instance_valid(bf.fx_layer):
+			var s_kind: String = "machinegun"
+			if effect == "electric":
+				s_kind = "tesla"
+			elif effect in ["burn", "acid"]:
+				s_kind = "flame"
+			bf.fx_layer.spawn_muzzle_flash(global_position + aim_dir * 22.0, aim_dir, s_kind, 0.85 + 0.12 * float(w_rarity))
+			if effect not in ["flame", "acid", "electric"]:
+				var eject_d: Vector2 = -aim_dir.rotated(randf_range(0.75, 1.4))
+				bf.fx_layer.spawn_casing(global_position, eject_d, false)
 
 		if effect == "electric":
 			SoundManager.play("subgun_electric", 0.1, -6.0)
@@ -409,9 +436,12 @@ func _try_fire_weapon(bf: Node, idx: int, w_id: String, rarity: int, w_def: Dict
 			var salvo: int = int(w_def.get("salvo", 4))
 			if GameState.synergy_counts.get("missile", 0) >= 2:
 				salvo += 2
+			var w_rarity: int = rarity
 			for s in range(salvo):
 				var ang: float = chassis_angle + (float(s) - float(salvo) * 0.5) * 0.25 + randf_range(-0.1, 0.1)
-				bf.spawn_player_projectile(global_position, Vector2.from_angle(ang), 540.0, dmg, 42.0, "homing", is_crit, false, 1, w_id)
+				bf.spawn_player_projectile(global_position, Vector2.from_angle(ang), 540.0, dmg, 42.0, "homing", is_crit, false, 1, w_id, w_rarity)
+			if is_instance_valid(bf.fx_layer):
+				bf.fx_layer.spawn_muzzle_flash(global_position, Vector2.from_angle(chassis_angle), "missile", 1.0 + 0.18 * float(w_rarity))
 			SoundManager.play("se_missile", 0.08, -2.0)
 			return true
 
@@ -887,20 +917,20 @@ func _draw() -> void:
 		var r_stick: Vector2 = Input.get_vector("aim_left", "aim_right", "aim_up", "aim_down", 0.25)
 		var is_manual_sight: bool = (not GameState.auto_main_cannon) or r_stick.length() > 0.25 or Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Input.is_mouse_button_pressed(MOUSE_BUTTON_RIGHT)
 		if is_manual_sight:
-			draw_line(Vector2(28, 0), Vector2(540, 0), Color(1.0, 0.22, 0.25, 0.38), 1.8)
+			draw_line(Vector2(28 - turret_kick_dist, 0), Vector2(540, 0), Color(1.0, 0.22, 0.25, 0.38), 1.8)
 			draw_arc(Vector2(540, 0), 14.0, 0.0, TAU, 20, Color(1.0, 0.28, 0.28, 0.78), 2.0)
 			draw_line(Vector2(520, 0), Vector2(560, 0), Color(1.0, 0.35, 0.35, 0.85), 1.5)
 			draw_line(Vector2(540, -18), Vector2(540, 18), Color(1.0, 0.35, 0.35, 0.85), 1.5)
-		draw_line(Vector2(28, 0), Vector2(88, 0), decal_col.lightened(0.2), 2.5)
-		draw_circle(Vector2(88, 0), 4.5, decal_col)
+		draw_line(Vector2(28 - turret_kick_dist, 0), Vector2(88 - turret_kick_dist, 0), decal_col.lightened(0.2), 2.5)
+		draw_circle(Vector2(88 - turret_kick_dist, 0), 4.5, decal_col)
 	if ch_tex == null:
 		draw_circle(Vector2.ZERO, 18.0, turret_col)
 		draw_circle(Vector2.ZERO, 18.0, decal_col, false, 2.0)
 		if main_cnt == 1:
-			draw_rect(Rect2(6, -5, 38, 10), turret_col.lightened(0.35))
+			draw_rect(Rect2(6 - turret_kick_dist, -5, 38, 10), turret_col.lightened(0.35))
 		elif main_cnt >= 2:
-			draw_rect(Rect2(6, -10, 38, 6), turret_col.lightened(0.35))
-			draw_rect(Rect2(6, 4, 38, 6), turret_col.lightened(0.35))
+			draw_rect(Rect2(6 - turret_kick_dist, -10, 38, 6), turret_col.lightened(0.35))
+			draw_rect(Rect2(6 - turret_kick_dist, 4, 38, 6), turret_col.lightened(0.35))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 	# 5. 绘制旋转刺球撞角、神盾粉碎星超武与浮游无人机
