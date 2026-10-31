@@ -5,6 +5,7 @@ extends Node2D
 signal wave_completed
 signal player_defeated
 signal game_victory
+signal request_town_hub
 
 const EnemyScript = preload("res://scripts/combat/Enemy.gd")
 const ProjectileScript = preload("res://scripts/combat/Projectile.gd")
@@ -47,6 +48,16 @@ var landmarks: Array = []
 var wasteland_roads: Array = []
 var wasteland_fissures: Array = []
 var dust_particles: Array = []
+
+# --- 荒原休整小镇与安全区 (Wasteland Rest Town & Safe Zone) ---
+var town_pos: Vector2 = Vector2(850.0, 800.0)
+var town_radius: float = 190.0
+var town_interact_radius: float = 125.0
+var town_available: bool = true
+var town_visited_this_wave: bool = false
+var is_player_in_safe_zone: bool = false
+var town_pulse_time: float = 0.0
+var btn_enter_town: Button
 var spawn_telegraphs: Array = []
 var shake_timer: float = 0.0
 var shake_intensity: float = 0.0
@@ -419,6 +430,31 @@ func _build_hud() -> void:
 	btn_top_pause.pressed.connect(_toggle_pause_modal)
 	tr_hbox.add_child(btn_top_pause)
 
+	# 底部进入休整小镇交互大按钮
+	var enter_town_center := CenterContainer.new()
+	enter_town_center.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	enter_town_center.offset_bottom = -38
+	enter_town_center.offset_top = -98
+	enter_town_center.mouse_filter = Control.MOUSE_FILTER_PASS
+	hud_root.add_child(enter_town_center)
+
+	btn_enter_town = Button.new()
+	btn_enter_town.text = "🏰 进入麦卡休整小镇 [按 E / 空格] (本波限 1 次)"
+	btn_enter_town.custom_minimum_size = Vector2(440, 48)
+	btn_enter_town.add_theme_font_size_override("font_size", 16)
+	var et_style := StyleBoxFlat.new()
+	et_style.bg_color = Color(0.12, 0.48, 0.26, 0.94)
+	et_style.border_color = Color(0.35, 1.0, 0.65)
+	et_style.set_border_width_all(2)
+	et_style.set_corner_radius_all(8)
+	btn_enter_town.add_theme_stylebox_override("normal", et_style)
+	var et_hover := et_style.duplicate()
+	et_hover.bg_color = Color(0.18, 0.62, 0.34)
+	btn_enter_town.add_theme_stylebox_override("hover", et_hover)
+	btn_enter_town.visible = false
+	btn_enter_town.pressed.connect(enter_town_hub)
+	enter_town_center.add_child(btn_enter_town)
+
 	# =========================================================================
 	# 4. 底部居中精简按键图标栏 (自适应任意分辨率底部，永不裁切)
 	# =========================================================================
@@ -634,6 +670,93 @@ func _toggle_fullscreen() -> void:
 	else:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 
+
+func _place_town_for_wave() -> void:
+	var p_center: Vector2 = arena_rect.get_center()
+	var offset_x: float = randf_range(-60.0, 60.0) if GameState.current_wave > 1 else 0.0
+	var offset_y: float = randf_range(-30.0, 30.0) if GameState.current_wave > 1 else 0.0
+	town_pos = Vector2(p_center.x - 550.0 + offset_x, 880.0 + offset_y)
+
+func _queue_single_spawn(e_id: String = "") -> void:
+	if enemies_container.get_child_count() >= current_max_enemies:
+		return
+	var p_pos: Vector2 = player_tank.get_active_position()
+	var ang: float = randf() * TAU
+	var dist: float = randf_range(580.0, 760.0)
+	var pos: Vector2 = p_pos + Vector2.from_angle(ang) * dist
+	pos.x = clampf(pos.x, arena_rect.position.x + 45.0, arena_rect.end.x - 45.0)
+	pos.y = clampf(pos.y, arena_rect.position.y + 45.0, arena_rect.end.y - 45.0)
+	var chosen: String = e_id
+	if chosen == "" or not GameData.ENEMIES.has(chosen):
+		var m_pool: Array = GameState.get_current_map_def().get("enemy_pool", ["bio_ant", "scout_bike"])
+		chosen = String(m_pool[randi() % m_pool.size()])
+	spawn_telegraphs.append({"id": chosen, "pos": pos, "timer": 0.65})
+
+func enter_town_hub() -> void:
+	if not town_available:
+		return
+	emit_signal("request_town_hub")
+
+func on_town_exited() -> void:
+	town_available = false
+	town_visited_this_wave = true
+	is_player_in_safe_zone = false
+	if is_instance_valid(btn_enter_town):
+		btn_enter_town.visible = false
+	if is_instance_valid(fx_layer):
+		fx_layer.spawn_smoke_puff(town_pos, 45.0, Color(0.75, 0.70, 0.60, 0.70), 1.2)
+		fx_layer.spawn_shockwave(town_pos, 180.0, Color(0.35, 0.95, 0.65))
+	banner_timer = 4.0
+	lbl_wanted_banner.text = "🏰 小镇商队已进入防空静默并移防隐蔽！下个波次将重新开放！"
+	if is_instance_valid(fx_layer) and is_instance_valid(player_tank):
+		fx_layer.spawn_text(player_tank.get_active_position() + Vector2(0, -50), "🏰 小镇商队已移防隐蔽！", Color(0.9, 0.8, 0.4), 1.35)
+
+	# 若在小镇接取了赏金通缉令，召唤赏金首 Boss
+	if GameState.active_wanted_boss_id != "" and not boss_spawned_this_wave:
+		_spawn_wanted_boss(GameState.active_wanted_boss_id)
+
+func _advance_to_next_wave_seamless() -> void:
+	SoundManager.play("upgrade", 0.05, 1.2)
+	# 全图战利品全域磁暴回收
+	var vacuumed_scrap: int = 0
+	var vacuumed_gold: int = 0
+	for d in drops_container.get_children():
+		if is_instance_valid(d) and not d.is_queued_for_deletion():
+			match d.drop_type:
+				"scrap": vacuumed_scrap += d.value
+				"gold": vacuumed_gold += d.value
+			d._collect(self, player_tank)
+	if vacuumed_scrap > 0 or vacuumed_gold > 0:
+		SoundManager.play("coin", 0.04, 2.0)
+		fx_layer.spawn_text(player_tank.get_active_position() + Vector2(0, -42), "⚡ 全域磁暴回收: +%d 零件(XP) | +%d 赏金!" % [vacuumed_scrap, vacuumed_gold], Color(0.45, 0.95, 1.0), 1.6)
+	if GameState.synergy_counts.get("tycoon", 0) >= 2:
+		var interest: int = int(GameState.gold * 0.15)
+		GameState.gold += interest
+	if GameState.selected_chassis_id == "tyrannos" and GameState.current_wave % 3 == 0 and GameState.chassis_slots.size() < 7:
+		var new_slots: Array = ["MAIN", "SUB", "SE"]
+		GameState.chassis_slots.append(new_slots[GameState.current_wave % 3])
+
+	var prev_w: int = GameState.current_wave
+	GameState.current_wave += 1
+	wave_elapsed = 0.0
+	wave_time_left = minf(85.0, 60.0 + GameState.current_wave * 3.0)
+	is_horde_active = false
+	horde_announced = false
+	boss_spawned_this_wave = false
+	spawn_timer = 0.6
+	elite_spawn_timer = 18.0
+	ring_spawn_timer = 22.0
+
+	# 重置休整小镇
+	town_available = true
+	town_visited_this_wave = false
+	_place_town_for_wave()
+
+	banner_timer = 5.0
+	lbl_wanted_banner.text = "🏆 第 %d 波 坚守胜利！全域磁暴回收！第 %d 波已逼近！🏰 麦卡休整小镇已开放！" % [prev_w, GameState.current_wave]
+	fx_layer.spawn_text(player_tank.get_active_position() + Vector2(0, -68), "🏰 麦卡休整小镇已在荒原开放！可在安全区改装补给！", Color(0.35, 1.0, 0.65), 1.6)
+	_update_hud()
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_fullscreen"):
 		get_viewport().set_input_as_handled()
@@ -644,6 +767,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		if visible and is_instance_valid(fx_layer) and is_instance_valid(player_tank):
 			fx_layer.spawn_text(player_tank.get_active_position() + Vector2(0, -24), "🔇 音频已静音" if is_m else "🔊 音频已恢复", Color(0.6, 0.95, 1.0), 1.1)
 		return
+	if town_available and is_player_in_safe_zone and is_instance_valid(player_tank) and player_tank.get_active_position().distance_to(town_pos) <= town_interact_radius:
+		if (event is InputEventKey and event.pressed and not event.echo and event.keycode == KEY_E) or event.is_action_pressed("ui_accept"):
+			get_viewport().set_input_as_handled()
+			enter_town_hub()
+			return
 	if not visible or level_up_modal.visible:
 		return
 	if event.is_action_pressed("pause_game") or (pause_modal.visible and event.is_action_pressed("ui_cancel")):
@@ -754,9 +882,9 @@ func start_wave() -> void:
 
 	wave_active = true
 	wave_elapsed = 0.0
-	wave_time_left = minf(50.0, 28.0 + GameState.current_wave * 2.0)
+	wave_time_left = minf(85.0, 60.0 + GameState.current_wave * 3.0)
 	if GameState.current_wave == GameState.max_waves:
-		wave_time_left = 75.0
+		wave_time_left = 95.0
 		GameState.active_wanted_boss_id = GameState.get_current_map_def()["final_boss_id"]
 
 	boss_spawned_this_wave = false
@@ -766,10 +894,16 @@ func start_wave() -> void:
 	arena_event_triggered_this_wave = false
 	combo_count = 0
 	combo_timer = 0.0
-	ring_spawn_timer = 7.0
-	spawn_timer = 0.4
-	elite_spawn_timer = 7.5
+	ring_spawn_timer = 22.0
+	spawn_timer = 0.6
+	elite_spawn_timer = 18.0
 	fx_layer.mortar_strikes.clear()
+
+	# 重置休整小镇
+	town_available = true
+	town_visited_this_wave = false
+	is_player_in_safe_zone = false
+	_place_town_for_wave()
 
 	player_tank.init_for_wave(arena_rect.get_center())
 	if is_instance_valid(battle_cam):
@@ -885,32 +1019,54 @@ func _process(delta: float) -> void:
 		GameState.bonus_stats["combo_reload_pct"] = 0.0
 		GameState.bonus_stats["combo_speed_pct"] = 0.0
 
-	# 4. 定时刷重装精英与360°环形包围突袭
-	elite_spawn_timer -= delta
-	if elite_spawn_timer <= 0.0:
-		elite_spawn_timer = maxf(5.5, 9.0 - GameState.current_wave * 0.25)
-		_spawn_map_elite()
+	# 4. 分阶段梯度刷怪节奏 (前10s零星侦察 ➔ 10~25s渐进逼近 ➔ 25s+阵地主力 ➔ 55s+机械狂潮)
+	var spawn_mult: float = float(GameState.get_current_difficulty_def().get("spawn_mult", 1.0))
+	if wave_elapsed < 10.0:
+		# (1) 零星侦察期：间隔极宽 (2.8 ~ 3.5s)，每次仅 1 只零星侦察兵，严禁小队包围与精英突袭
+		elite_spawn_timer = maxf(elite_spawn_timer, 18.0)
+		ring_spawn_timer = maxf(ring_spawn_timer, 22.0)
+		spawn_timer -= delta
+		if spawn_timer <= 0.0:
+			spawn_timer = randf_range(2.8, 3.5) / spawn_mult
+			var scout_pool: Array = ["bio_ant", "scout_bike", "scrap_bug"]
+			var s_id: String = scout_pool[randi() % scout_pool.size()]
+			_queue_single_spawn(s_id)
+	elif wave_elapsed < 25.0:
+		# (2) 渐进逼近期：间隔平滑收窄至 1.4 ~ 1.8s，生成 2~3 只小队
+		elite_spawn_timer -= delta
+		if elite_spawn_timer <= 0.0:
+			elite_spawn_timer = 15.0
+			_spawn_map_elite()
+		spawn_timer -= delta
+		if spawn_timer <= 0.0:
+			spawn_timer = randf_range(1.4, 1.8) / spawn_mult
+			_queue_squad_spawn(randi_range(2, 3))
+	else:
+		# (3) 阵地交火与高潮狂潮期 (25s+)
+		elite_spawn_timer -= delta
+		if elite_spawn_timer <= 0.0:
+			elite_spawn_timer = maxf(5.5, 9.0 - GameState.current_wave * 0.25)
+			_spawn_map_elite()
 
-	ring_spawn_timer -= delta
-	if ring_spawn_timer <= 0.0:
-		ring_spawn_timer = randf_range(6.5, 9.5) if is_horde_active else randf_range(9.0, 14.0)
-		_queue_ring_spawn(14 if is_horde_active else 8)
+		ring_spawn_timer -= delta
+		if ring_spawn_timer <= 0.0:
+			ring_spawn_timer = randf_range(6.5, 9.5) if is_horde_active else randf_range(9.0, 14.0)
+			_queue_ring_spawn(14 if is_horde_active else 8)
 
-	spawn_timer -= delta
-	if spawn_timer <= 0.0:
-		var spawn_mult: float = float(GameState.get_current_difficulty_def().get("spawn_mult", 1.0))
-		var interval: float = maxf(0.12, (0.75 - GameState.current_wave * 0.035) / spawn_mult)
-		if is_horde_active:
-			interval = maxf(0.08, interval * 0.45)
-		spawn_timer = interval
+		spawn_timer -= delta
+		if spawn_timer <= 0.0:
+			var interval: float = maxf(0.12, (0.75 - GameState.current_wave * 0.035) / spawn_mult)
+			if is_horde_active:
+				interval = maxf(0.08, interval * 0.45)
+			spawn_timer = interval
 
-		var batch: int = 3 + int(GameState.current_wave * 0.8)
-		if is_horde_active:
-			batch = int(batch * 2.0)
-		while batch > 0:
-			var s_size: int = mini(batch, randi_range(3, 6))
-			_queue_squad_spawn(s_size)
-			batch -= s_size
+			var batch: int = 3 + int(GameState.current_wave * 0.8)
+			if is_horde_active:
+				batch = int(batch * 2.0)
+			while batch > 0:
+				var s_size: int = mini(batch, randi_range(3, 6))
+				_queue_squad_spawn(s_size)
+				batch -= s_size
 
 	for i in range(spawn_telegraphs.size() - 1, -1, -1):
 		spawn_telegraphs[i]["timer"] -= delta
@@ -918,12 +1074,39 @@ func _process(delta: float) -> void:
 			_do_spawn_enemy(spawn_telegraphs[i]["id"], spawn_telegraphs[i]["pos"])
 			spawn_telegraphs.remove_at(i)
 
+	# 4.5 荒原休整小镇与安全区排斥力场处理
+	town_pulse_time += delta
+	if town_available and is_instance_valid(player_tank):
+		var p_pos: Vector2 = player_tank.get_active_position()
+		var dist_to_town: float = p_pos.distance_to(town_pos)
+		is_player_in_safe_zone = (dist_to_town <= town_radius)
+
+		if is_instance_valid(btn_enter_town):
+			btn_enter_town.visible = (dist_to_town <= town_interact_radius)
+
+		# 怪物排斥力场：严防怪物越界踩入安全区
+		for e in enemies_container.get_children():
+			if is_instance_valid(e) and not e.is_queued_for_deletion():
+				var edist: float = e.global_position.distance_to(town_pos)
+				if edist < town_radius + 24.0:
+					var pdir: Vector2 = (e.global_position - town_pos).normalized()
+					if pdir == Vector2.ZERO: pdir = Vector2.UP
+					e.global_position = town_pos + pdir * (town_radius + 25.0)
+	else:
+		is_player_in_safe_zone = false
+		if is_instance_valid(btn_enter_town):
+			btn_enter_town.visible = false
+
+	# 4.8 波次计时结束判定：无缝进入下一波，彻底消除强行切屏打断
 	if wave_time_left <= 0.0:
-		if GameState.current_wave >= GameState.max_waves and _has_alive_boss():
-			wave_time_left = 0.0
+		if GameState.current_wave >= GameState.max_waves:
+			if _has_alive_boss():
+				wave_time_left = 0.0
+			else:
+				_finish_wave_success()
+				return
 		else:
-			_finish_wave_success()
-			return
+			_advance_to_next_wave_seamless()
 
 	# 废土风沙环境微粒飘散
 	var wind_vec: Vector2 = Vector2(1.2, 0.35).normalized()
@@ -1915,6 +2098,15 @@ func _draw_minimap() -> void:
 			else:
 				minimap_ctrl.draw_circle(e_pos, 1.8, Color(0.92, 0.28, 0.28, 0.85))
 
+	# 4.5 绘制休整小镇雷达地标
+	if town_available:
+		var tm := Vector2(town_pos.x * sx, town_pos.y * sy)
+		var tr_m := town_radius * sx
+		minimap_ctrl.draw_circle(tm, tr_m, Color(0.15, 0.95, 0.45, 0.25))
+		minimap_ctrl.draw_arc(tm, tr_m, 0.0, TAU, 18, Color(0.35, 1.0, 0.65, 0.85), 1.5)
+		minimap_ctrl.draw_rect(Rect2(tm - Vector2(3, 3), Vector2(6, 6)), Color(0.95, 0.85, 0.25))
+		minimap_ctrl.draw_string(ThemeDB.fallback_font, tm + Vector2(6, 3), "🏰小镇", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color(0.35, 1.0, 0.65))
+
 	# 5. 玩家战车 (醒目绿色光标与行进方向指示)
 	if is_instance_valid(player_tank):
 		var p_pos: Vector2 = player_tank.get_active_position()
@@ -2019,6 +2211,16 @@ func _draw_offscreen_indicators() -> void:
 				"color": Color(1.0, 0.75, 0.15),
 				"border_col": Color(1.0, 0.95, 0.35)
 			})
+
+	# 0. 休整小镇 (安全区)
+	if town_available:
+		targets.append({
+			"pos": town_pos,
+			"icon": "🏰",
+			"color": Color(0.25, 1.0, 0.65),
+			"border_col": Color(0.85, 1.0, 0.55),
+			"is_town": true
+		})
 
 	# 3. 埋藏宝箱与战场动态事件信标
 	for d in drops_container.get_children():
@@ -2153,6 +2355,63 @@ func _draw() -> void:
 			draw_line(pts[idx], pts[idx + 1], Color(0.05, 0.04, 0.04, 0.85), fw)
 			if mid_id in ["map_4", "map_3"]:
 				draw_line(pts[idx], pts[idx + 1], glow_col, fw * 0.45)
+
+	# 3. 废土休整小镇与全向安全区力场 (Wasteland Rest Town & Safe Zone)
+	if town_available:
+		# (1) 地面小镇基座与工业停机坪
+		draw_circle(town_pos, town_radius * 0.78, Color(0.18, 0.17, 0.16, 0.75))
+		draw_arc(town_pos, town_radius * 0.78, 0.0, TAU, 36, Color(0.35, 0.32, 0.28, 0.8), 2.5)
+
+		# (2) 绿色安全区力场护盾 (Safe Zone Forcefield)
+		var shield_alpha: float = 0.65 + sin(town_pulse_time * 3.5) * 0.20
+		var shield_col := Color(0.25, 0.98, 0.65, shield_alpha)
+		draw_circle(town_pos, town_radius, Color(0.15, 0.85, 0.45, 0.08 + sin(town_pulse_time * 2.0) * 0.03))
+		draw_arc(town_pos, town_radius, 0.0, TAU, 48, shield_col, 3.5)
+		draw_arc(town_pos, town_radius - 8.0, 0.0, TAU, 36, Color(0.4, 1.0, 0.75, shield_alpha * 0.5), 1.5)
+
+		# 4 座力场水晶发射基桩 (Pylon Emitters)
+		for p_idx in range(4):
+			var p_ang: float = float(p_idx) * (TAU / 4.0) + town_pulse_time * 0.2
+			var p_pt: Vector2 = town_pos + Vector2.from_angle(p_ang) * town_radius
+			draw_circle(p_pt, 7.0, Color(0.12, 0.12, 0.12))
+			draw_circle(p_pt, 4.5, Color(0.35, 1.0, 0.70))
+			draw_circle(p_pt, 2.0, Color.WHITE)
+
+		# (3) 小镇核心建筑群 (Town Architecture)
+		# 麦卡改装工坊 (Main Garage)
+		var b_w: float = 88.0
+		var b_h: float = 56.0
+		var b_pos: Vector2 = town_pos + Vector2(-b_w * 0.5, -b_h * 0.5)
+		draw_rect(Rect2(b_pos, Vector2(b_w, b_h)), Color(0.24, 0.22, 0.20))
+		draw_rect(Rect2(b_pos, Vector2(b_w, b_h)), Color(0.85, 0.55, 0.20), false, 2.0)
+		draw_rect(Rect2(b_pos + Vector2(16, b_h - 18), Vector2(b_w - 32, 18)), Color(0.12, 0.12, 0.14))
+		draw_string_outline(ThemeDB.fallback_font, town_pos + Vector2(-36, -6), "🔧 麦卡车库", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 3, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, town_pos + Vector2(-36, -6), "🔧 麦卡车库", HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.88, 0.25))
+
+		# 赏金公会办事处帐篷 (Bounty Guild Tent)
+		var g_pos: Vector2 = town_pos + Vector2(58, -32)
+		draw_circle(g_pos, 22.0, Color(0.35, 0.18, 0.15))
+		draw_circle(g_pos, 22.0, Color(0.95, 0.35, 0.25), false, 2.0)
+		draw_string_outline(ThemeDB.fallback_font, g_pos + Vector2(-16, 5), "🎯公会", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, 2, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, g_pos + Vector2(-16, 5), "🎯公会", HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color(1.0, 0.6, 0.5))
+
+		# 补给站油罐与弹药箱 (Fuel Depot)
+		var f_pos: Vector2 = town_pos + Vector2(-68, 22)
+		draw_circle(f_pos, 15.0, Color(0.32, 0.35, 0.38))
+		draw_circle(f_pos + Vector2(16, 6), 12.0, Color(0.28, 0.30, 0.32))
+		draw_string_outline(ThemeDB.fallback_font, f_pos + Vector2(-10, 4), "⛽", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, 2, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, f_pos + Vector2(-10, 4), "⛽", HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.4, 0.9, 1.0))
+
+		# (4) 悬浮标题与进镇交互提示
+		var t_title: String = "🏰 麦卡休整小镇 [安全区]"
+		draw_string_outline(ThemeDB.fallback_font, town_pos + Vector2(-75, -town_radius - 14), t_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, 4, Color.BLACK)
+		draw_string(ThemeDB.fallback_font, town_pos + Vector2(-75, -town_radius - 14), t_title, HORIZONTAL_ALIGNMENT_LEFT, -1, 16, Color(0.35, 1.0, 0.65))
+
+		if is_player_in_safe_zone:
+			var prompt_txt: String = "💡 按 [E] / [空格] 进入小镇休整 (本波限进 1 次)"
+			var pulse_prompt: float = 0.85 + sin(town_pulse_time * 6.0) * 0.15
+			draw_string_outline(ThemeDB.fallback_font, town_pos + Vector2(-130, town_radius + 24), prompt_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 3, Color.BLACK)
+			draw_string(ThemeDB.fallback_font, town_pos + Vector2(-130, town_radius + 24), prompt_txt, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, Color(1.0, 0.95, 0.35, pulse_prompt))
 
 	# 3. 弹坑与沙地凹坑
 	for c in craters:

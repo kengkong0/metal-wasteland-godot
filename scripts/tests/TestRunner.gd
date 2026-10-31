@@ -22,6 +22,7 @@ func _ready() -> void:
 	test_suite_11_v2_blueprint_optimizations()
 	test_suite_12_stat_previews_and_layout_constraints()
 	test_suite_13_weapon_vfx_and_seamless_map()
+	test_suite_14_wasteland_town_and_pacing_system()
 
 	print("\n========================================================")
 	print("📊 [TEST RESULTS] 测试统计汇总:")
@@ -925,5 +926,71 @@ func test_suite_13_weapon_vfx_and_seamless_map() -> void:
 	var prev_pos_x: float = bf.dust_particles[0]["pos"].x
 	bf._process(0.25)
 	assert_true(bf.dust_particles[0]["pos"].x != prev_pos_x, "环境风沙粒子随风速实时位移飘散，赋予大地动态活力")
+
+	bf.queue_free()
+
+# ============================================================================
+# 14. 废土休整小镇系统、安全区力场排斥与分阶段梯度刷怪无缝波次测试
+# ============================================================================
+func test_suite_14_wasteland_town_and_pacing_system() -> void:
+	print("--- [Suite 14] 废土休整小镇、安全区力场与渐增刷怪节奏验证 ---")
+
+	var bf_scene: PackedScene = load("res://scenes/Battlefield.tscn")
+	var bf: Node2D = bf_scene.instantiate()
+	add_child(bf)
+	GameState.start_new_run("bounty_hunter", "buggy", 0, "normal")
+	bf.start_wave()
+
+	# 1. 验证休整小镇与安全区初始生成
+	assert_true(bf.town_available, "波次开始时荒原休整小镇处于开放状态")
+	assert_true(not bf.town_visited_this_wave, "初始状态下本波小镇未被造访")
+	assert_true(bf.town_radius >= 180.0, "小镇安全区力场半径充足 (当前 %.1f px)" % bf.town_radius)
+	assert_true(bf.town_pos.x > bf.arena_rect.position.x and bf.town_pos.x < bf.arena_rect.end.x, "小镇坐标位于竞技场大地内")
+
+	# 2. 验证战车进入安全区无敌免疫判定
+	var pt: Node2D = bf.player_tank
+	pt.global_position = bf.town_pos
+	bf._process(0.1)
+	assert_true(bf.is_player_in_safe_zone, "战车处于小镇范围内时成功判定为进入安全区")
+
+	var prev_sp: float = pt.current_sp
+	pt.take_damage(60.0)
+	assert_true(pt.current_sp == prev_sp, "处于安全区内战车获得绝对无敌，免疫外来伤害")
+
+	# 3. 验证安全区强力排斥敌怪机制
+	bf._do_spawn_enemy("bio_ant", bf.town_pos + Vector2(15.0, 15.0))
+	var spawned_e: Node2D = bf.enemies_container.get_child(bf.enemies_container.get_child_count() - 1)
+	assert_true(spawned_e != null, "成功在小镇内部附近生成敌怪")
+	bf._process(0.1)
+	var e_dist: float = spawned_e.global_position.distance_to(bf.town_pos)
+	assert_true(e_dist >= bf.town_radius + 20.0, "小镇绿色力场成功将入侵敌怪物理排斥推飞至安全区外 (当前距镇心 %.1f px)" % e_dist)
+
+	# 4. 验证小镇进出流程与单波次限进 1 次移防消失机制
+	var fired_ref := [false]
+	bf.request_town_hub.connect(func(): fired_ref[0] = true)
+	bf.enter_town_hub()
+	assert_true(fired_ref[0], "触发 enter_town_hub 成功向主控发射 request_town_hub 进镇信号")
+
+	bf.on_town_exited()
+	assert_true(not bf.town_available, "出镇后小镇与安全区立即移防隐蔽 (town_available 变为 false)")
+	assert_true(bf.town_visited_this_wave, "标记本波次已访问小镇 (town_visited_this_wave 为 true)")
+	assert_true(not bf.is_player_in_safe_zone, "出镇后安全区力场解除，恢复战场作战状态")
+
+	# 5. 验证波次无缝流转：不弹窗强行切屏，全域磁暴回收，小镇重新生成
+	bf.spawn_drop("gold", 50, Vector2(700, 700))
+	var wave_before: int = GameState.current_wave
+	bf.wave_time_left = 0.0
+	bf._process(0.05)
+
+	assert_true(GameState.current_wave == wave_before + 1, "波次计时归零后无缝推进至下一波 (当前第 %d 波)" % GameState.current_wave)
+	assert_true(bf.wave_active, "波次推进过程中战场保持持续活跃，绝无中断")
+	assert_true(bf.town_available, "新波次开始后休整小镇在荒原重新开放！")
+	assert_true(not bf.town_visited_this_wave, "新波次重置小镇造访标记")
+
+	# 6. 验证分阶段梯度刷怪：前 10s 零星侦察，无小队包围与精英突袭
+	bf.wave_elapsed = 2.0
+	bf._process(0.1)
+	assert_true(bf.elite_spawn_timer >= 15.0, "开局前 10s 严格禁止重装精英怪刷出，留出从容探索/进镇窗口")
+	assert_true(bf.ring_spawn_timer >= 18.0, "开局前 10s 严格禁止 360° 环形包围突袭")
 
 	bf.queue_free()

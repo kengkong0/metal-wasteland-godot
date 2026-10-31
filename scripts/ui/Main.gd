@@ -132,6 +132,7 @@ func _ready() -> void:
 	battlefield.wave_completed.connect(_on_wave_completed)
 	battlefield.player_defeated.connect(_on_player_defeated)
 	battlefield.game_victory.connect(_on_game_victory)
+	battlefield.request_town_hub.connect(_on_request_town_hub)
 
 	ui_layer = CanvasLayer.new()
 	ui_layer.layer = 10
@@ -2054,10 +2055,21 @@ func _on_wave_completed() -> void:
 	garage_ui.open_garage()
 
 func _on_start_next_wave() -> void:
-	GameState.current_wave += 1
+	SoundManager.play_bgm("bgm_battle_wasteland")
+	garage_ui.visible = false
 	battlefield.visible = true
 	battlefield.hud_layer.visible = true
-	battlefield.start_wave()
+	battlefield.wave_active = true
+	battlefield.on_town_exited()
+
+func _on_request_town_hub() -> void:
+	SoundManager.play("camp_enter")
+	SoundManager.play_bgm("bgm_camp_garage")
+	battlefield.wave_active = false
+	if is_instance_valid(battlefield.player_tank):
+		battlefield.player_tank.current_sp = GameState.max_sp
+		battlefield.player_tank.refill_all_ammo(999)
+	garage_ui.open_garage()
 
 func _on_player_defeated() -> void:
 	SoundManager.play("mince_revive", 0.02, 2.0)

@@ -764,6 +764,8 @@ func take_damage(amount: float, _source_pos: Vector2 = Vector2.ZERO) -> void:
 	if invuln_timer > 0.0:
 		return
 	var bf: Node = get_parent()
+	if is_instance_valid(bf) and bool(bf.get("is_player_in_safe_zone")):
+		return
 
 	# 闪避判定 (含热烟幕 100% 绝对闪避) + 幻影全息诱饵脉冲
 	if smoke_evade_timer > 0.0 or randf() < GameState.dodge_chance:

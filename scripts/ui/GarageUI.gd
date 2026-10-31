@@ -311,9 +311,11 @@ func open_garage() -> void:
 	reroll_count = 0
 	waxed_this_wave = false
 	dig_used_this_wave = false
-	lbl_event_toast.text = "💡 欢迎来到多拉姆商店！(支持键鼠点击或手柄摇杆选商品，[A]购买，[Y]刷新商店，[Start]出击下一波)"
+	lbl_shop_title.text = "🏰 麦卡休整小镇 · 战备前哨 (第 %d 波)" % GameState.current_wave
+	lbl_event_toast.text = "💡 已进入麦卡小镇安全区！战车装甲 SP 已全面抢修至 100%，重武弹药已补满！可在镇内改装武器、接取悬赏通缉令。"
 	_roll_shop_items()
 	refresh_all()
+	btn_launch.text = "🚀 离开小镇·重返荒原 (出镇后小镇移防) [Start]"
 	if is_instance_valid(btn_launch):
 		btn_launch.call_deferred("grab_focus")
 
@@ -359,9 +361,8 @@ func refresh_all() -> void:
 	_refresh_slots_and_weapons_grid()
 	_refresh_right_stats_and_wanted()
 
-	var next_w: int = GameState.current_wave + 1
 	var boss_tag: String = " ⚠️[迎战赏金首]" if GameState.active_wanted_boss_id != "" else ""
-	btn_launch.text = "🚀 出击第 %d 波 [Start]%s" % [next_w, boss_tag]
+	btn_launch.text = "🚀 离开小镇·重返荒原 (出镇后小镇移防)%s [Start]" % boss_tag
 	if visible and get_viewport() and get_viewport().gui_get_focus_owner() == null and is_instance_valid(btn_launch):
 		btn_launch.call_deferred("grab_focus")
 
